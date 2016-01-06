@@ -1,7 +1,10 @@
 import os
 
-def get_db_directory(subject):
-	return os.path.join('/Users/robert/Documents/gallant/realtimefmri/database/', subject)
+def get_database_directory():
+	return os.path.join('/Users/robert/Documents/gallant/realtimefmri')
+	
+def get_subject_directory(subject):
+	return os.path.join(get_database_directory(), subject)
 
 def generate_command(command, params):
 	cmd = [command]

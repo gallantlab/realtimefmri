@@ -7,35 +7,6 @@ from nibabel import load as nbload, save as nbsave
 
 from utils import generate_command
 
-class PixelToNifti1(object):
-	'''
-	takes data_dict containing raw_image_binary and adds 
-	'''
-	def __init__(self):
-		self.transform = np.eye(4)
-
-	def mosaic_to_volume(self, mosaic, nrows=6, ncols=6):
-		nrows = 6
-		volume = np.empty((100,100,36))
-		for i in xrange(nrows):
-			volume[:,:,i*ncols:(i+1)*ncols] = mosaic[i*100:(i+1)*100, :].reshape(100,100,ncols,order='F')
-		return volume
-
-	def fromstring(self, img_bin):
-		return np.fromstring(img_bin, dtype=np.uint16).reshape(600,600)
-
-	def run(self, data_dict):
-		'''
-			pixel_image is a binary string loaded directly from the .PixelData file
-			saved on the scanner console
-
-			returns a nifti1 image of the same data
-		'''
-		pixel_bin = 'raw'
-		pixel_img = self.fromstring(pixel_bin)
-		volume_img = self.mosaic_to_volume(pixel_img)
-		return { 'raw_image_nifti': Nifti1Image(volume_img, self.transform) }
-
 def transform(inp, base, verbose=False, cleanup=True):
 	if type(base)==str:
 		base_path = base
@@ -97,15 +68,10 @@ def mosaic_to_volume(mosaic, nrows=6, ncols=6):
 	return volume
 
 def plot_volume(volume):
+	from matplotlib import pyplot as plt
 	nslices = volume.shape[2]
 	nrows = ncols = np.ceil(nslices**0.5).astype(int)
 	
 	fig, ax = plt.subplots(nrows, ncols)
 	for i in xrange(volume.shape[2]):
 		ax[divmod(i,ncols)].pcolormesh(volume[:,:,i], cmap='gray');
-
-
-def read_pixel_data(img_fpath):
-	with open(img_fpath, 'r') as f:
-		img = np.fromstring(f.read(), dtype=np.uint16).reshape(600,600)
-	return img

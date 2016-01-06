@@ -1,9 +1,10 @@
 import numpy as np
 import zmq
 import time
+import yaml
 import logging
-FORMAT = '%(processName)s %(process)d (%(levelname)s): %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 import cPickle
 from glob import glob
 from uuid import uuid4
@@ -17,13 +18,23 @@ from matplotlib import pyplot as plt
 
 import cortex
 
-from image_utils import transform
+from image_utils import transform, mosaic_to_volume
 import utils
 
-db_dir = utils.get_db_directory('S1')
+db_dir = utils.get_database_directory()
+subj_dir = utils.get_subject_directory('S1')
+
+input_affine = np.array([
+		[-2.24000001, 0., 0., 108.97336578],
+		[0., -2.24000001, 0., 131.32203674],
+		[0., 0., 4.12999725, -59.81945419],
+		[0., 0., 0., 1.]
+	])
+
+
 
 class Preprocessor(object):
-	def __init__(self, **kwargs):
+	def __init__(self, pipeline_name='01', **kwargs):
 		super(Preprocessor, self).__init__()
 		context = zmq.Context()
 		self.image_subscribe = context.socket(zmq.SUB)
@@ -31,42 +42,13 @@ class Preprocessor(object):
 		self.image_subscribe.setsockopt(zmq.SUBSCRIBE, 'image')
 		self.active = False
 
-		simulate = kwargs.get('simulate', False)
-
-		if simulate:
-			self.pipeline = [
-				{
-					'name': 'debug',
-					'instance': Debug()
-				}
-			]
-		else:
-			self.pipeline = [
-				{
-					'name': 'pixelToNifti1',
-					'instance': PixelToNifti1()
-				},
-				{
-					'name': 'motionCorrection',
-					'instance': Register()
-				},
-				{
-					'name': 'average',
-					'instance': Average()
-				},
-				{
-					'name': 'registerToAnat',
-					'instance': Register()
-				},
-				{
-					'name': 'detrend',
-					'instance': HPFDetrend()
-				}
-			]
+		# load the pipeline fron pipelines.conf
+		with open(os.path.join(db_dir, 'pipelines.conf'), 'r') as f:
+			self.pipeline = yaml.load(f)['pipeline-'+pipeline_name]
 
 	def run(self):
 		self.active = True
-		logging.debug('running')
+		logger.debug('running')
 		while self.active:
 			message = self.image_subscribe.recv()
 			data = message.strip('image ')
@@ -74,21 +56,40 @@ class Preprocessor(object):
 			time.sleep(0.1)
 
 	def process(self, raw_image_binary):
-		pipeline_data = {
+		data_dict = {
 			'raw_image_binary': raw_image_binary,
 		}
 
 		for step in self.pipeline:
-			logging.debug('running %s' % step['name'])
-			output_dict = step['instance'].run(pipeline_data)
-			pipeline_data.update(output_dict)
+			logger.debug('running %s' % step['name'])
+			output_dict = step['instance'].run(data_dict)
+			data_dict.update(output_dict)
 
-		return pipeline_data
+		return data_dict
 
 class Debug(object):
 	def run(self, inp):
-		logging.debug(inp.keys())
+		logger.debug(inp.keys())
 		return {}
+
+class RawToNifti1(object):
+	'''
+	takes data_dict containing raw_image_binary and adds 
+	'''
+	def __init__(self):
+		# hard coded, I should find a way to generalize this later, e.g. read input image affine from metadata stored alongside image pixel data
+		self.affine = input_affine
+
+	def run(self, data_dict):
+		'''
+			pixel_image is a binary string loaded directly from the .PixelData file
+			saved on the scanner console
+
+			returns a nifti1 image of the same data
+		'''
+		mosaic = np.fromstring(data_dict['raw_image_binary'], dtype=np.uint16).reshape(600,600)
+		volume = mosaic_to_volume(mosaic)
+		return { 'raw_image_nifti': Nifti1Image(volume, self.affine) }
 
 class Average(object):
 	def __init__(self):
@@ -122,21 +123,16 @@ class WMDetrend(object):
 				since we'll be dealing with raw pixel data, we need to
 				have a predetermined image orientation
 		'''
-		self.db_dir = utils.get_db_directory(subject)
+		self.subj_dir = utils.get_subject_directory(subject)
 		self.subject = subject
 		self.masks = self.get_masks()
 
-		self.funcref_nifti1 = nbload(os.path.join(self.db_dir, 'funcref.nii'))
+		self.funcref_nifti1 = nbload(os.path.join(self.subj_dir, 'funcref.nii'))
 
-		self.input_affine = np.array([
-			[-2.24000001, 0., 0., 108.97336578],
-			[0., -2.24000001, 0., 131.32203674],
-			[0., 0., 4.12999725, -59.81945419],
-			[0., 0., 0., 1.]
-		])
+		self.input_affine = input_affine
 
 		try:
-			model_paths = glob(os.path.join(self.db_dir, 'model*.pkl'))
+			model_paths = glob(os.path.join(self.subj_dir, 'model*.pkl'))
 			with open(model_paths[0], 'r') as f:
 				model = cPickle.load(f)
 			self.model = model
@@ -144,7 +140,7 @@ class WMDetrend(object):
 			pass
 
 		try:
-			pca_paths = glob(os.path.join(self.db_dir, 'pca*.pkl'))
+			pca_paths = glob(os.path.join(self.subj_dir, 'pca*.pkl'))
 			with open(pca_paths[0], 'r') as f:
 				pca = cPickle.load(f)
 			self.pca = pca
@@ -154,18 +150,18 @@ class WMDetrend(object):
 	def get_masks(self):
 		masks = dict()
 		try:
-			wm_mask_funcref = nbload(os.path.join(self.db_dir, 'wm_mask_funcref.nii'))
+			wm_mask_funcref = nbload(os.path.join(self.subj_dir, 'wm_mask_funcref.nii'))
 			masks['wm'] = wm_mask_funcref.get_data().astype(bool)
-			logging.debug('loaded white matter mask')
+			logger.debug('loaded white matter mask')
 		except OSError:
-			logging.debug('white matter mask not found`')
+			logger.debug('white matter mask not found`')
 
 		try:
-			gm_mask_funcref = nbload(os.path.join(self.db_dir, 'gm_mask_funcref.nii'))
+			gm_mask_funcref = nbload(os.path.join(self.subj_dir, 'gm_mask_funcref.nii'))
 			masks['gm'] = gm_mask_funcref.get_data().astype(bool)
-			logging.debug('loaded gray matter mask')
+			logger.debug('loaded gray matter mask')
 		except OSError:
-			logging.debug('gray matter mask not found')
+			logger.debug('gray matter mask not found')
 
 		return masks
 		
@@ -215,5 +211,5 @@ def load_afni_xfm(path):
 	return np.r_[xfm, np.array([[0,0,0,1]])]
 
 if __name__=='__main__':
-	preproc = Preprocessor(simulate=True)
+	preproc = Preprocessor('debug')
 	preproc.run()

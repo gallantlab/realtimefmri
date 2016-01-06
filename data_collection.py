@@ -1,8 +1,9 @@
 import sys
 import time
 import logging
-FORMAT = '%(processName)s %(process)d (%(levelname)s): %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+
+logger = logging.getLogger(__name__)
+
 import numpy as np
 import time
 import os
@@ -24,7 +25,6 @@ wait_for_image
 read_image
 '''
 
-logging.basicConfig(level=logging.DEBUG)
 
 class DataCollector(object):
 	'''
@@ -32,7 +32,7 @@ class DataCollector(object):
 	'''
 	def __init__(self, directory, **kwargs):
 		super(DataCollector, self).__init__()
-		logging.debug('data collector initialized')
+		logger.debug('data collector initialized')
 
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
@@ -45,13 +45,13 @@ class DataCollector(object):
 
 	def _simulate(self, interval='return'):
 		ex_dir = get_example_data_directory()
-		logging.debug('simulating from %s' % ex_dir)
+		logger.debug('simulating from %s' % ex_dir)
 		image_fpaths = cycle(iglob(op.join(ex_dir, '*.PixelData')))
 		for image_fpath in image_fpaths:
 			with open(image_fpath, 'r') as f:
-				dat = f.read()
-			msg = 'image '+dat
-			logging.debug('sending message of length %d' % len(msg))
+				raw_image_binary = f.read()
+			msg = 'image '+raw_image_binary
+			logger.debug('sending message of length %d' % len(msg))
 			self.image_pub.send(msg)
 			if interval=='return':
 				raw_input('>> Press return for next image')
@@ -64,7 +64,10 @@ class DataCollector(object):
 		while self.active:
 			new_image_paths = self.monitor.get_new_image_paths()
 			if len(new_image_paths)>0:
-				self.image_pub.send('image %s'%new_image_paths[0])
+				with open(new_image_paths[0], 'r') as f:
+					raw_image_binary = f.read()
+				msg = 'image '+raw_image_binary
+				self.image_pub.send(msg)
 			self.monitor.update(new_image_paths)
 			time.sleep(0.1)
 	
@@ -86,7 +89,7 @@ class MonitorDirectory(object):
 		len(new_image_paths)==0 # True
 	'''
 	def __init__(self, directory, image_extension='.PixelData'):
-		logging.debug('monitoring %s'%directory)
+		logger.debug('monitoring %s'%directory)
 		self.directory = directory
 		self.image_extension = image_extension
 		self.image_paths = self.get_directory_contents()
@@ -103,7 +106,7 @@ class MonitorDirectory(object):
 		'''
 		directory_contents = self.get_directory_contents()
 		for i in directory_contents:
-			logging.debug('directory_contents %s' % directory_contents)
+			logger.debug('directory_contents %s' % directory_contents)
 		if len(directory_contents)>len(self.image_paths):
 			new_image_paths = set(directory_contents) - self.image_paths
 		else: new_image_paths = set()
@@ -112,13 +115,12 @@ class MonitorDirectory(object):
 
 	def update(self, new_image_paths):
 		if len(new_image_paths)>0:
-			logging.debug(new_image_paths)
+			logger.debug(new_image_paths)
 			self.image_paths = self.image_paths.union(new_image_paths)
 
 def get_example_data_directory():
 	return '/Users/robert/Documents/gallant/example_data'
 
 if __name__ == "__main__":
-	logging.basicConfig(level=logging.DEBUG)
 	d = DataCollector('tmp', simulate=True)
 	d.run()
