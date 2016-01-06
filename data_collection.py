@@ -2,6 +2,7 @@ import sys
 import time
 import logging
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -14,6 +15,7 @@ from glob import iglob
 import zmq
 
 from itertools import cycle
+from utils import get_example_data_directory
 
 '''
 actual data collection
@@ -51,7 +53,7 @@ class DataCollector(object):
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
 			msg = 'image '+raw_image_binary
-			logger.debug('sending message of length %d' % len(msg))
+			logger.debug('sending message of length %d\n(%s)' % (len(msg), op.basename(image_fpath)))
 			self.image_pub.send(msg)
 			if interval=='return':
 				raw_input('>> Press return for next image')
@@ -117,9 +119,6 @@ class MonitorDirectory(object):
 		if len(new_image_paths)>0:
 			logger.debug(new_image_paths)
 			self.image_paths = self.image_paths.union(new_image_paths)
-
-def get_example_data_directory():
-	return '/Users/robert/Documents/gallant/example_data'
 
 if __name__ == "__main__":
 	d = DataCollector('tmp', simulate=True)
