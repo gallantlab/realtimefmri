@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import zmq
 import time
@@ -46,6 +47,10 @@ class Preprocessor(object):
 		with open(os.path.join(db_dir, 'pipelines.conf'), 'r') as f:
 			self.pipeline = yaml.load(f)['pipeline-'+pipeline_name]
 
+		for step in self.pipeline:
+			logger.debug('initializing %s' % step['name'])
+			step['instance'].__init__()
+
 	def run(self):
 		self.active = True
 		logger.debug('running')
@@ -72,14 +77,10 @@ class Debug(object):
 		logger.debug(inp.keys())
 		return {}
 
-class RawToNifti1(object):
+class RawToVolume(object):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
-	def __init__(self):
-		# hard coded, I should find a way to generalize this later, e.g. read input image affine from metadata stored alongside image pixel data
-		self.affine = input_affine
-
 	def run(self, data_dict):
 		'''
 			pixel_image is a binary string loaded directly from the .PixelData file
@@ -88,8 +89,8 @@ class RawToNifti1(object):
 			returns a nifti1 image of the same data
 		'''
 		mosaic = np.fromstring(data_dict['raw_image_binary'], dtype=np.uint16).reshape(600,600)
-		volume = mosaic_to_volume(mosaic)
-		return { 'raw_image_nifti': Nifti1Image(volume, self.affine) }
+		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[..., 2:26]
+		return { 'raw_image_volume': volume }
 
 class Average(object):
 	def __init__(self):
@@ -197,6 +198,11 @@ class WMDetrend(object):
 		
 		return activity['gm']-gm_trend
 
+	def run(self, data_dict):
+		gm_detrend = self.detrend(data_dict['raw_image_volume'])
+		return { 'gm_detrend': gm_detrend }
+
+
 class Visualizer(object):
 	def __init__(self):
 		self.fig, self.ax = plt.subplots()
@@ -204,12 +210,8 @@ class Visualizer(object):
 		self.ax.cla()
 		self.ax.pcolormesh(image.get_data()[..., 10])
 		self.fig.savefig('vis.png')
-		return None
-
-def load_afni_xfm(path):
-	xfm = np.loadtxt(path+'.aff12.1D', skiprows=1).reshape(3,4)
-	return np.r_[xfm, np.array([[0,0,0,1]])]
+		return {}
 
 if __name__=='__main__':
-	preproc = Preprocessor('debug')
+	preproc = Preprocessor('01')
 	preproc.run()
