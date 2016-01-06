@@ -2,9 +2,12 @@ import os
 
 def get_database_directory():
 	return os.path.join('/Users/robert/Documents/gallant/realtimefmri')
-	
+
 def get_subject_directory(subject):
-	return os.path.join(get_database_directory(), subject)
+	return os.path.join(get_database_directory(), 'database', subject)
+
+def get_example_data_directory():
+	return os.path.join(get_subject_directory('example_data'), 'ampl_data')
 
 def generate_command(command, params):
 	cmd = [command]
