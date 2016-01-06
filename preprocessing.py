@@ -1,22 +1,21 @@
 #!/usr/bin/env python
-import numpy as np
-import zmq
+import os
+import subprocess
+import cPickle
+from glob import glob
 import time
 import yaml
+
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-import cPickle
-from glob import glob
-from uuid import uuid4
-import os
-import subprocess
+
+import numpy as np
+import zmq
+from matplotlib import pyplot as plt
 
 from nibabel import save as nbsave, load as nbload
 from nibabel.nifti1 import Nifti1Image
-
-from matplotlib import pyplot as plt
-
 import cortex
 
 from image_utils import transform, mosaic_to_volume
@@ -31,8 +30,6 @@ input_affine = np.array([
 		[0., 0., 4.12999725, -59.81945419],
 		[0., 0., 0., 1.]
 	])
-
-
 
 class Preprocessor(object):
 	def __init__(self, pipeline_name='01', **kwargs):
