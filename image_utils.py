@@ -7,7 +7,7 @@ from nibabel import load as nbload, save as nbsave
 
 from utils import generate_command
 
-def transform(inp, base, verbose=False, cleanup=True):
+def transform(inp, base):
 	if type(base)==str:
 		base_path = base
 	else:
@@ -40,26 +40,21 @@ def transform(inp, base, verbose=False, cleanup=True):
 	]
 	cmd = generate_command('3dvolreg', params)
 
-	ret = call(cmd)
-	if verbose:
-		print ' '.join(cmd)
-		print 'ret = %i' % ret
-		
-	if ret==0:
+	try:
+		ret = call(cmd)
+
 		out_img = nbload(out_path)
 		out_img.get_data()
 
-		if cleanup:
-			os.remove(out_path)
-			if inp is not inp_path:
-				os.remove(inp_path)
-			if base is not base_path:
-				os.remove(base_path)
-	
-		return out_img
+	except: pass
+	finally:
+		os.remove(out_path)
+		if inp is not inp_path:
+			os.remove(inp_path)
+		if base is not base_path:
+			os.remove(base_path)
 
-	elif ret==1:
-		print ' '.join(cmd)
+	return out_img
 
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
 	volume = np.empty((100,100, nrows*ncols))
