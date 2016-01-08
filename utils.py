@@ -1,10 +1,12 @@
 import os
 
+package_directory = '/Users/robert/Documents/gallant/realtimefmri'
+
 def get_database_directory():
-	return os.path.join('/Users/robert/Documents/gallant/realtimefmri')
+	return os.path.join(package_directory, 'database')
 
 def get_subject_directory(subject):
-	return os.path.join(get_database_directory(), 'database', subject)
+	return os.path.join(get_database_directory(), subject)
 
 def get_example_data_directory():
 	return os.path.join(get_subject_directory('example_data'), 'ampl_data')
