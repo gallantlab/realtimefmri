@@ -7,8 +7,6 @@ import time
 import yaml
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 import numpy as np
 import zmq
@@ -23,6 +21,18 @@ import utils
 
 db_dir = utils.get_database_directory()
 subj_dir = utils.get_subject_directory('S1')
+
+# initialize root logger, assigning file handler to output messages to log file
+logging.basicConfig(level=logging.DEBUG,
+	format='%(asctime)-12s %(name)-16s %(levelname)-8s %(message)s',
+	filename=os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strfime('%Y%m%d')),
+	filemode='a')
+
+# add logger, add stream handler to output to console
+logger = logging.getLogger(__name__)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 input_affine = np.array([
 		[-2.24000001, 0., 0., 108.97336578],
@@ -49,12 +59,12 @@ class Preprocessor(object):
 			self.preproc_pipeline = yaml.load(f)['preprocessing']
 
 		for step in self.preproc_pipeline:
-			logger.debug('initializing %s' % step['name'])
+			logger.info('initializing %s' % step['name'])
 			step['instance'].__init__()
 
 	def run(self):
 		self.active = True
-		logger.debug('running')
+		logger.info('ready')
 		while self.active:
 			message = self.input_socket.recv()
 			data = message.strip('image ')

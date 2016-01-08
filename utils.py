@@ -11,6 +11,9 @@ def get_subject_directory(subject):
 def get_example_data_directory():
 	return os.path.join(get_subject_directory('example_data'), 'ampl_data')
 
+def get_log_directory():
+	return os.path.join(package_directory, 'log')
+
 def generate_command(command, params):
 	cmd = [command]
 
