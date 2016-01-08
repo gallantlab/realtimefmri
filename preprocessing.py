@@ -32,19 +32,23 @@ input_affine = np.array([
 	])
 
 class Preprocessor(object):
-	def __init__(self, pipeline_name='01', **kwargs):
+	def __init__(self, preproc_config, **kwargs):
 		super(Preprocessor, self).__init__()
 		context = zmq.Context()
-		self.image_subscribe = context.socket(zmq.SUB)
-		self.image_subscribe.connect('tcp://localhost:5556')
-		self.image_subscribe.setsockopt(zmq.SUBSCRIBE, 'image')
+		self.input_socket = context.socket(zmq.SUB)
+		self.input_socket.connect('tcp://localhost:5556')
+		self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
+
+		self.output_socket = context.socket(zmq.PUB)
+		self.output_socket.bind('tcp://*:5557')
+
 		self.active = False
 
 		# load the pipeline fron pipelines.conf
-		with open(os.path.join(db_dir, 'pipelines.conf'), 'r') as f:
-			self.pipeline = yaml.load(f)['pipeline-'+pipeline_name]
+		with open(os.path.join(db_dir, preproc_config+'.conf'), 'r') as f:
+			self.preproc_pipeline = yaml.load(f)['preprocessing']
 
-		for step in self.pipeline:
+		for step in self.preproc_pipeline:
 			logger.debug('initializing %s' % step['name'])
 			step['instance'].__init__()
 
@@ -52,7 +56,7 @@ class Preprocessor(object):
 		self.active = True
 		logger.debug('running')
 		while self.active:
-			message = self.image_subscribe.recv()
+			message = self.input_socket.recv()
 			data = message.strip('image ')
 			outp = self.process(data)
 			time.sleep(0.1)
@@ -62,16 +66,19 @@ class Preprocessor(object):
 			'raw_image_binary': raw_image_binary,
 		}
 
-		for step in self.pipeline:
+		for step in self.preproc_pipeline:
 			logger.debug('running %s' % step['name'])
-			output_dict = step['instance'].run(data_dict)
-			data_dict.update(output_dict)
+			d = step['instance'].run(data_dict)
+			data_dict.update(d)
+			for out in step.get('output', []):
+				logger.debug('outputting %s' % out)
+				self.output_socket.send('%s %s' % (out, d[out].astype(np.float32).tostring()))
 
 		return data_dict
 
 class Debug(object):
-	def run(self, inp):
-		logger.debug(inp.keys())
+	def run(self, data_dict):
+		logger.debug(data_dict.keys())
 		return {}
 
 class RawToVolume(object):
@@ -210,5 +217,5 @@ class Visualizer(object):
 		return {}
 
 if __name__=='__main__':
-	preproc = Preprocessor('01')
+	preproc = Preprocessor('preproc-01')
 	preproc.run()
