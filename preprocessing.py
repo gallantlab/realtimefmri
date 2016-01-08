@@ -25,7 +25,7 @@ subj_dir = utils.get_subject_directory('S1')
 # initialize root logger, assigning file handler to output messages to log file
 logging.basicConfig(level=logging.DEBUG,
 	format='%(asctime)-12s %(name)-16s %(levelname)-8s %(message)s',
-	filename=os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strfime('%Y%m%d')),
+	filename=os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strftime('%Y%m%d')),
 	filemode='a')
 
 # add logger, add stream handler to output to console
