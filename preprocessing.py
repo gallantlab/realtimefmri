@@ -67,7 +67,8 @@ class Preprocessor(object):
 		logger.info('ready')
 		while self.active:
 			message = self.input_socket.recv()
-			data = message.strip('image ')
+			data = message[6:]
+			logger.info('received image data of length %u' % len(data))
 			outp = self.process(data)
 			time.sleep(0.1)
 
