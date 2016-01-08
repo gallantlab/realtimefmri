@@ -1,5 +1,5 @@
 import os
-from subprocess import call
+from subprocess import call, STDOUT
 
 import numpy as np
 from uuid import uuid4
@@ -40,7 +40,8 @@ def transform(inp, base):
 	]
 	cmd = generate_command('3dvolreg', params)
 
-	ret = call(cmd)
+	devnull = open(os.devnull, 'w')
+	ret = call(cmd, stdout=devnull, stderr=STDOUT, close_fds=True)
 
 	out_img = nbload(out_path)
 	out_img.get_data()
