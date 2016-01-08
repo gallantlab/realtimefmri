@@ -40,19 +40,16 @@ def transform(inp, base):
 	]
 	cmd = generate_command('3dvolreg', params)
 
-	try:
-		ret = call(cmd)
+	ret = call(cmd)
 
-		out_img = nbload(out_path)
-		out_img.get_data()
+	out_img = nbload(out_path)
+	out_img.get_data()
 
-	except: pass
-	finally:
-		os.remove(out_path)
-		if inp is not inp_path:
-			os.remove(inp_path)
-		if base is not base_path:
-			os.remove(base_path)
+	os.remove(out_path)
+	if inp is not inp_path:
+		os.remove(inp_path)
+	if base is not base_path:
+		os.remove(base_path)
 
 	return out_img
 
