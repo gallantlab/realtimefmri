@@ -4,7 +4,7 @@ from nibabel import load as nbload, save as nbsave
 from realtimefmri.data_collection import MonitorDirectory, get_example_data_directory
 from realtimefmri.preprocessing import RawToVolume, WMDetrend
 from realtimefmri.image_utils import transform
-from realtimefmri.utils import get_subject_directory
+from realtimefmri.utils import get_test_data_directory
 import logging
 FORMAT = '%(levelname)s: %(name)s %(funcName)s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -16,6 +16,8 @@ from glob import iglob
 import time
 
 import numpy as np
+
+test_data_directory = get_test_data_directory()
 
 @unittest.skip('')
 class MonitorDirectoryTests(unittest.TestCase):
@@ -89,8 +91,8 @@ class MonitorDirectoryTests(unittest.TestCase):
 class PreprocessingTests(unittest.TestCase):
 
 	def setUp(self):
-		self.test_data_directory = get_example_data_directory()
-		self.test_image_fpath = os.path.join(self.test_data_directory, '3806947492785422181115102.82353.23.2.5.7011.2.21.3.1.PixelData')
+		self.example_data_directory = get_example_data_directory()
+		self.test_image_fpath = os.path.join(self.example_data_directory, '3806947492785422181115102.82353.23.2.5.7011.2.21.3.1.PixelData')
 
 		with open(self.test_image_fpath, 'r') as f:
 			raw_image_binary = f.read()
@@ -108,14 +110,11 @@ class PreprocessingTests(unittest.TestCase):
 		self.assertTrue(isinstance(volume, np.ndarray))
 
 class ImageUtilsTests(unittest.TestCase):
-	def setUp(self):
-		self.testdir = get_subject_directory('tests')
-
 	def test_transform_identity(self):
 		# load test image
-		input_img = nbload(os.path.join(self.testdir, 'input_img.nii'))
+		input_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
 		# base image is identical
-		base_path = os.path.join(self.testdir, 'input_img.nii')
+		base_path = os.path.join(test_data_directory, 'input_img.nii')
 
 		output_img = transform(input_img, base_path)
 		
@@ -123,9 +122,9 @@ class ImageUtilsTests(unittest.TestCase):
 		self.assertTrue(isinstance(output_img, Nifti1Image))
 
 	def test_motion_correct_shift(self):
-		input_img = nbload(os.path.join(self.testdir, 'input_img.nii'))
+		input_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
 		# base image is identical
-		base_img = nbload(os.path.join(self.testdir, 'input_img.nii'))
+		base_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
 		base_affine = base_img.affine[:]
 		base_affine[0,3] += 10
 		
@@ -135,11 +134,8 @@ class ImageUtilsTests(unittest.TestCase):
 
 @unittest.skip('not ready')
 class WMDetrendTests(unittest.TestCase):
-	def setUp(self):
-		self.testdir = os.path.join('realtimefmri/database/tests/')
-
 	def test_detrend(self):
-		input_nifti1 = nbload(os.path.join(self.testdir, 'input_img.nii'))
+		input_nifti1 = nbload(os.path.join(test_data_directory, 'input_img.nii'))
 
 		wm = WMDetrend()
 		wm.detrend(input_nifti1.get_data())
