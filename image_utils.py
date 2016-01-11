@@ -12,7 +12,7 @@ def transform(inp, base):
 		base_path = base
 	else:
 		base_path = str(uuid4())+'.nii'
-		nbsave(inp, base_path)
+		nbsave(base, base_path)
 
 	if type(inp)==str:
 		inp_path = inp
