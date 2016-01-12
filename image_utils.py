@@ -7,7 +7,7 @@ from nibabel import load as nbload, save as nbsave
 
 from utils import generate_command
 
-def transform(inp, base):
+def transform(inp, base, output_transform=False):
 	if type(base)==str:
 		base_path = base
 	else:
@@ -38,11 +38,20 @@ def transform(inp, base):
 			'value': out_path
 		}
 	]
+	
+	if output_transform:
+		transform_path = str(uuid4())+'.aff12.1D'
+		params.append({
+			'name': 'transform path',
+			'flag': '1Dmatrix_save',
+			'value': transform_path
+		})
+
 	cmd = generate_command('3dvolreg', params)
 
 	devnull = open(os.devnull, 'w')
 	ret = call(cmd, stdout=devnull, stderr=STDOUT, close_fds=True)
-
+		
 	out_img = nbload(out_path)
 	out_img.get_data()
 
@@ -52,7 +61,13 @@ def transform(inp, base):
 	if base is not base_path:
 		os.remove(base_path)
 
-	return out_img
+	if output_transform:
+		xfm = load_afni_xfm(transform_path)
+		os.remove(transform_path)
+		return out_img, xfm	
+		
+	else:
+		return out_img
 
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
 	volume = np.empty((100,100, nrows*ncols))
@@ -68,3 +83,7 @@ def plot_volume(volume):
 	fig, ax = plt.subplots(nrows, ncols)
 	for i in xrange(volume.shape[2]):
 		ax[divmod(i,ncols)].pcolormesh(volume[:,:,i], cmap='gray');
+
+def load_afni_xfm(path):
+    return np.r_[np.loadtxt(path).reshape(3,4), np.array([[0,0,0,1]])]
+
