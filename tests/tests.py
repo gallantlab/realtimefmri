@@ -3,7 +3,7 @@ from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
 from realtimefmri.data_collection import MonitorDirectory, get_example_data_directory
 from realtimefmri.preprocessing import RawToVolume, WMDetrend
-from realtimefmri.image_utils import transform
+from realtimefmri.image_utils import transform, load_afni_xfm
 from realtimefmri.utils import get_test_data_directory
 import logging
 FORMAT = '%(levelname)s: %(name)s %(funcName)s %(message)s'
@@ -112,35 +112,58 @@ class PreprocessingTests(unittest.TestCase):
 class ImageUtilsTests(unittest.TestCase):
 	def test_transform_identity(self):
 		# load test image
-		input_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
+		input_img = nbload(os.path.join(test_data_directory, 'img.nii'))
 		# base image is identical
-		base_path = os.path.join(test_data_directory, 'input_img.nii')
+		base_path = os.path.join(test_data_directory, 'img.nii')
 
 		output_img = transform(input_img, base_path)
 		
-		np.testing.assert_almost_equal(input_img.get_data(), output_img.get_data())
+		self.assertTrue(np.allclose(input_img.get_data(), output_img.get_data()))
 		self.assertTrue(isinstance(output_img, Nifti1Image))
+	
+	def test_rotate(self):
+		# image rotated 9 degrees in first axis
+		input_img = nbload(os.path.join(test_data_directory, 'img_rot.nii'))
+		base_img = nbload(os.path.join(test_data_directory, 'img.nii'))
+
+		registered_img, xfm_pred = transform(input_img, base_img, output_transform=True)
+		xfm_true = np.linalg.inv(load_afni_xfm(os.path.join(test_data_directory, 'rotmat.aff12.1D')))
+
+		self.assertTrue(np.allclose(xfm_true, xfm_pred, rtol=0.01, atol=0.01))
 
 	def test_motion_correct_shift(self):
-		input_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
+		input_img = nbload(os.path.join(test_data_directory, 'img.nii'))
 		# base image is identical
-		base_img = nbload(os.path.join(test_data_directory, 'input_img.nii'))
+		base_img = nbload(os.path.join(test_data_directory, 'img.nii'))
 		base_affine = base_img.affine[:]
 		base_affine[0,3] += 10
 		
 		output_img = transform(input_img, Nifti1Image(base_img.get_data(), base_affine))
 		
-		np.testing.assert_almost_equal(input_img.get_data(), output_img.get_data())
+		self.assertTrue(np.allclose(input_img.get_data(), output_img.get_data()))
 
 @unittest.skip('not ready')
 class WMDetrendTests(unittest.TestCase):
-	def test_detrend(self):
-		input_nifti1 = nbload(os.path.join(test_data_directory, 'input_img.nii'))
+
+	def test_get_activity_in_mask(self):
+
+		input_img = nbload(os.path.join(test_data_directory, 'img_rot.nii'))
+		ref_img = nbload(os.path.join(test_data_directory, 'img.nii'))
+
+		wm_mask = nbload(os.path.join(test_data_directory, 'wm_mask.nii'))
+		gm_mask = nbload(os.path.join(test_data_directory, 'gm_mask.nii'))
 
 		wm = WMDetrend()
-		wm.detrend(input_nifti1.get_data())
+		wm.funcref_nifti1 = ref_img
+		wm.masks = { 'wm': wm_mask.get_data().astype(bool),
+				         'gm': gm_mask.get_data().astype(bool)
+				       }
 
+		self.assertTrue(np.allclose(input_img.affine, wm.input_affine))
 
+		mask_activity = wm.get_activity_in_masks(input_img.get_data())
+		ref_wm = ref_img.get_data().T[wm_mask.T]
+		self.assertTrue(np.corrcoef(mask_activity['wm'], ref_wm)[0,1]>0.99)
 
 if __name__=='__main__':
 	unittest.main()
