@@ -143,26 +143,35 @@ class ImageUtilsTests(unittest.TestCase):
 		self.assertTrue(np.allclose(input_img.get_data(), output_img.get_data()))
 
 @unittest.skip('not ready')
+class RawToVolumeTests(unittest.TestCase):
+	def test_raw_to_volume(self):
+		pass
+
 class WMDetrendTests(unittest.TestCase):
 
 	def test_get_activity_in_mask(self):
 
-		input_img = nbload(os.path.join(test_data_directory, 'img_rot.nii'))
+		input_fpath = os.path.join(test_data_directory, 'img_rot.PixelData')
+		with open(input_fpath, 'r') as f:
+			raw_image_binary = f.read()
+
 		ref_img = nbload(os.path.join(test_data_directory, 'img.nii'))
 
 		wm_mask = nbload(os.path.join(test_data_directory, 'wm_mask.nii'))
 		gm_mask = nbload(os.path.join(test_data_directory, 'gm_mask.nii'))
 
 		wm = WMDetrend()
+		raw_to_volume = RawToVolume()
+
 		wm.funcref_nifti1 = ref_img
 		wm.masks = { 'wm': wm_mask.get_data().astype(bool),
 				         'gm': gm_mask.get_data().astype(bool)
 				       }
 
-		self.assertTrue(np.allclose(input_img.affine, wm.input_affine))
+		d = raw_to_volume.run({'raw_image_binary': raw_image_binary})
+		mask_activity = wm.get_activity_in_masks(d['raw_image_volume'])
 
-		mask_activity = wm.get_activity_in_masks(input_img.get_data())
-		ref_wm = ref_img.get_data().T[wm_mask.T]
+		ref_wm = ref_img.get_data().T[wm.masks['wm'].T]
 		self.assertTrue(np.corrcoef(mask_activity['wm'], ref_wm)[0,1]>0.99)
 
 if __name__=='__main__':
