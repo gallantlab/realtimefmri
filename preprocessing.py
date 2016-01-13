@@ -126,7 +126,7 @@ class WMDetrend(object):
 	when a new image comes in, motion corrects it to reference image
 	then applies wm mask
 	'''
-	def __init__(self, subject='S1'):
+	def __init__(self, subject='S1', model_name='20160112_1804'):
 		'''
 		This should set up the class instance to be ready to take an image input
 		and output the detrended gray matter activation
@@ -147,21 +147,15 @@ class WMDetrend(object):
 
 		self.input_affine = input_affine
 
-		try:
-			model_paths = glob(os.path.join(self.subj_dir, 'model*.pkl'))
-			with open(model_paths[0], 'r') as f:
-				model = cPickle.load(f)
-			self.model = model
-		except IndexError:
-			pass
+		model_path = os.path.join(self.subj_dir, 'model-%s.pkl'%model_name)
+		with open(model_path, 'r') as f:
+			model = cPickle.load(f)
+		self.model = model
 
-		try:
-			pca_paths = glob(os.path.join(self.subj_dir, 'pca*.pkl'))
-			with open(pca_paths[0], 'r') as f:
-				pca = cPickle.load(f)
-			self.pca = pca
-		except IndexError:
-			pass
+		pca_path = os.path.join(self.subj_dir, 'pca-%s.pkl'%model_name)
+		with open(pca_path, 'r') as f:
+			pca = cPickle.load(f)
+		self.pca = pca
 
 	def get_masks(self):
 		masks = dict()
