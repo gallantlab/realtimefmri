@@ -19,7 +19,6 @@ import numpy as np
 
 test_data_directory = get_test_data_directory()
 
-@unittest.skip('')
 class MonitorDirectoryTests(unittest.TestCase):
 	
 	def test_get_directory_contents(self):
@@ -48,45 +47,39 @@ class MonitorDirectoryTests(unittest.TestCase):
 		'''
 		monitor file contents of a directory add a file and assert that in a call to new_image_paths = m.get_new_image_paths() new_image_paths contains the new file
 		'''
+		os.mkdir('tmp')
+		m = MonitorDirectory('tmp', image_extension='.tmp')
 
-		try:
-			os.mkdir('tmp')
-			m = MonitorDirectory('tmp', image_extension='.tmp')
+		# create dummy file
+		open('tmp/tmp.tmp', 'w').close()
 
-			# create dummy file
-			open('tmp/tmp.tmp', 'w').close()
+		new_image_paths = m.get_new_image_paths()
 
-			new_image_paths = m.get_new_image_paths()
+		logger.info(new_image_paths)
 
-			logger.info(new_image_paths)
+		self.assertTrue('tmp.tmp' in new_image_paths)
 
-			self.assertTrue('tmp.tmp' in new_image_paths)
-	
-		except:
-			os.remove('tmp/tmp.tmp')
-			os.rmdir('tmp')
+		os.remove('tmp/tmp.tmp')
+		os.rmdir('tmp')
 
 	def test_update_image_paths(self):
-		try:
-			os.mkdir('tmp')
-			open('tmp/tmp1.tmp', 'w').close()
+		os.mkdir('tmp')
+		open('tmp/1.tmp', 'w').close()
 
-			m = MonitorDirectory('tmp', image_extension='.tmp')
-			open('tmp/tmp2.tmp', 'w').close()
-			open('tmp/tmp3.tmp', 'w').close()
-			new_image_paths = m.get_new_image_paths()
-			m.update(new_image_paths)
+		m = MonitorDirectory('tmp', image_extension='.tmp')
+		open('tmp/2.tmp', 'w').close()
+		open('tmp/3.tmp', 'w').close()
+		new_image_paths = m.get_new_image_paths()
+		m.update(new_image_paths)
 
-			for i in m.image_paths:
-				logger.info(i)
+		self.assertEquals(m.image_paths, set(['1.tmp', '2.tmp', '3.tmp']))
 
-			self.assertEquals(m.image_paths, set(['tmp1.tmp', 'tmp2.tmp', 'tmp3.tmp']))
+		new_image_paths = m.get_new_image_paths()
 
-		except:
-			pass
-		finally:
-			[os.remove(i) for i in iglob('tmp/*.tmp')]
-			os.rmdir('tmp')
+		self.assertTrue(len(new_image_paths)==0)
+
+		[os.remove(i) for i in iglob('tmp/*.tmp')]
+		os.rmdir('tmp')
 
 class PreprocessingTests(unittest.TestCase):
 
