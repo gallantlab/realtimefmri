@@ -36,6 +36,8 @@ class DataCollector(object):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
+		self.directory = directory
+
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:5556')
@@ -62,16 +64,16 @@ class DataCollector(object):
 
 	def _run(self):
 		self.active = True
-		self.monitor = MonitorDirectory(directory, image_extension='.PixelData')
+		self.monitor = MonitorDirectory(self.directory, image_extension='.PixelData')
 		while self.active:
 			new_image_paths = self.monitor.get_new_image_paths()
 			if len(new_image_paths)>0:
-				with open(new_image_paths[0], 'r') as f:
+				with open(os.path.join(self.directory, list(new_image_paths)[0]), 'r') as f:
 					raw_image_binary = f.read()
 				msg = 'image '+raw_image_binary
 				self.image_pub.send(msg)
 			self.monitor.update(new_image_paths)
-			time.sleep(0.1)
+			time.sleep(0.2)
 	
 	def run(self):
 		self._run()
@@ -107,8 +109,6 @@ class MonitorDirectory(object):
 		gets entire contents of directory and returns paths that were not present since last update
 		'''
 		directory_contents = self.get_directory_contents()
-		for i in directory_contents:
-			logger.debug('directory_contents %s' % directory_contents)
 		if len(directory_contents)>len(self.image_paths):
 			new_image_paths = set(directory_contents) - self.image_paths
 		else: new_image_paths = set()
@@ -121,5 +121,5 @@ class MonitorDirectory(object):
 			self.image_paths = self.image_paths.union(new_image_paths)
 
 if __name__ == "__main__":
-	d = DataCollector('tmp', simulate=True)
+	d = DataCollector('tmp', simulate=False)
 	d.run()
