@@ -1,6 +1,8 @@
 import sys
 import time
 import logging
+import argparse
+import functools
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ class DataCollector(object):
 	'''
 
 	'''
-	def __init__(self, directory, **kwargs):
+	def __init__(self, directory, simulate=False, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
@@ -41,11 +43,9 @@ class DataCollector(object):
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:5556')
-		self.active = False
-		self.simulation = kwargs.get('simulate', False)
-		simulate = kwargs.get('simulate', False)
+		self.active = False 
 		if simulate:
-			self._run = self._simulate
+			self._run = functools.partial(self._simulate, interval=interval)
 
 	def _simulate(self, interval='return'):
 		ex_dir = get_example_data_directory()
@@ -121,5 +121,27 @@ class MonitorDirectory(object):
 			self.image_paths = self.image_paths.union(new_image_paths)
 
 if __name__ == "__main__":
-	d = DataCollector('tmp', simulate=False)
+
+	parser = argparse.ArgumentParser(description='Collect data')
+	parser.add_argument('-s', '--simulate', 
+		action='store_true', 
+		dest='simulate', 
+		default=False, 
+		help='''Simulate data collection''')
+	parser.add_argument('-i', '--interval',
+		action='store',
+		dest='interval',
+		default='2',
+		help='''Interval between scans, in seconds. Only active if simulate is True''')
+	args = parser.parse_args()
+
+	try:
+		interval = float(args.interval)
+	except TypeError:
+		if args.interval=='return':
+			interval = args.interval
+		else:
+			raise ValueError
+
+	d = DataCollector('tmp', simulate=args.simulate, interval=interval)
 	d.run()
