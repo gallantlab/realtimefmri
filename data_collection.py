@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
 	try:
 		interval = float(args.interval)
-	except TypeError:
+	except (TypeError, ValueError):
 		if args.interval=='return':
 			interval = args.interval
 		else:
