@@ -28,7 +28,7 @@ class Stimulator(object):
 
 		for step in self.stim_pipeline:
 			logger.debug('initializing %s' % step['name'])
-			step['instance'].__init__()
+			step['instance'].__init__(**step.get('kwargs', {}))
 
 	def run(self):
 		logger.debug('running')
@@ -59,15 +59,27 @@ class Stimulus(threading.Thread):
 			self._run(msg)
 
 class FlatMap(Stimulus):
-	def __init__(self):
+	def __init__(self, subject, xfm_name, mask_type):
 		super(FlatMap, self).__init__()
+		npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
+		
+		data = np.zeros(npts)
+		vol = cortex.Volume(data, subject, xfm_name)
+
 		self.topic = 'gm_detrend'
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, self.topic)
+
+		self.subject = subject
+		self.xfm_name = xfm_name
+		self.mask_type = mask_type
+
+		self.ctx_client = cortex.webshow(vol)
 
 	def _run(self, msg):
 		data = msg[len(self.topic)+1:]
 		data = np.fromstring(data, dtype=np.float32)
-		logger.debug('FlatMap._run(); data length %i' % len(data))
+		vol = cortex.Volume(data, self.subject, self.xfm_name)
+		self.ctx_client.addData(data=vol)
 
 if __name__=='__main__':
 	stim = Stimulator('stim-01')
