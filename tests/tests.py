@@ -2,7 +2,7 @@ import unittest
 from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
 from realtimefmri.data_collection import MonitorDirectory, get_example_data_directory
-from realtimefmri.preprocessing import RawToVolume, WMDetrend
+from realtimefmri.preprocessing import RawToVolume, WMDetrend, VoxelZScore, RunningMeanStd
 from realtimefmri.image_utils import transform, load_afni_xfm
 from realtimefmri.utils import get_test_data_directory
 import logging
@@ -87,20 +87,44 @@ class PreprocessingTests(unittest.TestCase):
 		self.example_data_directory = get_example_data_directory()
 		self.test_image_fpath = os.path.join(self.example_data_directory, '3806947492785422181115102.82353.23.2.5.7011.2.21.3.1.PixelData')
 
-		with open(self.test_image_fpath, 'r') as f:
-			raw_image_binary = f.read()
-
-		self.data_dict = { 'raw_image_binary': raw_image_binary }
-
-	unittest.skip('not ready')
 	def test_preprocessing(self):
-		
 		self.assertTrue(True)
 
 	def test_raw_to_volume(self):
+		with open(self.test_image_fpath, 'r') as f:
+			raw_image_binary = f.read()
+
 		raw_to_volume = RawToVolume()
-		volume = raw_to_volume.run(self.data_dict)['raw_image_volume']
+		volume = raw_to_volume.run(raw_image_binary)['raw_image_volume']
 		self.assertTrue(isinstance(volume, np.ndarray))
+
+	def test_zscore(self):
+		vox_zscore = VoxelZScore()
+		x = np.arange(10)
+		mean = np.arange(10,0,-1)
+		std = np.ones(10)/2.
+		z = vox_zscore.run(x, mean, std)['gm_zscore']
+		self.assertTrue((z==np.array([-20.,-16.,-12.,-8.,-4.,0.,4.,8.,12.,16.])).all())
+
+	def test_running_mean_std(self):
+		running = RunningMeanStd(n=5)
+		x, y = np.meshgrid(np.arange(10), np.arange(40,30,-1))
+		z = x+y
+
+		d = running.run(z[0,:])
+		self.assertTrue((d['running_mean']==z[0,:]).all())
+		self.assertTrue((d['running_std']==np.zeros(z.shape[1])).all())
+
+		d = running.run(z[1,:])
+		self.assertTrue((d['running_mean']==np.array([39.5,40.5,41.5,42.5,43.5,44.5,45.5,46.5,47.5,48.5])).all())
+
+		for i in xrange(2, z.shape[0]):
+			d = running.run(z[i,:])
+
+		self.assertTrue((running.samples==z[-running.n:,:]).all())
+		self.assertTrue((running.mean==np.array([ 33.,34.,35.,36.,37.,38.,39.,40.,41.,42.])).all())
+		self.assertTrue((running.std==running.samples.std(0)).all())
+
 
 class ImageUtilsTests(unittest.TestCase):
 	def test_transform_identity(self):
@@ -135,13 +159,8 @@ class ImageUtilsTests(unittest.TestCase):
 		
 		self.assertTrue(np.allclose(input_img.get_data(), output_img.get_data()))
 
-@unittest.skip('not ready')
-class RawToVolumeTests(unittest.TestCase):
-	def test_raw_to_volume(self):
-		pass
 
 class WMDetrendTests(unittest.TestCase):
-
 	def test_get_activity_in_mask(self):
 
 		input_fpath = os.path.join(test_data_directory, 'img_rot.PixelData')
@@ -161,7 +180,7 @@ class WMDetrendTests(unittest.TestCase):
 				         'gm': gm_mask.get_data().astype(bool)
 				       }
 
-		d = raw_to_volume.run({'raw_image_binary': raw_image_binary})
+		d = raw_to_volume.run(raw_image_binary)
 		mask_activity = wm.get_activity_in_masks(d['raw_image_volume'])
 
 		ref_wm = ref_img.get_data().T[wm.masks['wm'].T]

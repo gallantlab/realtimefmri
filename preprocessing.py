@@ -79,7 +79,8 @@ class Preprocessor(object):
 
 		for step in self.preproc_pipeline:
 			logger.debug('running %s' % step['name'])
-			d = step['instance'].run(data_dict)
+			args = [data_dict[i] for i in step['input']]
+			d = step['instance'].run(*args)
 			data_dict.update(d)
 			for out in step.get('output', []):
 				logger.debug('outputting %s' % out)
@@ -96,14 +97,18 @@ class RawToVolume(object):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
-	def run(self, data_dict):
+	def run(self, inp):
 		'''
 			pixel_image is a binary string loaded directly from the .PixelData file
 			saved on the scanner console
 
 			returns a nifti1 image of the same data
 		'''
-		mosaic = np.fromstring(data_dict['raw_image_binary'], dtype=np.uint16).reshape(600,600)
+		# siements mosaic format is strange
+		mosaic = np.fromstring(inp, dtype=np.uint16).reshape(600,600, order='C')
+		# axes 0 and 1 must be swapped because mosaic is PLS and we need LPS voxel data
+		# (affine values are -/-/+ for dimensions 1-3, yielding RAS)
+		# we want the voxel data orientation to match that of the functional reference, gm, and wm masks
 		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[..., 2:26]
 		return { 'raw_image_volume': volume }
 
@@ -207,19 +212,37 @@ class WMDetrend(object):
 		
 		return activity['gm']-gm_trend
 
-	def run(self, data_dict):
-		gm_detrend = self.detrend(data_dict['raw_image_volume'])
+	def run(self, inp):
+		gm_detrend = self.detrend(inp)
 		return { 'gm_detrend': gm_detrend }
 
-
-class Visualizer(object):
+class RunningMeanStd(object):
+	def __init__(self, n=20):
+		self.n = n
+		self.mean = None
+	def run(self, inp):
+		if self.mean is None:
+			self.samples = np.empty((self.n, inp.size))*np.nan
+		else:
+			self.samples[:-1,:] = self.samples[1:,:]
+		self.samples[-1,:] = inp
+		self.mean = np.nanmean(self.samples, 0)
+		self.std = np.nanstd(self.samples, 0)
+		return { 'running_mean': self.mean, 'running_std': self.std}
+		
+class VoxelZScore(object):
 	def __init__(self):
-		self.fig, self.ax = plt.subplots()
-	def run(self, image):
-		self.ax.cla()
-		self.ax.pcolormesh(image.get_data()[..., 10])
-		self.fig.savefig('vis.png')
-		return {}
+		tmp = np.load(os.path.join(subj_dir, 'gm_zscore.npz'))
+		self.mean = tmp['mean']
+		self.std = tmp['std']
+	def zscore(self, data):
+		return (data-self.mean)/self.std
+	def run(self, inp, mean=None, std=None):
+		if not mean is None:
+			self.mean = mean
+		if not std is None:
+			self.std = std
+		return { 'gm_zscore': self.zscore(inp)}
 
 if __name__=='__main__':
 	preproc = Preprocessor('preproc-01')
