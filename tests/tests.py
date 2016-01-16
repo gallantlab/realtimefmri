@@ -82,16 +82,11 @@ class MonitorDirectoryTests(unittest.TestCase):
 		os.rmdir('tmp')
 
 class PreprocessingTests(unittest.TestCase):
-
-	def setUp(self):
-		self.example_data_directory = get_example_data_directory()
-		self.test_image_fpath = os.path.join(self.example_data_directory, '3806947492785422181115102.82353.23.2.5.7011.2.21.3.1.PixelData')
-
 	def test_preprocessing(self):
 		self.assertTrue(True)
 
 	def test_raw_to_volume(self):
-		with open(self.test_image_fpath, 'r') as f:
+		with open(os.path.join(test_data_directory, 'img_rot.PixelData'), 'r') as f:
 			raw_image_binary = f.read()
 
 		raw_to_volume = RawToVolume()
