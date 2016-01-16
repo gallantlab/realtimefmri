@@ -78,7 +78,7 @@ class FlatMap(Stimulus):
 	def _run(self, msg):
 		data = msg[len(self.topic)+1:]
 		data = np.fromstring(data, dtype=np.float32)
-		vol = cortex.Volume(data, self.subject, self.xfm_name)
+		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=-75, vmax=75)
 		self.ctx_client.addData(data=vol)
 
 if __name__=='__main__':
