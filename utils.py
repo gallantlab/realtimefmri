@@ -9,7 +9,7 @@ def get_subject_directory(subject):
 	return os.path.join(get_database_directory(), subject)
 
 def get_example_data_directory():
-	return os.path.join(get_subject_directory('example_data'), 'ampl_data')
+	return os.path.join(package_directory, 'benchmark_data', 'pixeldata_07')
 
 def get_log_directory():
 	return os.path.join(package_directory, 'log')
