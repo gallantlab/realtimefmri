@@ -12,7 +12,7 @@ import time
 import os
 import os.path as op
 import random
-from glob import iglob
+from glob import glob
 
 import zmq
 
@@ -50,7 +50,9 @@ class DataCollector(object):
 	def _simulate(self, interval='return'):
 		ex_dir = get_example_data_directory()
 		logger.debug('simulating from %s' % ex_dir)
-		image_fpaths = cycle(iglob(op.join(ex_dir, '*.PixelData')))
+		image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
+		image_fpaths.sort()
+		image_fpaths = cycle(image_fpaths)
 		for image_fpath in image_fpaths:
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
