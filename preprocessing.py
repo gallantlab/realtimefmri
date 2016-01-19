@@ -128,6 +128,16 @@ class RawToNifti(object):
 		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[...,:30]
 		return Nifti1Image(volume, self.affine)
 
+class MotionCorrect(object):
+	def __init__(self, subject=None, reference_name='funcref.nii'):
+		if (subject is not None):
+			self.reference_path = os.path.join(utils.get_subject_directory(subject), reference_name)
+		else:
+			warnings.warn('''Provide path to reference volume before calling run.''')
+
+	def run(self, input_volume):
+		return transform(input_volume, self.reference_path)
+
 class ApplyMask(object):
 	def __init__(self, subject=None, mask_name=None):
 		if (subject is not None) and (mask_name is not None):
@@ -135,7 +145,7 @@ class ApplyMask(object):
 			mask_path = os.path.join(subj_dir, mask_name+'.nii')
 			self.load_mask(mask_path)
 		else:
-			warnings.warn('''Set "subject" and "mask_name" attributes manually before calling run.''')
+			warnings.warn('''Load mask manually before calling run.''')
 
 	def load_mask(self, mask_path):
 			mask_nifti1 = nbload(mask_path)
@@ -144,7 +154,7 @@ class ApplyMask(object):
 
 	def run(self, volume):
 		assert np.allclose(volume.affine, self.mask_affine)
-		return volume.get_data()[self.mask]
+		return volume.get_data().T[self.mask.T]
 		
 
 class Average(object):

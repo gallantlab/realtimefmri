@@ -2,7 +2,7 @@ import unittest
 from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
 from realtimefmri.data_collection import MonitorDirectory, get_example_data_directory
-from realtimefmri.preprocessing import RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
+from realtimefmri.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
 from realtimefmri.image_utils import transform, load_afni_xfm
 from realtimefmri.utils import get_test_data_directory
 import logging
@@ -85,6 +85,17 @@ class PreprocessingTests(unittest.TestCase):
 	def test_preprocessing(self):
 		self.assertTrue(True)
 
+	def test_motion_correct(self):
+		reference_path = os.path.join(test_data_directory, 'img.nii')
+		reference_img = nbload(reference_path)
+
+		input_img = nbload(os.path.join(test_data_directory, 'img_rot.nii'))
+		mc = MotionCorrect()
+		mc.reference_path = reference_path
+		registered_img = mc.run(input_img)
+		self.assertTrue(np.corrcoef(reference_img.get_data().flatten(), 
+			registered_img.get_data().flatten())[0,1]>0.99)
+		
 	def test_apply_mask(self):
 		mask = np.zeros((3,4,5))
 		ix = [[0,1],[1,2],[2,3]]
