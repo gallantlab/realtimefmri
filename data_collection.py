@@ -135,6 +135,11 @@ if __name__ == "__main__":
 		dest='interval',
 		default='2',
 		help='''Interval between scans, in seconds. Only active if simulate is True''')
+	parser.add_argument('-d', '--directory',
+		action='store',
+		dest='directory',
+		default='tmp',
+		help='Directory to watch')
 	args = parser.parse_args()
 
 	try:
@@ -145,5 +150,5 @@ if __name__ == "__main__":
 		else:
 			raise ValueError
 
-	d = DataCollector('tmp', simulate=args.simulate, interval=interval)
+	d = DataCollector(args.directory, simulate=args.simulate, interval=interval)
 	d.run()
