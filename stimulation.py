@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import argparse
 
 import time
 import zmq
@@ -24,15 +25,15 @@ class Stimulator(object):
 	def __init__(self, stim_config):
 		
 		with open(os.path.join(db_dir, stim_config+'.conf'), 'r') as f:
-			self.stim_pipeline = yaml.load(f)['stimulation']
+			self.pipeline = yaml.load(f)['pipeline']
 
-		for step in self.stim_pipeline:
+		for step in self.pipeline:
 			logger.debug('initializing %s' % step['name'])
 			step['instance'].__init__(**step.get('kwargs', {}))
 
 	def run(self):
 		logger.debug('running')
-		for step in self.stim_pipeline:
+		for step in self.pipeline:
 			logger.debug('starting %s' % step['name'])
 			step['instance'].start()
 
@@ -47,8 +48,15 @@ class Stimulus(threading.Thread):
 		self.input_socket.connect('tcp://localhost:5557')
 		self.active = False
 
-	def _run(self):
-		raise NotImplementedError
+	@property
+	def topic(self):
+		return self._topic
+
+	@topic.setter
+	def topic(self, topic):
+		self.input_socket.setsockopt(zmq.SUBSCRIBE, topic)
+		self._topic = topic
+		
 
 	def run(self):
 		self.active = True
@@ -59,15 +67,14 @@ class Stimulus(threading.Thread):
 			self._run(msg)
 
 class FlatMap(Stimulus):
-	def __init__(self, subject, xfm_name, mask_type):
+	def __init__(self, topic, subject, xfm_name, mask_type):
 		super(FlatMap, self).__init__()
 		npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
 		
 		data = np.zeros(npts)
 		vol = cortex.Volume(data, subject, xfm_name)
 
-		self.topic = 'gm_detrend'
-		self.input_socket.setsockopt(zmq.SUBSCRIBE, self.topic)
+		self.topic = topic
 
 		self.subject = subject
 		self.xfm_name = xfm_name
@@ -78,11 +85,19 @@ class FlatMap(Stimulus):
 	def _run(self, msg):
 		data = msg[len(self.topic)+1:]
 		data = np.fromstring(data, dtype=np.float32)
-		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=-75, vmax=75)
+		vol = cortex.Volume(data, self.subject, self.xfm_name)
 		self.ctx_client.addData(data=vol)
 
 if __name__=='__main__':
-	stim = Stimulator('stim-01')
+	parser = argparse.ArgumentParser(description='Preprocess data')
+	parser.add_argument('config',
+		action='store',
+		nargs='?',
+		default='stim-01',
+		help='Name of configuration file')
+	args = parser.parse_args()
+
+	stim = Stimulator(args.config)
 	stim.run()
 	try:
 		while True:

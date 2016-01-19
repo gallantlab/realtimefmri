@@ -5,6 +5,8 @@ import cPickle
 from glob import glob
 import time
 import yaml
+import argparse
+import warnings
 
 import logging
 
@@ -20,7 +22,6 @@ from image_utils import transform, mosaic_to_volume
 import utils
 
 db_dir = utils.get_database_directory()
-subj_dir = utils.get_subject_directory('S1')
 
 # initialize root logger, assigning file handler to output messages to log file
 logging.basicConfig(level=logging.DEBUG,
@@ -34,16 +35,16 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-input_affine = np.array([
-		[-2.24000001, 0., 0., 108.97336578],
-		[0., -2.24000001, 0., 131.32203674],
-		[0., 0., 4.12999725, -59.81945419],
-		[0., 0., 0., 1.]
-	])
-
 class Preprocessor(object):
+	'''
+	This class loads the preprocessing pipeline from the configuration
+	file, initializes the classes for each step, and runs the main loop
+	that receives incoming images from the data collector.
+	'''
 	def __init__(self, preproc_config, **kwargs):
 		super(Preprocessor, self).__init__()
+
+		# initialize input and output sockets
 		context = zmq.Context()
 		self.input_socket = context.socket(zmq.SUB)
 		self.input_socket.connect('tcp://localhost:5556')
@@ -54,13 +55,17 @@ class Preprocessor(object):
 
 		self.active = False
 
-		# load the pipeline fron pipelines.conf
+		# load the pipeline from pipelines.conf
 		with open(os.path.join(db_dir, preproc_config+'.conf'), 'r') as f:
-			self.preproc_pipeline = yaml.load(f)['preprocessing']
+			yaml_contents = yaml.load(f)
+			subject = yaml_contents['subject']
+			pipeline = yaml_contents['pipeline']
 
-		for step in self.preproc_pipeline:
+		for step in pipeline:
 			logger.info('initializing %s' % step['name'])
-			step['instance'].__init__()
+			step['instance'].__init__(**step.get('kwargs', {}))
+
+		self.pipeline = pipeline
 
 	def run(self):
 		self.active = True
@@ -77,14 +82,17 @@ class Preprocessor(object):
 			'raw_image_binary': raw_image_binary,
 		}
 
-		for step in self.preproc_pipeline:
+		for step in self.pipeline:
 			logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
-			d = step['instance'].run(*args)
+			outp = step['instance'].run(*args)
+			if not isinstance(outp, list):
+				outp = [outp]
+			d = dict(zip(step['output'], outp))
 			data_dict.update(d)
-			for out in step.get('output', []):
-				logger.debug('outputting %s' % out)
-				self.output_socket.send('%s %s' % (out, d[out].astype(np.float32).tostring()))
+			for send in step.get('send', []):
+				logger.debug('sending %s' % send)
+				self.output_socket.send('%s %s' % (send, d[send].astype(np.float32).tostring()))
 
 		return data_dict
 
@@ -93,10 +101,18 @@ class Debug(object):
 		logger.debug(data_dict.keys())
 		return {}
 
-class RawToVolume(object):
+class RawToNifti(object):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
+	def __init__(self, subject=None):
+		if not subject is None:
+			funcref_path = os.path.join(utils.get_subject_directory(subject), 'funcref.nii')
+			funcref = nbload(funcref_path)
+			self.affine = funcref.affine[:]
+		else:
+			warnings.warn('No subject provided. Set affine attribute manually before calling run.')
+
 	def run(self, inp):
 		'''
 			pixel_image is a binary string loaded directly from the .PixelData file
@@ -109,8 +125,27 @@ class RawToVolume(object):
 		# axes 0 and 1 must be swapped because mosaic is PLS and we need LPS voxel data
 		# (affine values are -/-/+ for dimensions 1-3, yielding RAS)
 		# we want the voxel data orientation to match that of the functional reference, gm, and wm masks
-		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[..., 2:26]
-		return { 'raw_image_volume': volume }
+		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[...,:30]
+		return Nifti1Image(volume, self.affine)
+
+class ApplyMask(object):
+	def __init__(self, subject=None, mask_name=None):
+		if (subject is not None) and (mask_name is not None):
+			subj_dir = utils.get_subject_directory(subject)
+			mask_path = os.path.join(subj_dir, mask_name+'.nii')
+			self.load_mask(mask_path)
+		else:
+			warnings.warn('''Set "subject" and "mask_name" attributes manually before calling run.''')
+
+	def load_mask(self, mask_path):
+			mask_nifti1 = nbload(mask_path)
+			self.mask_affine = mask_nifti1.affine
+			self.mask = mask_nifti1.get_data().astype(bool)
+
+	def run(self, volume):
+		assert np.allclose(volume.affine, self.mask_affine)
+		return volume.get_data()[self.mask]
+		
 
 class Average(object):
 	def __init__(self):
@@ -131,7 +166,7 @@ class WMDetrend(object):
 	when a new image comes in, motion corrects it to reference image
 	then applies wm mask
 	'''
-	def __init__(self, subject='S1', model_name='20160112_1804'):
+	def __init__(self, subject, model_name):
 		'''
 		This should set up the class instance to be ready to take an image input
 		and output the detrended gray matter activation
@@ -146,39 +181,22 @@ class WMDetrend(object):
 		'''
 		self.subj_dir = utils.get_subject_directory(subject)
 		self.subject = subject
-		self.masks = self.get_masks()
 
 		self.funcref_nifti1 = nbload(os.path.join(self.subj_dir, 'funcref.nii'))
 
-		self.input_affine = input_affine
-
-		model_path = os.path.join(self.subj_dir, 'model-%s.pkl'%model_name)
-		with open(model_path, 'r') as f:
-			model = cPickle.load(f)
-		self.model = model
-
-		pca_path = os.path.join(self.subj_dir, 'pca-%s.pkl'%model_name)
-		with open(pca_path, 'r') as f:
-			pca = cPickle.load(f)
-		self.pca = pca
-
-	def get_masks(self):
-		masks = dict()
 		try:
-			wm_mask_funcref = nbload(os.path.join(self.subj_dir, 'wm_mask_funcref.nii'))
-			masks['wm'] = wm_mask_funcref.get_data().astype(bool)
-			logger.debug('loaded white matter mask')
-		except OSError:
-			logger.debug('white matter mask not found`')
+			model_path = os.path.join(self.subj_dir, 'model-%s.pkl'%model_name)
+			pca_path = os.path.join(self.subj_dir, 'pca-%s.pkl'%model_name)
 
-		try:
-			gm_mask_funcref = nbload(os.path.join(self.subj_dir, 'gm_mask_funcref.nii'))
-			masks['gm'] = gm_mask_funcref.get_data().astype(bool)
-			logger.debug('loaded gray matter mask')
-		except OSError:
-			logger.debug('gray matter mask not found')
+			with open(model_path, 'r') as f:
+				model = cPickle.load(f)
+			self.model = model
 
-		return masks
+			with open(pca_path, 'r') as f:
+				pca = cPickle.load(f)
+			self.pca = pca
+		except IOError:
+			warnings.warn('''Could not load...\n\tModel from %s\nand\n\tPCA from %s. Load them manually before running.''' % (model_path, pca_path))
 		
 	def train(self, gm_train, wm_train, n_wm_pcs=10):
 		from sklearn.linear_model import LinearRegression
@@ -195,26 +213,10 @@ class WMDetrend(object):
 
 		return model, pca
 
-	def get_activity_in_masks(self, input_voxeldata):
-		input_nifti1 = Nifti1Image(input_voxeldata, self.input_affine)
-		input_funcref_nifti1 = transform(input_nifti1, self.funcref_nifti1.get_filename())
-
-		return {
-			'wm': input_funcref_nifti1.get_data().T[self.masks['wm'].T],
-			'gm': input_funcref_nifti1.get_data().T[self.masks['gm'].T]
-		}
-
-	def detrend(self, input_voxeldata):
-		activity = self.get_activity_in_masks(input_voxeldata)
-	
-		wm_activity_pcs = self.pca.transform(activity['wm'].reshape(1,-1)).reshape(1,-1)
+	def run(self, wm_activity, gm_activity):
+		wm_activity_pcs = self.pca.transform(wm_activity.reshape(1,-1)).reshape(1,-1)
 		gm_trend = self.model.predict(wm_activity_pcs)
-		
-		return activity['gm']-gm_trend
-
-	def run(self, inp):
-		gm_detrend = self.detrend(inp)
-		return { 'gm_detrend': gm_detrend }
+		return gm_activity - gm_trend
 
 class RunningMeanStd(object):
 	def __init__(self, n=20):
@@ -228,7 +230,7 @@ class RunningMeanStd(object):
 		self.samples[-1,:] = inp
 		self.mean = np.nanmean(self.samples, 0)
 		self.std = np.nanstd(self.samples, 0)
-		return { 'running_mean': self.mean, 'running_std': self.std}
+		return self.mean, self.std
 		
 class VoxelZScore(object):
 	def __init__(self):
@@ -242,8 +244,18 @@ class VoxelZScore(object):
 			self.mean = mean
 		if not std is None:
 			self.std = std
-		return { 'gm_zscore': self.zscore(inp)}
+		return self.zscore(inp)
 
 if __name__=='__main__':
-	preproc = Preprocessor('preproc-01')
+
+	parser = argparse.ArgumentParser(description='Preprocess data')
+	parser.add_argument('config',
+		action='store',
+		nargs='?',
+		default='preproc-01',
+		help='Name of configuration file')
+	args = parser.parse_args()
+	logger.info('Loading preprocessing pipeline from %s' % args.config)
+
+	preproc = Preprocessor(args.config)
 	preproc.run()
