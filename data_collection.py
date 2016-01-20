@@ -34,7 +34,7 @@ class DataCollector(object):
 	'''
 
 	'''
-	def __init__(self, directory, simulate=False, interval=None):
+	def __init__(self, directory, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
@@ -44,11 +44,11 @@ class DataCollector(object):
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:5556')
 		self.active = False 
-		if simulate:
-			self._run = functools.partial(self._simulate, interval=interval)
+		if not simulate is None:
+			self._run = functools.partial(self._simulate, interval=interval, subject=simulate)
 
-	def _simulate(self, interval='return'):
-		ex_dir = get_example_data_directory()
+	def _simulate(self, interval='return', subject='S1'):
+		ex_dir = get_example_data_directory(subject)
 		logger.debug('simulating from %s' % ex_dir)
 		image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
 		image_fpaths.sort()
@@ -126,9 +126,9 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Collect data')
 	parser.add_argument('-s', '--simulate', 
-		action='store_true', 
+		action='store', 
 		dest='simulate', 
-		default=False, 
+		default=None, 
 		help='''Simulate data collection''')
 	parser.add_argument('-i', '--interval',
 		action='store',
