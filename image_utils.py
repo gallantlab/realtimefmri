@@ -51,7 +51,9 @@ def transform(inp, base, output_transform=False):
 
 	devnull = open(os.devnull, 'w')
 	ret = call(cmd, stdout=devnull, stderr=STDOUT, close_fds=True)
-		
+	if ret>0:
+		print ' '.join(cmd)
+
 	out_img = nbload(out_path)
 	out_img.get_data()
 
