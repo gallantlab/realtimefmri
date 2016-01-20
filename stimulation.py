@@ -67,7 +67,7 @@ class Stimulus(threading.Thread):
 			self._run(msg)
 
 class FlatMap(Stimulus):
-	def __init__(self, topic, subject, xfm_name, mask_type):
+	def __init__(self, topic, subject, xfm_name, mask_type, vmin=None, vmax=None):
 		super(FlatMap, self).__init__()
 		npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
 		
@@ -81,11 +81,13 @@ class FlatMap(Stimulus):
 		self.mask_type = mask_type
 
 		self.ctx_client = cortex.webshow(vol)
+		self.vmin = vmin
+		self.vmax = vmax
 
 	def _run(self, msg):
 		data = msg[len(self.topic)+1:]
 		data = np.fromstring(data, dtype=np.float32)
-		vol = cortex.Volume(data, self.subject, self.xfm_name)
+		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
 		self.ctx_client.addData(data=vol)
 
 if __name__=='__main__':
