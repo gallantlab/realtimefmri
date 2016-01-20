@@ -86,7 +86,7 @@ class Preprocessor(object):
 			logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
 			outp = step['instance'].run(*args)
-			if not isinstance(outp, list):
+			if not isinstance(outp, (list, tuple)):
 				outp = [outp]
 			d = dict(zip(step['output'], outp))
 			data_dict.update(d)
@@ -132,10 +132,12 @@ class MotionCorrect(object):
 	def __init__(self, subject=None, reference_name='funcref.nii'):
 		if (subject is not None):
 			self.reference_path = os.path.join(utils.get_subject_directory(subject), reference_name)
+			self.reference_affine = nbload(self.reference_path).affine
 		else:
 			warnings.warn('''Provide path to reference volume before calling run.''')
 
 	def run(self, input_volume):
+		assert np.allclose(input_volume.affine, self.reference_affine)
 		return transform(input_volume, self.reference_path)
 
 class ApplyMask(object):
@@ -244,9 +246,8 @@ class RunningMeanStd(object):
 		
 class VoxelZScore(object):
 	def __init__(self):
-		tmp = np.load(os.path.join(subj_dir, 'gm_zscore.npz'))
-		self.mean = tmp['mean']
-		self.std = tmp['std']
+		self.mean = None
+		self.std = None
 	def zscore(self, data):
 		return (data-self.mean)/self.std
 	def run(self, inp, mean=None, std=None):
@@ -254,7 +255,11 @@ class VoxelZScore(object):
 			self.mean = mean
 		if not std is None:
 			self.std = std
-		return self.zscore(inp)
+
+		if self.mean is None:
+			return inp
+		else:
+			return self.zscore(inp)
 
 if __name__=='__main__':
 
