@@ -24,14 +24,16 @@ import utils
 
 db_dir = utils.get_database_directory()
 
-# initialize root logger, assigning file handler to output messages to log file
-logging.basicConfig(level=logging.DEBUG,
-	format='%(asctime)-12s %(name)-16s %(levelname)-8s %(message)s',
-	filename=os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strftime('%Y%m%d')),
-	filemode='a')
+logger = logging.getLogger('preprocessing')
+logger.setLevel(logging.DEBUG)
 
-# add logger, add stream handler to output to console
-logger = logging.getLogger(__name__)
+log_path = os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strftime('%Y%m%d'))
+fh = logging.FileHandler(log_path)
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
@@ -44,6 +46,7 @@ class Preprocessor(object):
 	'''
 	def __init__(self, preproc_config, **kwargs):
 		super(Preprocessor, self).__init__()
+		self.logger = logging.getLogger('preprocessing.Preprocessor')
 
 		# initialize input and output sockets
 		context = zmq.Context()
@@ -63,18 +66,18 @@ class Preprocessor(object):
 			pipeline = yaml_contents['pipeline']
 
 		for step in pipeline:
-			logger.info('initializing %s' % step['name'])
+			self.logger.info('initializing %s' % step['name'])
 			step['instance'].__init__(**step.get('kwargs', {}))
 
 		self.pipeline = pipeline
 
 	def run(self):
 		self.active = True
-		logger.info('ready')
+		self.logger.info('ready')
 		while self.active:
 			message = self.input_socket.recv()
 			data = message[6:]
-			logger.info('received image data of length %u' % len(data))
+			self.logger.info('received image data of length %u' % len(data))
 			outp = self.process(data)
 			time.sleep(0.1)
 
@@ -84,7 +87,7 @@ class Preprocessor(object):
 		}
 
 		for step in self.pipeline:
-			logger.debug('running %s' % step['name'])
+			self.logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
 			outp = step['instance'].run(*args)
 			if not isinstance(outp, (list, tuple)):
@@ -92,14 +95,16 @@ class Preprocessor(object):
 			d = dict(zip(step['output'], outp))
 			data_dict.update(d)
 			for send in step.get('send', []):
-				logger.debug('sending %s' % send)
+				self.logger.debug('sending %s' % send)
 				self.output_socket.send('%s %s' % (send, d[send].astype(np.float32).tostring()))
 
 		return data_dict
 
 class Debug(object):
+	def __init__(self):
+		self.logger = logging.getLogger('preprocessing.Debug')
 	def run(self, data_dict):
-		logger.debug(data_dict.keys())
+		self.logger.debug(data_dict.keys())
 		return {}
 
 class RawToNifti(object):

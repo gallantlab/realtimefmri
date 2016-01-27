@@ -4,20 +4,28 @@ import logging
 import argparse
 import functools
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 import numpy as np
 import time
 import os
-import os.path as op
 import random
 from glob import glob
-
 import zmq
 
 from itertools import cycle
-from utils import get_example_data_directory
+
+from utils import get_example_data_directory, get_log_directory
+
+logger = logging.getLogger('data_collection')
+logger.setLevel(logging.DEBUG)
+log_path = os.path.join(get_log_directory(), '%s_data_collection.log'%time.strftime('%Y%m%d'))
+formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
+fh = logging.FileHandler(log_path)
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 '''
 actual data collection
@@ -49,15 +57,15 @@ class DataCollector(object):
 
 	def _simulate(self, interval='return', subject='S1'):
 		ex_dir = get_example_data_directory(subject)
-		logger.debug('simulating from %s' % ex_dir)
-		image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
+		logger.info('simulating from %s' % ex_dir)
+		image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
 		image_fpaths.sort()
 		image_fpaths = cycle(image_fpaths)
 		for image_fpath in image_fpaths:
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
 			msg = 'image '+raw_image_binary
-			logger.debug('sending message of length %d\n(%s)' % (len(msg), op.basename(image_fpath)))
+			logger.info('sending message of length %d\n(%s)' % (len(msg), os.path.basename(image_fpath)))
 			self.image_pub.send(msg)
 			if interval=='return':
 				raw_input('>> Press return for next image')
