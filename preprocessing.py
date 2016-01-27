@@ -159,6 +159,32 @@ class ApplyMask(object):
 		assert np.allclose(volume.affine, self.mask_affine)
 		return volume.get_data().T[self.mask.T]
 
+class RoiActivity(object):
+  def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
+    subj_dir = utils.get_subject_directory(subject)
+    pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
+    
+    # mask in zyx
+    pre_mask = nbload(pre_mask_path).get_data().T
+    pre_mask_ix = pre_mask.flatten().nonzero()[0]
+
+    # returns masks in zyx
+    roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
+    self.masks = dict()
+    for name, mask_value in roi_dict.iteritems():
+      mask = roi_masks==mask_value
+      mask_overlap = np.logical_and(pre_mask, mask).flatten().nonzero()[0]
+      self.masks[name] = np.asarray([i for i,j in enumerate(pre_mask_ix) if j in mask_overlap])
+      print self.masks[name].max()
+
+  def run(self, activity):
+    if activity.ndim>1:
+      activity = activity.reshape(-1,1)
+    roi_activities = dict()
+    for name, mask in self.masks.iteritems():
+      roi_activities[name] = activity[mask]
+    return roi_activities[self.masks.keys()[0]].mean()
+
 class WMDetrend(object):
 	'''
 	Stores the white matter mask in functional reference space

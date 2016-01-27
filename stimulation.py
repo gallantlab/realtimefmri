@@ -90,6 +90,16 @@ class FlatMap(Stimulus):
 		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
 		self.ctx_client.addData(data=vol)
 
+class Debug(Stimulus):
+	def __init__(self, topic):
+		super(Debug, self).__init__()
+		self.topic = topic
+
+	def _run(self, msg):
+		data = msg[len(self.topic)+1:]
+		data = np.fromstring(data, dtype=np.float32)
+		logger.debug(data)
+
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='Preprocess data')
 	parser.add_argument('config',
