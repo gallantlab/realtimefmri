@@ -48,9 +48,9 @@ class Stimulator(object):
 		self.active = True
 		self.logger.info('running')
 		while self.active:
-			self.logger.info('start receive wait')
+			self.logger.debug('start receive wait')
 			msg = self.input_socket.recv()
-			self.logger.info('received message')
+			self.logger.debug('received message')
 			topic_end = msg.find(' ')
 			topic = msg[:topic_end]
 			data = msg[topic_end+1:]
@@ -58,6 +58,7 @@ class Stimulator(object):
 				if stim['topic']==topic:
 					self.logger.info('sending data of length %i to %s'%(len(data), topic))
 					stim['instance'].run(data)
+					self.logger.info('%s function returned'%stim['name'])
 
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='Preprocess data')
