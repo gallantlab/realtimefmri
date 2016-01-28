@@ -13,7 +13,6 @@ import logging
 
 import numpy as np
 import zmq
-from matplotlib import pyplot as plt
 
 from nibabel import save as nbsave, load as nbload
 from nibabel.nifti1 import Nifti1Image
@@ -23,7 +22,6 @@ from image_utils import transform, mosaic_to_volume
 import utils
 
 db_dir = utils.get_database_directory()
-
 
 class Preprocessor(object):
 	'''
@@ -170,7 +168,6 @@ class RoiActivity(object):
       mask = roi_masks==mask_value
       mask_overlap = np.logical_and(pre_mask, mask).flatten().nonzero()[0]
       self.masks[name] = np.asarray([i for i,j in enumerate(pre_mask_ix) if j in mask_overlap])
-      print self.masks[name].max()
 
   def run(self, activity):
     if activity.ndim>1:
@@ -253,7 +250,6 @@ def compute_raw2skew(raw1,raw2,raw3,*args):
 	# get standardized 3rd moment
 	sm3 = cm3/cm2**1.5
 	return sm3
-
 
 def compute_raw2kurt(raw1,raw2,raw3,raw4, *args):
 	'''Use the raw moments to compute the 4th standardized moment
@@ -377,6 +373,10 @@ class VoxelZScore(object):
 			self.std = std
 
 		if self.mean is None:
-			return inp
+			z = inp
 		else:
-			return self.zscore(inp)
+			if (self.std==0).any():
+				z = self.zscore(inp)
+			else:
+				z = np.zeros_like(inp) 
+		return z
