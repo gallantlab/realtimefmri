@@ -6,7 +6,7 @@ from glob import glob
 from itertools import izip
 import time
 import yaml
-import argparse
+import json
 import warnings
 
 import logging
@@ -24,19 +24,6 @@ import utils
 
 db_dir = utils.get_database_directory()
 
-logger = logging.getLogger('preprocessing')
-logger.setLevel(logging.DEBUG)
-
-log_path = os.path.join(utils.get_log_directory(), '%s_preprocessing.log'%time.strftime('%Y%m%d'))
-fh = logging.FileHandler(log_path)
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-logger.addHandler(ch)
 
 class Preprocessor(object):
 	'''
@@ -94,9 +81,12 @@ class Preprocessor(object):
 				outp = [outp]
 			d = dict(zip(step['output'], outp))
 			data_dict.update(d)
-			for send in step.get('send', []):
-				self.logger.debug('sending %s' % send)
-				self.output_socket.send('%s %s' % (send, d[send].astype(np.float32).tostring()))
+			for topic in step.get('send', []):
+				self.logger.info('sending %s' % topic)
+				if isinstance(d[topic], dict):
+					self.output_socket.send(topic+' '+json.dumps(d[topic]))
+				elif isinstance(d[topic], (np.ndarray)):
+					self.output_socket.send(topic+' '+d[topic].astype(np.float32).tostring())
 
 		return data_dict
 
@@ -187,8 +177,8 @@ class RoiActivity(object):
       activity = activity.reshape(-1,1)
     roi_activities = dict()
     for name, mask in self.masks.iteritems():
-      roi_activities[name] = activity[mask]
-    return roi_activities[self.masks.keys()[0]].mean()
+      roi_activities[name] = float(activity[mask].mean())
+    return roi_activities
 
 class WMDetrend(object):
 	'''
@@ -390,17 +380,3 @@ class VoxelZScore(object):
 			return inp
 		else:
 			return self.zscore(inp)
-
-if __name__=='__main__':
-
-	parser = argparse.ArgumentParser(description='Preprocess data')
-	parser.add_argument('config',
-		action='store',
-		nargs='?',
-		default='preproc-01',
-		help='Name of configuration file')
-	args = parser.parse_args()
-	logger.info('Loading preprocessing pipeline from %s' % args.config)
-
-	preproc = Preprocessor(args.config)
-	preproc.run()

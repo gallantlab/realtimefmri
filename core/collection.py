@@ -1,11 +1,7 @@
-import sys
 import time
 import logging
-import argparse
 import functools
 
-import numpy as np
-import time
 import os
 import random
 from glob import glob
@@ -13,7 +9,7 @@ import zmq
 
 from itertools import cycle
 
-from utils import get_example_data_directory, get_log_directory
+from .utils import get_example_data_directory, get_log_directory
 
 logger = logging.getLogger('data_collection')
 logger.setLevel(logging.DEBUG)
@@ -27,21 +23,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-'''
-actual data collection
--images arrive to scanner console from ICE
--images are stored in a shared folder on the local network
--real-time computer is sitting on that folder waiting for new images to appear
-wait_for_image
--on new image, preprocesses image (register, detrend)
-read_image
-'''
-
-
 class DataCollector(object):
-	'''
-
-	'''
 	def __init__(self, directory, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
@@ -129,34 +111,3 @@ class MonitorDirectory(object):
 		if len(new_image_paths)>0:
 			logger.debug(new_image_paths)
 			self.image_paths = self.image_paths.union(new_image_paths)
-
-if __name__ == "__main__":
-
-	parser = argparse.ArgumentParser(description='Collect data')
-	parser.add_argument('-s', '--simulate', 
-		action='store', 
-		dest='simulate', 
-		default=None, 
-		help='''Simulate data collection''')
-	parser.add_argument('-i', '--interval',
-		action='store',
-		dest='interval',
-		default='2',
-		help='''Interval between scans, in seconds. Only active if simulate is True''')
-	parser.add_argument('-d', '--directory',
-		action='store',
-		dest='directory',
-		default='tmp',
-		help='Directory to watch')
-	args = parser.parse_args()
-
-	try:
-		interval = float(args.interval)
-	except (TypeError, ValueError):
-		if args.interval=='return':
-			interval = args.interval
-		else:
-			raise ValueError
-
-	d = DataCollector(args.directory, simulate=args.simulate, interval=interval)
-	d.run()

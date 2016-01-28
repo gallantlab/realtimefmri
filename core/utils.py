@@ -1,6 +1,6 @@
 import os
 
-package_directory = '/Users/robert/Documents/gallant/realtimefmri'
+package_directory = '/home/glab/realtimefmri'
 
 def get_database_directory():
 	return os.path.join(package_directory, 'database')

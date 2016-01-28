@@ -5,11 +5,12 @@ import argparse
 
 import time
 import yaml
+import zmq
 
 import numpy as np
 import logging
 
-from .utils import get_database_directory, get_log_directory
+from core.utils import get_database_directory, get_log_directory
 db_dir = get_database_directory()
 
 # initialize root logger, assigning file handler to output messages to log file
@@ -27,7 +28,15 @@ logger.addHandler(ch)
 
 class Stimulator(object):
 	def __init__(self, stim_config):
+
 		self.logger = logging.getLogger('stimulation.Stimulator')
+
+		zmq_context = zmq.Context()
+		self.input_socket = zmq_context.socket(zmq.SUB)
+		self.input_socket.connect('tcp://localhost:5557')
+		self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
+		self.active = False
+
 		with open(os.path.join(db_dir, stim_config+'.conf'), 'r') as f:
 			self.pipeline = yaml.load(f)['pipeline']
 
@@ -36,10 +45,19 @@ class Stimulator(object):
 			step['instance'].__init__(**step.get('kwargs', {}))
 
 	def run(self):
+		self.active = True
 		self.logger.info('running')
-		for step in self.pipeline:
-			self.logger.info('starting %s' % step['name'])
-			step['instance'].start()
+		while self.active:
+			self.logger.info('start receive wait')
+			msg = self.input_socket.recv()
+			self.logger.info('received message')
+			topic_end = msg.find(' ')
+			topic = msg[:topic_end]
+			data = msg[topic_end+1:]
+			for stim in self.pipeline:
+				if stim['topic']==topic:
+					self.logger.info('sending data of length %i to %s'%(len(data), topic))
+					stim['instance'].run(data)
 
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='Preprocess data')
