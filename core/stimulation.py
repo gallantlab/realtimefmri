@@ -1,8 +1,6 @@
 import numpy as np
 import json
 import zmq
-import threading
-import multiprocessing
 import cortex
 
 import logging
@@ -39,17 +37,26 @@ class FlatMap(object):
 
 class RoiBars(object):
 	def __init__(self):
-		self.fig, self.ax = plt.subplots();
+		self.fig = plt.figure();
+		self.ax = self.fig.add_subplot(111);
 		self.rects = None
+		plt.show()
+		plt.draw()
 	def run(self, data):
+		logger.info('running RoiBars with data %s'%data)
 		data = json.loads(data)
 		if self.rects is None:
+			logger.info('self.rects is None')
+
 			self.rects = self.ax.bar(range(len(data)), data.values())
-			plt.show(block=False)
+			plt.show()
+			plt.draw()
 		else:
-			logger.info(data.values())
+			logger.info('self.rects is not None')
 			for r, v in zip(self.rects, data.values()):
+				logger.info('setting %s %f' % (r.__repr__(), v))
 				r.set_height(v)
+			plt.show()
 			plt.draw() # should update
 
 class WeirdSound(object):
@@ -73,11 +80,15 @@ class WeirdSound(object):
 		self.synth.out()
 	def run(self, controls):
 		controls = json.loads(controls)
-		f = self.f0*(1.+controls['M1H']*2.)
-		self.freq.value = [f, f+(0.01*f), f*2, f*2+(0.01*f*2)]
+		cv1 = controls['M1H']
+		if not np.isnan(cv1):
+			f = self.f0*(1.+cv1*2.)
+			self.freq.value = [f, f+(0.01*f), f*2, f*2+(0.01*f*2)]
 
-		f = self.lfo_freq0*(1.+controls['M1F']*5.)
-		self.lfo_freq.value = [f, f+(0.01*f)]
+		cv2 = controls['M1F']
+		if not np.isnan(cv2):
+			f = self.lfo_freq0*(1.+cv2*5.)
+			self.lfo_freq.value = [f, f+(0.01*f)]
 
 class Debug(object):
 	def __init__(self):
