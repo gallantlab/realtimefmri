@@ -31,7 +31,7 @@ class Preprocessor(object):
 	'''
 	def __init__(self, preproc_config, **kwargs):
 		super(Preprocessor, self).__init__()
-		self.logger = logging.getLogger('preprocessing.Preprocessor')
+		self.logger = logging.getLogger('preprocess.Preprocessor')
 
 		# initialize input and output sockets
 		context = zmq.Context()
@@ -77,7 +77,7 @@ class Preprocessor(object):
 			outp = step['instance'].run(*args)
 			if not isinstance(outp, (list, tuple)):
 				outp = [outp]
-			d = dict(zip(step['output'], outp))
+			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
 			for topic in step.get('send', []):
 				self.logger.info('sending %s' % topic)
@@ -90,10 +90,13 @@ class Preprocessor(object):
 
 class Debug(object):
 	def __init__(self):
-		self.logger = logging.getLogger('preprocessing.Debug')
-	def run(self, data_dict):
-		self.logger.debug(data_dict.keys())
-		return {}
+		self.logger = logging.getLogger('preprocess.Debug')
+		self.logger.setLevel(logging.DEBUG)
+	def run(self, val):
+		self.logger.info('debugging')
+		if isinstance(val, np.ndarray):
+			val = str(val[:10])
+		self.logger.info(val)
 
 class RawToNifti(object):
 	'''
@@ -109,10 +112,10 @@ class RawToNifti(object):
 
 	def run(self, inp):
 		'''
-			pixel_image is a binary string loaded directly from the .PixelData file
-			saved on the scanner console
+		pixel_image is a binary string loaded directly from the .PixelData file
+		saved on the scanner console
 
-			returns a nifti1 image of the same data
+		returns a nifti1 image of the same data in xyz
 		'''
 		# siements mosaic format is strange
 		mosaic = np.fromstring(inp, dtype=np.uint16).reshape(600,600, order='C')
@@ -135,6 +138,12 @@ class MotionCorrect(object):
 		return transform(input_volume, self.reference_path)
 
 class ApplyMask(object):
+	'''
+	Loads a mask from the realtimefmri database
+	Mask should be in xyz format to match data.
+	Mask is applied after transposing mask and data to zyx
+	to match the wm detrend training
+	'''
 	def __init__(self, subject=None, mask_name=None):
 		if (subject is not None) and (mask_name is not None):
 			subj_dir = utils.get_subject_directory(subject)
@@ -152,30 +161,77 @@ class ApplyMask(object):
 		assert np.allclose(volume.affine, self.mask_affine)
 		return volume.get_data().T[self.mask.T]
 
+class ApplyMask2(object):
+	def __init__(self, subject, mask1_name, mask2_name):
+		'''
+		Input:
+		-----
+		mask1_path: path to a boolean mask in xyz format
+		mask2_path: path to a boolean mask in xyz format
+
+		Initialization will generate a boolean vector that selects elements 
+		from the vector output of mask1 applied to a volume that are also in
+		mask2.
+
+		Example:
+		-----
+		Given a 3d array, X and two 3d masks, mask1 and mask2
+		X.T[mask1.T] = x
+		X.T[mask1.T & mask2.T] = y
+		x[new_mask] = y
+		'''
+		logger = logging.getLogger('preprocess.ApplyMask2')
+		subj_dir = utils.get_subject_directory(subject)
+		mask1_path = os.path.join(subj_dir, mask1_name+'.nii')
+		mask2_path = os.path.join(subj_dir, mask2_name+'.nii')
+
+		mask1 = nbload(mask1_path).get_data().astype(bool) # in xyz
+		mask2 = nbload(mask2_path).get_data().astype(bool) # in xyz		
+		mask1_flat = mask1.flatten(order='F')
+		mask2_flat = mask2.flatten(order='F')
+
+		masks = np.c_[mask1_flat, mask2_flat]
+		masks = masks[mask1_flat,:]
+		self.mask = masks[:,1].astype(bool)
+
+	def run(self, x):
+		if x.ndim>1:
+			x = x.reshape(-1,1)
+		return x[self.mask]
+
+class ActivityRatio(object):
+	def run(self, x1, x2):
+		if isinstance(x1, np.ndarray):
+			x1 = np.nanmean(x1)
+		if isinstance(x2, np.ndarray):
+			x2 = np.nanmean(x2)
+
+		return x1/(x1+x2)
+
 class RoiActivity(object):
-  def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
-    subj_dir = utils.get_subject_directory(subject)
-    pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
-    
-    # mask in zyx
-    pre_mask = nbload(pre_mask_path).get_data().T
-    pre_mask_ix = pre_mask.flatten().nonzero()[0]
+	def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
+		subj_dir = utils.get_subject_directory(subject)
+		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
+		
+		# mask in zyx
+		pre_mask = nbload(pre_mask_path).get_data().T
+		pre_mask_ix = pre_mask.flatten().nonzero()[0]
 
-    # returns masks in zyx
-    roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
-    self.masks = dict()
-    for name, mask_value in roi_dict.iteritems():
-      mask = roi_masks==mask_value
-      mask_overlap = np.logical_and(pre_mask, mask).flatten().nonzero()[0]
-      self.masks[name] = np.asarray([i for i,j in enumerate(pre_mask_ix) if j in mask_overlap])
+		# returns masks in zyx
+		roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
+		self.masks = dict()
+		for name, mask_value in roi_dict.iteritems():
+			mask = roi_masks==mask_value
+			mask_overlap = np.logical_and(pre_mask, mask).flatten().nonzero()[0]
+			self.masks[name] = np.asarray([i for i,j in enumerate(pre_mask_ix) if j in mask_overlap])
 
-  def run(self, activity):
-    if activity.ndim>1:
-      activity = activity.reshape(-1,1)
-    roi_activities = dict()
-    for name, mask in self.masks.iteritems():
-      roi_activities[name] = float(activity[mask].mean())
-    return roi_activities
+	def run(self, activity):
+		if activity.ndim>1:
+			activity = activity.reshape(-1,1)
+		roi_activities = dict()
+		for name, mask in self.masks.iteritems():
+			roi_activities[name] = float(activity[mask].mean())
+		return roi_activities
 
 class WMDetrend(object):
 	'''
@@ -183,7 +239,7 @@ class WMDetrend(object):
 	when a new image comes in, motion corrects it to reference image
 	then applies wm mask
 	'''
-	def __init__(self, subject, model_name):
+	def __init__(self, subject, model_name=None):
 		'''
 		This should set up the class instance to be ready to take an image input
 		and output the detrended gray matter activation
@@ -362,6 +418,8 @@ class RunningMeanStd(object):
 	
 class VoxelZScore(object):
 	def __init__(self):
+		self.logger = logging.getLogger('preprocess.VoxelZScore')
+		self.logger.setLevel(logging.DEBUG)
 		self.mean = None
 		self.std = None
 	def zscore(self, data):
@@ -375,8 +433,8 @@ class VoxelZScore(object):
 		if self.mean is None:
 			z = inp
 		else:
-			if (self.std==0).any():
-				z = self.zscore(inp)
+			if (self.std==0).all():
+				z = np.zeros_like(inp)
 			else:
-				z = np.zeros_like(inp) 
+				z = self.zscore(inp)
 		return z
