@@ -29,8 +29,9 @@ class FlatMap(object):
 		self.logger = logging.getLogger('stimulation.stimuli.FlatMap')
 		self.logger.debug('initialized FlatMap')
 
-	def run(self, data):
-		data = np.fromstring(data, dtype=np.float32)
+	def run(self, inp):
+
+		data = np.fromstring(inp['data'], dtype=np.float32)
 		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
 		self.ctx_client.addData(data=vol)
 
@@ -61,8 +62,8 @@ class ConsolePlot(object):
 			right_space = [' ']*int(middle)
 		return ''.join(left_space+bar+right_space)
 
-	def run(self, x):
-		x = np.fromstring(x, dtype=np.float32)
+	def run(self, inp):
+		x = np.fromstring(inp['data'], dtype=np.float32)
 		print self.make_bars(x)
 
 class RoiBars(object):
@@ -105,18 +106,22 @@ class WeirdSound(object):
 			time=1.)
 
 		self.synth = pyo.Sine(freq=self.freq, mul=self.lfo)
-		self.synth.out()
-	def run(self, controls):
-		controls = json.loads(controls)
-		cv1 = controls['M1H']
-		if not np.isnan(cv1):
-			f = self.f0*(1.+cv1*2.)
-			self.freq.value = [f, f+(0.01*f), f*2, f*2+(0.01*f*2)]
+		self.pan = pyo.SigTo(value=0.5, time=0.1)
+		self.panner = pyo.Pan(self.synth, outs=2, pan=self.pan)
+		self.panner.out()
+	def run(self, inp):
+		if 'pan' in inp:
+			pan = np.fromstring(inp['pan'], dtype=np.float32)
+			self.pan.value = pan
+		# cv1 = controls['M1H']
+		# if not np.isnan(cv1):
+		# 	f = self.f0*(1.+cv1*2.)
+		# 	self.freq.value = [f, f+(0.01*f), f*2, f*2+(0.01*f*2)]
 
-		cv2 = controls['M1F']
-		if not np.isnan(cv2):
-			f = self.lfo_freq0*(1.+cv2*5.)
-			self.lfo_freq.value = [f, f+(0.01*f)]
+		# cv2 = controls['M1F']
+		# if not np.isnan(cv2):
+		# 	f = self.lfo_freq0*(1.+cv2*5.)
+		# 	self.lfo_freq.value = [f, f+(0.01*f)]
 
 class Debug(object):
 	def __init__(self):

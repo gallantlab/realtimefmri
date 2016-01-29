@@ -55,9 +55,11 @@ class Stimulator(object):
 			topic = msg[:topic_end]
 			data = msg[topic_end+1:]
 			for stim in self.pipeline:
-				if stim['topic']==topic:
+				if topic in stim['topic'].keys():
+					self.logger.info(topic)
+					self.logger.info(stim['topic'])
 					self.logger.info('sending data of length %i to %s'%(len(data), topic))
-					stim['instance'].run(data)
+					stim['instance'].run({stim['topic'][topic]: data})
 					self.logger.info('%s function returned'%stim['name'])
 
 if __name__=='__main__':
