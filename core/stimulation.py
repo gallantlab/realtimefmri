@@ -30,10 +30,40 @@ class FlatMap(object):
 		self.logger.debug('initialized FlatMap')
 
 	def run(self, data):
-		logger.info(len(data))
 		data = np.fromstring(data, dtype=np.float32)
 		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
 		self.ctx_client.addData(data=vol)
+
+class ConsolePlot(object):
+	def __init__(self, xmin=-2., xmax=2., width=40):
+		self.xmin = xmin
+		self.xmax = xmax
+		self.x_range = xmax-xmin
+		self.width = width
+		self.y_range = width
+	
+	def make_bars(self, x):
+		y = ((x-self.xmin)/self.x_range)*self.y_range
+		middle = self.width/2
+		y = min(y,self.width)
+		y = max(y,0)
+		if y<middle:
+			left_space = [' ']*int(y)
+			bar = ['-']*int(middle-y)
+			right_space = [' ']*int(middle)
+		elif y>middle:
+			left_space = [' ']*int(middle)
+			bar = ['-']*int(y-middle)
+			right_space = [' ']*int(self.width-y)
+		else:
+			left_space = [' ']*int(middle)
+			bar = ['|']
+			right_space = [' ']*int(middle)
+		return ''.join(left_space+bar+right_space)
+
+	def run(self, x):
+		x = np.fromstring(x, dtype=np.float32)
+		print self.make_bars(x)
 
 class RoiBars(object):
 	def __init__(self):
@@ -65,9 +95,7 @@ class WeirdSound(object):
 		self.server.start()
 
 		self.lfo_freq0 = 0.4
-		self.lfo_freq = pyo.SigTo(value=[self.lfo_freq0,
-			self.lfo_freq0+(0.01*self.lfo_freq0)],
-			time=0.5)
+		self.lfo_freq = pyo.SigTo(value=self.lfo_freq0, time=0.5)
 		self.lfo = pyo.LFO(freq=self.lfo_freq, mul=0.005)
 		self.lfo.play()
 		

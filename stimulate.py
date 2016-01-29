@@ -15,7 +15,7 @@ db_dir = get_database_directory()
 
 # initialize root logger, assigning file handler to output messages to log file
 logger = logging.getLogger('stimulation')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 log_path = os.path.join(get_log_directory(), '%s_stimulation.log'%time.strftime('%Y%m%d'))
 fh = logging.FileHandler(log_path)
 fh.setLevel(logging.DEBUG)
