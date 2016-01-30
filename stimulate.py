@@ -9,9 +9,11 @@ import zmq
 
 import numpy as np
 import logging
+import warnings
 
-from core.utils import get_database_directory, get_log_directory
+from core.utils import get_database_directory, get_log_directory, get_recording_directory
 db_dir = get_database_directory()
+rec_dir = get_recording_directory()
 
 # initialize root logger, assigning file handler to output messages to log file
 logger = logging.getLogger('stimulation')
@@ -38,29 +40,55 @@ class Stimulator(object):
 		self.active = False
 
 		with open(os.path.join(db_dir, stim_config+'.conf'), 'r') as f:
-			self.pipeline = yaml.load(f)['pipeline']
+			config = yaml.load(f)
+			self.pipeline = config['pipeline']
+			self.global_defaults = config.get('global_defaults', dict())
+		
+		if self.global_defaults['record']:
+			if self.global_defaults['recording_id'] is None:
+				self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'], time.strftime('%Y%m%d_%H%M'))
+			try:
+				os.mkdir(os.path.join(rec_dir, self.global_defaults['recording_id']))
+			except OSError:
+				warnings.warn('Recording id %s already exists!' % self.global_defaults['recording_id'])
 
 		for step in self.pipeline:
 			self.logger.debug('initializing %s' % step['name'])
-			step['instance'].__init__(**step.get('kwargs', {}))
+
+			params = step['kwargs']
+			for k,v in self.global_defaults.iteritems():
+				params.setdefault(k, v)
+
+			print params
+
+			step['instance'].__init__(params)
 
 	def run(self):
 		self.active = True
 		self.logger.info('running')
 		while self.active:
-			self.logger.debug('start receive wait')
-			msg = self.input_socket.recv()
-			self.logger.debug('received message')
-			topic_end = msg.find(' ')
-			topic = msg[:topic_end]
-			data = msg[topic_end+1:]
-			for stim in self.pipeline:
-				if topic in stim['topic'].keys():
-					self.logger.info(topic)
-					self.logger.info(stim['topic'])
-					self.logger.info('sending data of length %i to %s'%(len(data), topic))
-					stim['instance'].run({stim['topic'][topic]: data})
-					self.logger.info('%s function returned'%stim['name'])
+			try:
+				self.logger.debug('start receive wait')
+				msg = self.input_socket.recv()
+				self.logger.debug('received message')
+				topic_end = msg.find(' ')
+				topic = msg[:topic_end]
+				data = msg[topic_end+1:]
+				for stim in self.pipeline:
+					if topic in stim['topic'].keys():
+						self.logger.info(topic)
+						self.logger.info(stim['topic'])
+						self.logger.info('sending data of length %i to %s'%(len(data), topic))
+
+						stim['instance'].run({stim['topic'][topic]: data})
+						self.logger.info('%s function returned'%stim['name'])
+			except (KeyboardInterrupt, SystemExit):
+				self.active = False
+				for stim in self.pipeline:
+					stim['instance'].stop()
+
+				sys.exit(0)
+
 
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='Preprocess data')
@@ -72,10 +100,4 @@ if __name__=='__main__':
 	args = parser.parse_args()
 
 	stim = Stimulator(args.config)
-	stim.run()
-	try:
-		while True:
-			time.sleep(0.01)
-	except KeyboardInterrupt:
-		sys.exit(0)
-
+	stim.run() # this will start an infinite run loop

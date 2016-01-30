@@ -17,6 +17,9 @@ def get_log_directory():
 def get_test_data_directory():
 	return os.path.join(package_directory, 'tests/data')
 
+def get_recording_directory():
+	return os.path.join(package_directory, 'recordings')
+	
 def generate_command(command, params):
 	cmd = [command]
 

@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import json
 import zmq
@@ -12,8 +14,22 @@ import pyo
 from matplotlib import pyplot as plt
 plt.ion()
 
-class FlatMap(object):
-	def __init__(self, subject, xfm_name, mask_type, vmin=None, vmax=None):
+class Stimulus(object):
+	def __init__(self, **kwargs):
+		self.subject = kwargs.get('subject', None)
+		self.record = kwargs.get('record', False)
+		self.recording_path = kwargs.get('recording_path', None)
+	def stop(self):
+		logger.info('stopping %s' % type(self))
+	def run(self):
+		raise NotImplementedError
+
+class FlatMap(Stimulus):
+	def __init__(self, **kwargs):
+		super(FlatMap, self).__init__(**kwargs)
+		subject = kwargs.get('subject')
+		xfm_name = kwargs.get('xfm_name')
+		mask_type = kwargs.get('mask_type')
 		npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
 		
 		data = np.zeros(npts)
@@ -30,13 +46,13 @@ class FlatMap(object):
 		self.logger.debug('initialized FlatMap')
 
 	def run(self, inp):
-
 		data = np.fromstring(inp['data'], dtype=np.float32)
 		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
 		self.ctx_client.addData(data=vol)
 
-class ConsolePlot(object):
+class ConsolePlot(Stimulus):
 	def __init__(self, xmin=-2., xmax=2., width=40):
+		super(ConsolePlot, self).__init__()
 		self.xmin = xmin
 		self.xmax = xmax
 		self.x_range = xmax-xmin
@@ -66,8 +82,9 @@ class ConsolePlot(object):
 		x = np.fromstring(inp['data'], dtype=np.float32)
 		print self.make_bars(x)
 
-class RoiBars(object):
+class RoiBars(Stimulus):
 	def __init__(self):
+		super(RoiBars, self).__init__(**kwargs)
 		self.fig = plt.figure();
 		self.ax = self.fig.add_subplot(111);
 		self.rects = None
@@ -90,9 +107,10 @@ class RoiBars(object):
 			plt.show()
 			plt.draw() # should update
 
-class WeirdSound(object):
-	def __init__(self):
-		self.server = pyo.Server().boot()
+class WeirdSound(Stimulus):
+	def __init__(self, **kwargs):
+		super(WeirdSound, self).__init__(**kwargs)
+		self.server = pyo.Server(audio='jack', ichnls=0).boot()
 		self.server.start()
 
 		self.lfo_freq0 = 0.4
@@ -109,10 +127,14 @@ class WeirdSound(object):
 		self.pan = pyo.SigTo(value=0.5, time=0.1)
 		self.panner = pyo.Pan(self.synth, outs=2, pan=self.pan)
 		self.panner.out()
+
+		if self.record:
+			self.server.recstart(recording_path)
+
 	def run(self, inp):
 		if 'pan' in inp:
 			pan = np.fromstring(inp['pan'], dtype=np.float32)
-			self.pan.value = pan
+			self.pan.value = float(pan)
 		# cv1 = controls['M1H']
 		# if not np.isnan(cv1):
 		# 	f = self.f0*(1.+cv1*2.)
@@ -122,12 +144,12 @@ class WeirdSound(object):
 		# if not np.isnan(cv2):
 		# 	f = self.lfo_freq0*(1.+cv2*5.)
 		# 	self.lfo_freq.value = [f, f+(0.01*f)]
+	def stop(self):
+		logger.info('stopping weird sound')
+		if self.record:
+			self.server.recstop()
 
-class Debug(object):
-	def __init__(self):
-		self.logger = logging.getLogger('stimulation.stimuli.Debug')
-		self.logger.debug('initialized Debug')
-
+class Debug(Stimulus):
 	def run(self, data):
 		data = np.fromstring(data, dtype=np.float32)
-		self.logger.info(data)
+		logger.info(data)
