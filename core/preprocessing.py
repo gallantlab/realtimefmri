@@ -91,14 +91,20 @@ class Preprocessor(object):
 
 		return data_dict
 
-class Debug(object):
+class PreprocessingStep(object):
+	def __init__(self):
+		pass
+	def run(self):
+		raise NotImplementedError
+
+class Debug(PreprocessingStep):
 	def run(self, val):
 		logger.info('debugging')
 		if isinstance(val, np.ndarray):
 			val = str(val[:10])
 		logger.info(val)
 
-class RawToNifti(object):
+class RawToNifti(PreprocessingStep):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
@@ -125,7 +131,7 @@ class RawToNifti(object):
 		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[...,:30]
 		return Nifti1Image(volume, self.affine)
 
-class SaveNifti(object):
+class SaveNifti(PreprocessingStep):
 	def __init__(self, save_directory=None, path_format='volume_%4.4u.nii'):
 		if save_directory is None:
 			save_directory = str(uuid4())
@@ -157,7 +163,7 @@ class SaveNifti(object):
 		nbsave(inp, os.path.join(self.save_directory, fpath))
 		self._i += 1
 
-class MotionCorrect(object):
+class MotionCorrect(PreprocessingStep):
 	def __init__(self, subject=None, reference_name='funcref.nii'):
 		if (subject is not None):
 			self.reference_path = os.path.join(get_subject_directory(subject), reference_name)
@@ -169,7 +175,7 @@ class MotionCorrect(object):
 		assert np.allclose(input_volume.affine, self.reference_affine)
 		return transform(input_volume, self.reference_path)
 
-class ApplyMask(object):
+class ApplyMask(PreprocessingStep):
 	'''
 	Loads a mask from the realtimefmri database
 	Mask should be in xyz format to match data.
@@ -193,7 +199,7 @@ class ApplyMask(object):
 		assert np.allclose(volume.affine, self.mask_affine)
 		return volume.get_data().T[self.mask.T]
 
-class ApplyMask2(object):
+class ApplyMask2(PreprocessingStep):
 	def __init__(self, subject, mask1_name, mask2_name):
 		'''
 		Input:
@@ -230,7 +236,7 @@ class ApplyMask2(object):
 			x = x.reshape(-1,1)
 		return x[self.mask]
 
-class ActivityRatio(object):
+class ActivityRatio(PreprocessingStep):
 	def run(self, x1, x2):
 		if isinstance(x1, np.ndarray):
 			x1 = np.nanmean(x1)
@@ -239,7 +245,7 @@ class ActivityRatio(object):
 
 		return x1/(x1+x2)
 
-class RoiActivity(object):
+class RoiActivity(PreprocessingStep):
 	def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
 		subj_dir = get_subject_directory(subject)
 		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
@@ -264,7 +270,7 @@ class RoiActivity(object):
 			roi_activities[name] = float(activity[mask].mean())
 		return roi_activities
 
-class WMDetrend(object):
+class WMDetrend(PreprocessingStep):
 	'''
 	Stores the white matter mask in functional reference space
 	when a new image comes in, motion corrects it to reference image
@@ -386,7 +392,7 @@ def convert_parallel2moments(node_raw_moments, nsamples):
 	ekurt = compute_raw2kurt(*mean_moments)
 	return emean, evar, eskew, ekurt
 
-class OnlineMoments(object):
+class OnlineMoments(PreprocessingStep):
 	'''Compute 1-Nth raw moments online
 
 	For the Ith moment: E[X^i] = (1/n)*\Sum(X^i)
@@ -433,7 +439,7 @@ class OnlineMoments(object):
 		self.update(inp)
 		return self.get_statistics()[:2]
 
-class RunningMeanStd(object):
+class RunningMeanStd(PreprocessingStep):
 	def __init__(self, n=20):
 		self.n = n
 		self.mean = None
@@ -447,7 +453,7 @@ class RunningMeanStd(object):
 		self.std = np.nanstd(self.samples, 0)
 		return self.mean, self.std
 	
-class VoxelZScore(object):
+class VoxelZScore(PreprocessingStep):
 	def __init__(self):
 		self.mean = None
 		self.std = None
