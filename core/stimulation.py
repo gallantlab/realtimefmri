@@ -6,7 +6,7 @@ import zmq
 import cortex
 
 import logging
-logger = logging.getLogger('stimulation.stimuli')
+logger = logging.getLogger('stimulate.ion')
 logger.setLevel(logging.DEBUG)
 
 import pyo
@@ -25,7 +25,7 @@ class Stimulus(object):
 		raise NotImplementedError
 
 class FlatMap(Stimulus):
-	def __init__(self, **kwargs):
+	def __init__(self, vmin=-1., vmax=1., **kwargs):
 		super(FlatMap, self).__init__(**kwargs)
 		subject = kwargs.get('subject')
 		xfm_name = kwargs.get('xfm_name')
@@ -42,8 +42,7 @@ class FlatMap(Stimulus):
 		self.ctx_client = cortex.webshow(vol)
 		self.vmin = vmin
 		self.vmax = vmax
-		self.logger = logging.getLogger('stimulation.stimuli.FlatMap')
-		self.logger.debug('initialized FlatMap')
+		logger.debug('initialized FlatMap')
 
 	def run(self, inp):
 		data = np.fromstring(inp['data'], dtype=np.float32)
@@ -51,7 +50,7 @@ class FlatMap(Stimulus):
 		self.ctx_client.addData(data=vol)
 
 class ConsolePlot(Stimulus):
-	def __init__(self, xmin=-2., xmax=2., width=40):
+	def __init__(self, xmin=-2., xmax=2., width=40, **kwargs):
 		super(ConsolePlot, self).__init__()
 		self.xmin = xmin
 		self.xmax = xmax

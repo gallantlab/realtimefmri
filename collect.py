@@ -1,6 +1,23 @@
 import sys
+import os
+import time
 import argparse
 from core.collection import DataCollector
+from core.utils import get_log_directory
+
+import logging
+
+logger = logging.getLogger('collect')
+logger.setLevel(logging.DEBUG)
+log_path = os.path.join(get_log_directory(), '%s_collection.log'%time.strftime('%Y%m%d'))
+formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
+fh = logging.FileHandler(log_path)
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 if __name__ == "__main__":
 

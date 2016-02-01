@@ -8,17 +8,16 @@ import yaml
 import zmq
 
 import numpy as np
-import logging
 import warnings
 
 from core.utils import get_database_directory, get_log_directory, get_recording_directory
 db_dir = get_database_directory()
 rec_dir = get_recording_directory()
 
-# initialize root logger, assigning file handler to output messages to log file
-logger = logging.getLogger('stimulation')
-logger.setLevel(logging.WARNING)
-log_path = os.path.join(get_log_directory(), '%s_stimulation.log'%time.strftime('%Y%m%d'))
+import logging
+logger = logging.getLogger('stimulate')
+logger.setLevel(logging.DEBUG)
+log_path = os.path.join(get_log_directory(), '%s_stimulate.log'%time.strftime('%Y%m%d'))
 fh = logging.FileHandler(log_path)
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
@@ -26,6 +25,8 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)-20s %(message)s')
+ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 class Stimulator(object):
@@ -55,13 +56,13 @@ class Stimulator(object):
 		for step in self.pipeline:
 			self.logger.debug('initializing %s' % step['name'])
 
-			params = step['kwargs']
+			params = step.get('kwargs', {})
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
 
 			print params
 
-			step['instance'].__init__(params)
+			step['instance'].__init__(**params)
 
 	def run(self):
 		self.active = True

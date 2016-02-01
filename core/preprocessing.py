@@ -8,8 +8,11 @@ import time
 import yaml
 import json
 import warnings
+from uuid import uuid4
 
 import logging
+logger = logging.getLogger('preprocess.ing')
+logger.setLevel(logging.DEBUG)
 
 import numpy as np
 import zmq
@@ -19,9 +22,10 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-import utils
+from .utils import get_database_directory, get_recording_directory, get_subject_directory
 
-db_dir = utils.get_database_directory()
+db_dir = get_database_directory()
+rec_dir = get_recording_directory()
 
 class Preprocessor(object):
 	'''
@@ -31,7 +35,6 @@ class Preprocessor(object):
 	'''
 	def __init__(self, preproc_config, **kwargs):
 		super(Preprocessor, self).__init__()
-		self.logger = logging.getLogger('preprocess.Preprocessor')
 
 		# initialize input and output sockets
 		context = zmq.Context()
@@ -51,18 +54,18 @@ class Preprocessor(object):
 			pipeline = yaml_contents['pipeline']
 
 		for step in pipeline:
-			self.logger.info('initializing %s' % step['name'])
+			logger.info('initializing %s' % step['name'])
 			step['instance'].__init__(**step.get('kwargs', {}))
 
 		self.pipeline = pipeline
 
 	def run(self):
 		self.active = True
-		self.logger.info('ready')
+		logger.info('ready')
 		while self.active:
 			message = self.input_socket.recv()
 			data = message[6:]
-			self.logger.info('received image data of length %u' % len(data))
+			logger.info('received image data of length %u' % len(data))
 			outp = self.process(data)
 			time.sleep(0.1)
 
@@ -72,7 +75,7 @@ class Preprocessor(object):
 		}
 
 		for step in self.pipeline:
-			self.logger.debug('running %s' % step['name'])
+			logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
 			outp = step['instance'].run(*args)
 			if not isinstance(outp, (list, tuple)):
@@ -80,7 +83,7 @@ class Preprocessor(object):
 			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
 			for topic in step.get('send', []):
-				self.logger.info('sending %s' % topic)
+				logger.info('sending %s' % topic)
 				if isinstance(d[topic], dict):
 					self.output_socket.send(topic+' '+json.dumps(d[topic]))
 				elif isinstance(d[topic], (np.ndarray)):
@@ -89,22 +92,19 @@ class Preprocessor(object):
 		return data_dict
 
 class Debug(object):
-	def __init__(self):
-		self.logger = logging.getLogger('preprocess.Debug')
-		self.logger.setLevel(logging.DEBUG)
 	def run(self, val):
-		self.logger.info('debugging')
+		logger.info('debugging')
 		if isinstance(val, np.ndarray):
 			val = str(val[:10])
-		self.logger.info(val)
+		logger.info(val)
 
 class RawToNifti(object):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
-	def __init__(self, subject=None):
+	def __init__(self, subject=None, reference_name='funcref.nii'):
 		if not subject is None:
-			funcref_path = os.path.join(utils.get_subject_directory(subject), 'funcref.nii')
+			funcref_path = os.path.join(get_subject_directory(subject), reference_name)
 			funcref = nbload(funcref_path)
 			self.affine = funcref.affine[:]
 		else:
@@ -125,10 +125,42 @@ class RawToNifti(object):
 		volume = mosaic_to_volume(mosaic).swapaxes(0,1)[...,:30]
 		return Nifti1Image(volume, self.affine)
 
+class SaveNifti(object):
+	def __init__(self, save_directory=None, path_format='volume_%4.4u.nii'):
+		if save_directory is None:
+			save_directory = str(uuid4())
+		self.save_directory = os.path.join(rec_dir, save_directory)
+		self.path_format = path_format
+		self._i = 0
+		try:
+			os.mkdir(self.save_directory)
+		except OSError:
+			self._i = self._infer_i()
+			warnings.warn('''Save directory already exists. Beginning file numbering with %u''' % self._i)
+	def _infer_i(self):
+		from re import compile as re_compile
+		pattern = re_compile("\%[0-9]*\.?[0-9]*[uifd]")
+		match = pattern.split(self.path_format)
+		glob_pattern = '*'.join(match)
+		fpaths = glob(os.path.join(self.save_directory, glob_pattern))
+
+		i_pattern = re_compile('(?<={})[0-9]*(?={})'.format(*match))
+		try:
+			max_i = max([int(i_pattern.findall(i)[0]) for i in fpaths])
+			i = max_i + 1
+		except ValueError:
+			i = 0
+		return i
+
+	def run(self, inp):
+		fpath = self.path_format % self._i
+		nbsave(inp, os.path.join(self.save_directory, fpath))
+		self._i += 1
+
 class MotionCorrect(object):
 	def __init__(self, subject=None, reference_name='funcref.nii'):
 		if (subject is not None):
-			self.reference_path = os.path.join(utils.get_subject_directory(subject), reference_name)
+			self.reference_path = os.path.join(get_subject_directory(subject), reference_name)
 			self.reference_affine = nbload(self.reference_path).affine
 		else:
 			warnings.warn('''Provide path to reference volume before calling run.''')
@@ -146,7 +178,7 @@ class ApplyMask(object):
 	'''
 	def __init__(self, subject=None, mask_name=None):
 		if (subject is not None) and (mask_name is not None):
-			subj_dir = utils.get_subject_directory(subject)
+			subj_dir = get_subject_directory(subject)
 			mask_path = os.path.join(subj_dir, mask_name+'.nii')
 			self.load_mask(mask_path)
 		else:
@@ -180,8 +212,7 @@ class ApplyMask2(object):
 		X.T[mask1.T & mask2.T] = y
 		x[new_mask] = y
 		'''
-		logger = logging.getLogger('preprocess.ApplyMask2')
-		subj_dir = utils.get_subject_directory(subject)
+		subj_dir = get_subject_directory(subject)
 		mask1_path = os.path.join(subj_dir, mask1_name+'.nii')
 		mask2_path = os.path.join(subj_dir, mask2_name+'.nii')
 
@@ -210,7 +241,7 @@ class ActivityRatio(object):
 
 class RoiActivity(object):
 	def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
-		subj_dir = utils.get_subject_directory(subject)
+		subj_dir = get_subject_directory(subject)
 		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
 		
 		# mask in zyx
@@ -252,7 +283,7 @@ class WMDetrend(object):
 				since we'll be dealing with raw pixel data, we need to
 				have a predetermined image orientation
 		'''
-		self.subj_dir = utils.get_subject_directory(subject)
+		self.subj_dir = get_subject_directory(subject)
 		self.subject = subject
 
 		self.funcref_nifti1 = nbload(os.path.join(self.subj_dir, 'funcref.nii'))
@@ -418,8 +449,6 @@ class RunningMeanStd(object):
 	
 class VoxelZScore(object):
 	def __init__(self):
-		self.logger = logging.getLogger('preprocess.VoxelZScore')
-		self.logger.setLevel(logging.DEBUG)
 		self.mean = None
 		self.std = None
 	def zscore(self, data):
