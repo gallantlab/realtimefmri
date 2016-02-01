@@ -24,9 +24,9 @@ class Stimulus(object):
 	def run(self):
 		raise NotImplementedError
 
-class FlatMap(Stimulus):
+class PyCortexViewer(Stimulus):
 	def __init__(self, vmin=-1., vmax=1., **kwargs):
-		super(FlatMap, self).__init__(**kwargs)
+		super(PyCortexViewer, self).__init__(**kwargs)
 		subject = kwargs.get('subject')
 		xfm_name = kwargs.get('xfm_name')
 		mask_type = kwargs.get('mask_type')
@@ -42,7 +42,7 @@ class FlatMap(Stimulus):
 		self.ctx_client = cortex.webshow(vol)
 		self.vmin = vmin
 		self.vmax = vmax
-		logger.debug('initialized FlatMap')
+		logger.debug('initialized PyCortexViewer')
 
 	def run(self, inp):
 		data = np.fromstring(inp['data'], dtype=np.float32)

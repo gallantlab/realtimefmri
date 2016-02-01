@@ -10,7 +10,8 @@ import zmq
 import numpy as np
 import warnings
 
-from core.utils import get_database_directory, get_log_directory, get_recording_directory
+from core.utils import get_database_directory, get_log_directory, get_recording_directory, get_configuration_directory
+config_dir = get_configuration_directory()
 db_dir = get_database_directory()
 rec_dir = get_recording_directory()
 
@@ -40,7 +41,7 @@ class Stimulator(object):
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
 		self.active = False
 
-		with open(os.path.join(db_dir, stim_config+'.conf'), 'r') as f:
+		with open(os.path.join(config_dir, stim_config+'.conf'), 'r') as f:
 			config = yaml.load(f)
 			self.pipeline = config['pipeline']
 			self.global_defaults = config.get('global_defaults', dict())

@@ -22,10 +22,11 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-from .utils import get_database_directory, get_recording_directory, get_subject_directory
+from .utils import get_database_directory, get_recording_directory, get_subject_directory, get_configuration_directory
 
 db_dir = get_database_directory()
 rec_dir = get_recording_directory()
+config_dir = get_configuration_directory()
 
 class Preprocessor(object):
 	'''
@@ -48,7 +49,7 @@ class Preprocessor(object):
 		self.active = False
 
 		# load the pipeline from pipelines.conf
-		with open(os.path.join(db_dir, preproc_config+'.conf'), 'r') as f:
+		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
 			yaml_contents = yaml.load(f)
 			subject = yaml_contents['subject']
 			pipeline = yaml_contents['pipeline']
