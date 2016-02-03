@@ -42,12 +42,17 @@ class PyCortexViewer(Stimulus):
 		self.ctx_client = cortex.webshow(vol)
 		self.vmin = vmin
 		self.vmax = vmax
+		self.active = True
 		logger.debug('initialized PyCortexViewer')
 
 	def run(self, inp):
-		data = np.fromstring(inp['data'], dtype=np.float32)
-		vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
-		self.ctx_client.addData(data=vol)
+		if self.active:
+			try:
+				data = np.fromstring(inp['data'], dtype=np.float32)
+				vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
+				self.ctx_client.addData(data=vol)
+			except IndexError:
+				self.active = False
 
 class ConsolePlot(Stimulus):
 	def __init__(self, xmin=-2., xmax=2., width=40, **kwargs):
@@ -109,7 +114,7 @@ class RoiBars(Stimulus):
 class WeirdSound(Stimulus):
 	def __init__(self, **kwargs):
 		super(WeirdSound, self).__init__(**kwargs)
-		self.server = pyo.Server(audio='jack', ichnls=0).boot()
+		self.server = pyo.Server(audio='jack').boot()
 		self.server.start()
 
 		self.lfo_freq0 = 0.4
@@ -123,7 +128,7 @@ class WeirdSound(Stimulus):
 			time=1.)
 
 		self.synth = pyo.Sine(freq=self.freq, mul=self.lfo)
-		self.pan = pyo.SigTo(value=0.5, time=0.1)
+		self.pan = pyo.SigTo(value=0.5, time=0.9)
 		self.panner = pyo.Pan(self.synth, outs=2, pan=self.pan)
 		self.panner.out()
 

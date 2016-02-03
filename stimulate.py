@@ -56,13 +56,9 @@ class Stimulator(object):
 
 		for step in self.pipeline:
 			self.logger.debug('initializing %s' % step['name'])
-
 			params = step.get('kwargs', {})
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
-
-			print params
-
 			step['instance'].__init__(**params)
 
 	def run(self):
