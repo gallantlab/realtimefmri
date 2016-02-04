@@ -133,23 +133,24 @@ class RawToNifti(PreprocessingStep):
 		return Nifti1Image(volume, self.affine)
 
 class SaveNifti(PreprocessingStep):
-	def __init__(self, save_directory=None, path_format='volume_%4.4u.nii'):
-		if save_directory is None:
-			save_directory = str(uuid4())
-		self.save_directory = os.path.join(rec_dir, save_directory)
+	def __init__(self, recording_id=None, path_format='volume_%4.4u.nii'):
+		if recording_id is None:
+			recording_id = str(uuid4())
+		self.recording_dir = os.path.join(rec_dir, recording_id, 'nifti')
 		self.path_format = path_format
 		self._i = 0
 		try:
-			os.mkdir(self.save_directory)
+			os.makedirs(self.recording_dir)
 		except OSError:
 			self._i = self._infer_i()
 			warnings.warn('''Save directory already exists. Beginning file numbering with %u''' % self._i)
+			
 	def _infer_i(self):
 		from re import compile as re_compile
 		pattern = re_compile("\%[0-9]*\.?[0-9]*[uifd]")
 		match = pattern.split(self.path_format)
 		glob_pattern = '*'.join(match)
-		fpaths = glob(os.path.join(self.save_directory, glob_pattern))
+		fpaths = glob(os.path.join(self.recording_dir, glob_pattern))
 
 		i_pattern = re_compile('(?<={})[0-9]*(?={})'.format(*match))
 		try:
@@ -161,7 +162,7 @@ class SaveNifti(PreprocessingStep):
 
 	def run(self, inp):
 		fpath = self.path_format % self._i
-		nbsave(inp, os.path.join(self.save_directory, fpath))
+		nbsave(inp, os.path.join(self.recording_dir, fpath))
 		self._i += 1
 
 class MotionCorrect(PreprocessingStep):
