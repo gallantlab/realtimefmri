@@ -50,15 +50,32 @@ class Preprocessor(object):
 
 		# load the pipeline from pipelines.conf
 		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
-			yaml_contents = yaml.load(f)
-			subject = yaml_contents['subject']
-			pipeline = yaml_contents['pipeline']
+			config = yaml.load(f)
+			self.initialization = config.get('initialization', dict())
+			self.pipeline = config['pipeline']
+			self.global_defaults = config.get('global_defaults', dict())
 
-		for step in pipeline:
+		if self.global_defaults['recording_id'] is None:
+			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
+				time.strftime('%Y%m%d_%H%M'))
+		try:
+			os.mkdir(os.path.join(rec_dir, self.global_defaults['recording_id']))
+			logger.info('making recording directory for id %s' % self.global_defaults['recording_id'])
+		except OSError:
+			warnings.warn('Recording id %s already exists!'% self.global_defaults['recording_id'])
+
+		for init in self.initialization:
+			logger.debug('initializing %s' % init['name'])
+			params = init.get('kwargs', {})
+			for k,v in self.global_defaults.iteritems():
+				params.setdefault(k, v)
+			init['instance'].__init__(**params)
+		for step in self.pipeline:
 			logger.info('initializing %s' % step['name'])
-			step['instance'].__init__(**step.get('kwargs', {}))
-
-		self.pipeline = pipeline
+			params = step.get('kwargs', dict())
+			for k,v in self.global_defaults.iteritems():
+				params.setdefault(k, v)
+			step['instance'].__init__(**params)
 
 	def run(self):
 		self.active = True
@@ -109,7 +126,7 @@ class RawToNifti(PreprocessingStep):
 	'''
 	takes data_dict containing raw_image_binary and adds 
 	'''
-	def __init__(self, subject=None, reference_name='funcref.nii'):
+	def __init__(self, subject=None, reference_name='funcref.nii', **kwargs):
 		if not subject is None:
 			funcref_path = os.path.join(get_subject_directory(subject), reference_name)
 			funcref = nbload(funcref_path)
@@ -133,7 +150,7 @@ class RawToNifti(PreprocessingStep):
 		return Nifti1Image(volume, self.affine)
 
 class SaveNifti(PreprocessingStep):
-	def __init__(self, recording_id=None, path_format='volume_%4.4u.nii'):
+	def __init__(self, recording_id=None, path_format='volume_%4.4u.nii', **kwargs):
 		if recording_id is None:
 			recording_id = str(uuid4())
 		self.recording_dir = os.path.join(rec_dir, recording_id, 'nifti')
@@ -166,7 +183,7 @@ class SaveNifti(PreprocessingStep):
 		self._i += 1
 
 class MotionCorrect(PreprocessingStep):
-	def __init__(self, subject=None, reference_name='funcref.nii'):
+	def __init__(self, subject=None, reference_name='funcref.nii', **kwargs):
 		if (subject is not None):
 			self.reference_path = os.path.join(get_subject_directory(subject), reference_name)
 			self.reference_affine = nbload(self.reference_path).affine
@@ -184,7 +201,7 @@ class ApplyMask(PreprocessingStep):
 	Mask is applied after transposing mask and data to zyx
 	to match the wm detrend training
 	'''
-	def __init__(self, subject=None, mask_name=None):
+	def __init__(self, subject=None, mask_name=None, **kwargs):
 		if (subject is not None) and (mask_name is not None):
 			subj_dir = get_subject_directory(subject)
 			mask_path = os.path.join(subj_dir, mask_name+'.nii')
@@ -202,7 +219,7 @@ class ApplyMask(PreprocessingStep):
 		return volume.get_data().T[self.mask.T]
 
 class ApplyMask2(PreprocessingStep):
-	def __init__(self, subject, mask1_name, mask2_name):
+	def __init__(self, subject, mask1_name, mask2_name, **kwargs):
 		'''
 		Input:
 		-----
@@ -239,6 +256,8 @@ class ApplyMask2(PreprocessingStep):
 		return x[self.mask]
 
 class ActivityRatio(PreprocessingStep):
+	def __init__(self, **kwargs):
+		super(ActivityRatio, self).__init__()
 	def run(self, x1, x2):
 		if isinstance(x1, np.ndarray):
 			x1 = np.nanmean(x1)
@@ -248,7 +267,7 @@ class ActivityRatio(PreprocessingStep):
 		return x1/(x1+x2)
 
 class RoiActivity(PreprocessingStep):
-	def __init__(self, subject, xfm_name, pre_mask_name, roi_names):
+	def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
 		subj_dir = get_subject_directory(subject)
 		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
 		
@@ -278,7 +297,7 @@ class WMDetrend(PreprocessingStep):
 	when a new image comes in, motion corrects it to reference image
 	then applies wm mask
 	'''
-	def __init__(self, subject, model_name=None):
+	def __init__(self, subject, model_name=None, **kwargs):
 		'''
 		This should set up the class instance to be ready to take an image input
 		and output the detrended gray matter activation
@@ -401,7 +420,7 @@ class OnlineMoments(PreprocessingStep):
 	This function only stores \Sum(X^i) and keeps
 	track of the number of observations.
 	'''
-	def __init__(self, order=4):
+	def __init__(self, order=4, **kwargs):
 		self.n = 0.0
 		self.order = order
 		self.all_raw_moments = [0.0]*self.order
@@ -442,7 +461,7 @@ class OnlineMoments(PreprocessingStep):
 		return self.get_statistics()[:2]
 
 class RunningMeanStd(PreprocessingStep):
-	def __init__(self, n=20):
+	def __init__(self, n=20, **kwargs):
 		self.n = n
 		self.mean = None
 	def run(self, inp):
@@ -456,7 +475,7 @@ class RunningMeanStd(PreprocessingStep):
 		return self.mean, self.std
 	
 class VoxelZScore(PreprocessingStep):
-	def __init__(self):
+	def __init__(self, **kwargs):
 		self.mean = None
 		self.std = None
 	def zscore(self, data):

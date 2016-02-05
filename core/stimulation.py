@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import subprocess
 import yaml
 import logging
 import warnings
@@ -10,7 +9,6 @@ import numpy as np
 import json
 import zmq
 import cortex
-import pyo
 
 from matplotlib import pyplot as plt
 plt.ion()
@@ -37,7 +35,8 @@ class Stimulator(object):
 			self.global_defaults = config.get('global_defaults', dict())
 		
 		if self.global_defaults['recording_id'] is None:
-			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'], time.strftime('%Y%m%d_%H%M'))
+			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
+				time.strftime('%Y%m%d_%H%M'))
 		try:
 			os.mkdir(os.path.join(rec_dir, self.global_defaults['recording_id']))
 			logger.info('making recording directory for id %s' % self.global_defaults['recording_id'])
@@ -86,21 +85,14 @@ class Stimulator(object):
 				sys.exit(0)
 
 class Stimulus(object):
-	def __init__(self, **kwargs):
-		self.subject = kwargs.get('subject', None)
-		self.record = kwargs.get('record', False)
-		self.recording_id = kwargs.get('recording_id', None)
 	def stop(self):
 		logger.info('stopping %s' % type(self))
 	def run(self):
 		raise NotImplementedError
 
 class PyCortexViewer(Stimulus):
-	def __init__(self, vmin=-1., vmax=1., **kwargs):
-		super(PyCortexViewer, self).__init__(**kwargs)
-		subject = kwargs.get('subject')
-		xfm_name = kwargs.get('xfm_name')
-		mask_type = kwargs.get('mask_type')
+	def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1., **kwargs):
+		super(PyCortexViewer, self).__init__()
 		npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
 		
 		data = np.zeros(npts)
@@ -124,35 +116,6 @@ class PyCortexViewer(Stimulus):
 				self.ctx_client.addData(data=vol)
 			except IndexError:
 				self.active = False
-
-class AudioRecorder(Stimulus):
-	def __init__(self, **kwargs):
-		super(AudioRecorder, self).__init__(**kwargs)
-		jack_port = kwargs['jack_port']
-		name = kwargs['name']
-		path = os.path.join(rec_dir, self.recording_id, name+'.wav')
-		try:
-			os.makedirs(os.path.dirname(path))
-		except OSError:
-			pass
-		params = [
-			{'name': 'out_path', 'flag': 'f', 'value': path},
-			{'name': 'duration', 'flag': 'd', 'value': '-1'},
-			{'name': 'jack_port', 'position': 'last', 'value': jack_port}
-		]
-		self.cmd = generate_command('jack_rec', params)
-		self.path = path
-	def run(self):
-		self.proc = subprocess.Popen(self.cmd)
-	def stop(self):
-		logger.debug('stopping AudioRecorder')
-		self.proc.terminate()
-		# params = [
-		# 	{'name': 'input', 'position': 'first', 'value': self.path},
-		# 	{'name': 'output', 'position': 'last', 'value': self.path.replace('.wav', '.mp3')}
-		# ]
-		# cmd = generate_command('sox', params)
-		# subprocess.call(cmd)
 
 class ConsolePlot(Stimulus):
 	def __init__(self, xmin=-2., xmax=2., width=40, **kwargs):
@@ -187,8 +150,8 @@ class ConsolePlot(Stimulus):
 		print self.make_bars(x)
 
 class RoiBars(Stimulus):
-	def __init__(self):
-		super(RoiBars, self).__init__(**kwargs)
+	def __init__(self, **kwargs):
+		super(RoiBars, self).__init__()
 		self.fig = plt.figure();
 		self.ax = self.fig.add_subplot(111);
 		self.rects = None
@@ -210,53 +173,6 @@ class RoiBars(Stimulus):
 				r.set_height(v)
 			plt.show()
 			plt.draw() # should update
-
-class WeirdSound(Stimulus):
-	def __init__(self, **kwargs):
-		super(WeirdSound, self).__init__(**kwargs)
-		self.server = pyo.Server(audio='jack').boot()
-		self.server.start()
-
-		self.lfo_freq0 = 0.4
-		self.lfo_freq = pyo.SigTo(value=self.lfo_freq0, time=0.5)
-		self.lfo = pyo.LFO(freq=self.lfo_freq, mul=0.005)
-		self.lfo.play()
-		
-		self.f0 = 180
-		self.freq = pyo.SigTo(value=[self.f0, self.f0+(0.01*self.f0),
-			self.f0*2, self.f0*2+(0.01*self.f0*2)],
-			time=1.)
-
-		self.synth = pyo.Sine(freq=self.freq, mul=self.lfo)
-		self.pan = pyo.SigTo(value=0.5, time=1.75)
-		self.panner = pyo.Pan(self.synth, outs=2, pan=self.pan)
-		self.panner.out()
-
-		if self.record:
-			rec_path = os.path.join(rec_dir, self.recording_id, 'weirdsound.wav')
-			try:
-				os.makedirs(os.path.dirname(rec_path))
-			except OSError:
-				pass
-			self.server.recstart(rec_path)
-
-	def run(self, inp):
-		if 'pan' in inp:
-			pan = np.fromstring(inp['pan'], dtype=np.float32)
-			self.pan.value = float(pan)
-		# cv1 = controls['M1H']
-		# if not np.isnan(cv1):
-		# 	f = self.f0*(1.+cv1*2.)
-		# 	self.freq.value = [f, f+(0.01*f), f*2, f*2+(0.01*f*2)]
-
-		# cv2 = controls['M1F']
-		# if not np.isnan(cv2):
-		# 	f = self.lfo_freq0*(1.+cv2*5.)
-		# 	self.lfo_freq.value = [f, f+(0.01*f)]
-	def stop(self):
-		logger.info('stopping weird sound')
-		if self.record:
-			self.server.recstop()
 
 class Debug(Stimulus):
 	def run(self, data):
