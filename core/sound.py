@@ -119,7 +119,7 @@ class WeirdSound(Stimulus):
 				os.makedirs(os.path.dirname(self.rec_path))
 			except OSError:
 				pass
-			self.server.recstart(self.rec_path)
+			server.recstart(self.rec_path)
 
 	@property
 	def lfo_freq(self):
@@ -172,7 +172,7 @@ class WeirdSound(Stimulus):
 		logger.info('stopping weird sound')
 		self.synth.stop()
 		if self.record:
-			self.server.recstop()
+			server.recstop()
 			params = [
 				{'name': 'input', 'position': 'first', 'value': self.rec_path},
 				{'name': 'output', 'position': 'last', 'value': self.rec_path.replace('.wav', '.mp3')}
