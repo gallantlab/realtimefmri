@@ -15,11 +15,12 @@ from itertools import cycle
 from .utils import get_example_data_directory, log_directory
 
 class DataCollector(object):
-	def __init__(self, directory, simulate=None, interval=None):
+	def __init__(self, directory=None, parent_directory=False, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
 		self.directory = directory
+		self.parent_directory = parent_directory
 
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
@@ -59,6 +60,15 @@ class DataCollector(object):
 			time.sleep(0.2)
 	
 	def run(self):
+		if self.parent_directory:
+			m = MonitorDirectory(self.directory, image_extension='/')
+			while True:
+				new_image_paths = m.get_new_image_paths()
+				if len(new_image_paths)>0:
+					self.directory = os.path.join(self.directory, new_image_paths.pop())
+					logger.info('detected new folder %s, monitoring' % self.directory)
+					break
+				time.sleep(0.2)
 		self._run()
 
 class MonitorDirectory(object):
@@ -76,16 +86,27 @@ class MonitorDirectory(object):
 		len(new_image_paths)==0 # True
 	'''
 	def __init__(self, directory, image_extension='.PixelData'):
-		logger.debug('monitoring %s'%directory)
+		logger.debug('monitoring %s for %s' % (directory, image_extension))
+
+		if image_extension=='/':
+			self._is_valid = self._is_valid_directories
+		else:
+			self._is_valid = self._is_valid_files
+
 		self.directory = directory
 		self.image_extension = image_extension
 		self.image_paths = self.get_directory_contents()
+
+	def _is_valid_directories(self, val):
+		return os.path.isdir(os.path.join(self.directory, val))
+	def _is_valid_files(self, val):
+		return val.endswith(self.image_extension)
 
 	def get_directory_contents(self):
 		'''
 		returns entire contents of directory with image_extension
 		'''
-		return set([i for i in os.listdir(self.directory) if i.endswith(self.image_extension)])
+		return set([i for i in os.listdir(self.directory) if self._is_valid(i)])
 
 	def get_new_image_paths(self):
 		'''
