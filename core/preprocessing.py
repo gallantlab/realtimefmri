@@ -22,11 +22,11 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-from .utils import get_database_directory, get_recording_directory, get_subject_directory, get_configuration_directory
+from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory
 
-db_dir = get_database_directory()
-rec_dir = get_recording_directory()
-config_dir = get_configuration_directory()
+db_dir = database_directory
+rec_dir = recording_directory
+config_dir = configuration_directory
 
 class Preprocessor(object):
 	'''
@@ -185,10 +185,13 @@ class SaveNifti(PreprocessingStep):
 class MotionCorrect(PreprocessingStep):
 	def __init__(self, subject=None, reference_name='funcref.nii', **kwargs):
 		if (subject is not None):
-			self.reference_path = os.path.join(get_subject_directory(subject), reference_name)
-			self.reference_affine = nbload(self.reference_path).affine
+			self.load_reference(os.path.join(get_subject_directory(subject), reference_name))
 		else:
 			warnings.warn('''Provide path to reference volume before calling run.''')
+
+	def load_reference(self, reference_path):
+		self.reference_path = reference_path
+		self.reference_affine = nbload(self.reference_path).affine
 
 	def run(self, input_volume):
 		assert np.allclose(input_volume.affine, self.reference_affine)
@@ -218,6 +221,21 @@ class ApplyMask(PreprocessingStep):
 		assert np.allclose(volume.affine, self.mask_affine)
 		return volume.get_data().T[self.mask.T]
 
+def secondary_mask(mask1, mask2, order='C'):
+	'''
+	Given an array, X and two 3d masks, mask1 and mask2
+	X[mask1] = x
+	X[mask1 & mask2] = y
+	x[new_mask] = y
+	'''
+	assert mask1.shape==mask2.shape
+	mask1_flat = mask1.flatten(order=order)
+	mask2_flat = mask2.flatten(order=order)
+
+	masks = np.c_[mask1_flat, mask2_flat]
+	masks = masks[mask1_flat,:]
+	return masks[:,1].astype(bool)
+
 class ApplyMask2(PreprocessingStep):
 	def __init__(self, subject, mask1_name, mask2_name, **kwargs):
 		'''
@@ -225,17 +243,10 @@ class ApplyMask2(PreprocessingStep):
 		-----
 		mask1_path: path to a boolean mask in xyz format
 		mask2_path: path to a boolean mask in xyz format
-
+	
 		Initialization will generate a boolean vector that selects elements 
 		from the vector output of mask1 applied to a volume that are also in
 		mask2.
-
-		Example:
-		-----
-		Given a 3d array, X and two 3d masks, mask1 and mask2
-		X.T[mask1.T] = x
-		X.T[mask1.T & mask2.T] = y
-		x[new_mask] = y
 		'''
 		subj_dir = get_subject_directory(subject)
 		mask1_path = os.path.join(subj_dir, mask1_name+'.nii')
@@ -243,12 +254,7 @@ class ApplyMask2(PreprocessingStep):
 
 		mask1 = nbload(mask1_path).get_data().astype(bool) # in xyz
 		mask2 = nbload(mask2_path).get_data().astype(bool) # in xyz		
-		mask1_flat = mask1.flatten(order='F')
-		mask2_flat = mask2.flatten(order='F')
-
-		masks = np.c_[mask1_flat, mask2_flat]
-		masks = masks[mask1_flat,:]
-		self.mask = masks[:,1].astype(bool)
+		self.mask = secondary_mask(mask1, mask2, order='F')
 
 	def run(self, x):
 		if x.ndim>1:
@@ -272,16 +278,15 @@ class RoiActivity(PreprocessingStep):
 		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
 		
 		# mask in zyx
-		pre_mask = nbload(pre_mask_path).get_data().T
-		pre_mask_ix = pre_mask.flatten().nonzero()[0]
+		pre_mask = nbload(pre_mask_path).get_data().T.astype(bool)
 
 		# returns masks in zyx
 		roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
+
 		self.masks = dict()
 		for name, mask_value in roi_dict.iteritems():
-			mask = roi_masks==mask_value
-			mask_overlap = np.logical_and(pre_mask, mask).flatten().nonzero()[0]
-			self.masks[name] = np.asarray([i for i,j in enumerate(pre_mask_ix) if j in mask_overlap])
+			roi_mask = roi_masks==mask_value
+			self.masks[name] = secondary_mask(pre_mask, roi_mask)
 
 	def run(self, activity):
 		if activity.ndim>1:

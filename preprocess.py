@@ -1,23 +1,9 @@
 import os
 import time
 import argparse
-from core.utils import get_log_directory
 from core.preprocessing import Preprocessor
-
-import logging
-logger = logging.getLogger('preprocess')
-logger.setLevel(logging.DEBUG)
-log_path = os.path.join(get_log_directory(), '%s_preprocess.log'%time.strftime('%Y%m%d'))
-fh = logging.FileHandler(log_path)
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(name)-20s %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+from core.utils import get_logger
+logger = get_logger('preprocess', dest=['console', 'file'])
 
 if __name__=='__main__':
 

@@ -12,7 +12,7 @@ import zmq
 
 from itertools import cycle
 
-from .utils import get_example_data_directory, get_log_directory
+from .utils import get_example_data_directory, log_directory
 
 class DataCollector(object):
 	def __init__(self, directory, simulate=None, interval=None):
