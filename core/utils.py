@@ -50,7 +50,7 @@ def get_logger(name, dest=[]):
 		ch = logging.StreamHandler()
 		ch.setLevel(logging.INFO)
 		logger.addHandler(ch)
-		dest.pop('console')
+		dest.remove('console')
 	for d in dest:
 		if d=='file':
 			log_path = os.path.join(log_directory, '%s_%s.log' % (time.strftime('%Y%m%d'), name))
