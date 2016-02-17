@@ -2,13 +2,12 @@ import os
 import subprocess
 import numpy as np
 import pyo64 as pyo
-import logging
-logger = logging.getLogger('stimulate.ion')
 
 from .stimulation import Stimulus
-from .utils import generate_command, get_recording_directory
+from .utils import generate_command, recording_directory, get_logger
+logger = get_logger('stimulate.ion')
 
-rec_dir = get_recording_directory()
+rec_dir = recording_directory
 server = pyo.Server(audio='jack').boot()
 server.start()
 
@@ -35,7 +34,7 @@ class WeirdSound2(Stimulus):
 
 		self.record = record
 		if self.record:
-			self.rec_path = os.path.join(rec_dir, recording_id, 'weirdsound.wav')
+			self.rec_path = os.path.join(rec_dir, recording_id, 'logs', 'weirdsound.wav')
 			try:
 				os.makedirs(os.path.dirname(self.rec_path))
 			except OSError:
@@ -114,7 +113,7 @@ class WeirdSound(Stimulus):
 
 		self.record = record
 		if self.record:
-			self.rec_path = os.path.join(rec_dir, recording_id, 'weirdsound.wav')
+			self.rec_path = os.path.join(rec_dir, recording_id, 'logs', 'weirdsound.wav')
 			try:
 				os.makedirs(os.path.dirname(self.rec_path))
 			except OSError:
@@ -184,7 +183,7 @@ class WeirdSound(Stimulus):
 class AudioRecorder(Stimulus):
 	def __init__(self, jack_port, file_name, recording_id, **kwargs):
 		super(AudioRecorder, self).__init__()
-		rec_path = os.path.join(rec_dir, recording_id, file_name+'.wav')
+		rec_path = os.path.join(rec_dir, recording_id, 'logs', file_name+'.wav')
 		try:
 			os.makedirs(os.path.dirname(rec_path))
 		except OSError:

@@ -1,18 +1,13 @@
-import time
-import logging
-logger = logging.getLogger('collect.ion')
-logger.setLevel(logging.DEBUG)
-
-import functools
-
 import os
+import time
+import functools
 import random
 from glob import glob
 import zmq
-
 from itertools import cycle
 
-from .utils import get_example_data_directory, log_directory
+from .utils import get_example_data_directory, get_logger
+logger = get_logger('collect.ion') 
 
 class DataCollector(object):
 	def __init__(self, directory=None, parent_directory=False, simulate=None, interval=None):

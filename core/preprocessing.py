@@ -10,10 +10,6 @@ import json
 import warnings
 from uuid import uuid4
 
-import logging
-logger = logging.getLogger('preprocess.ing')
-logger.setLevel(logging.DEBUG)
-
 import numpy as np
 import zmq
 
@@ -22,7 +18,7 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory
+from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory, get_logger
 
 db_dir = database_directory
 rec_dir = recording_directory
@@ -59,19 +55,22 @@ class Preprocessor(object):
 			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
 				time.strftime('%Y%m%d_%H%M'))
 		try:
-			os.mkdir(os.path.join(rec_dir, self.global_defaults['recording_id']))
-			logger.info('making recording directory for id %s' % self.global_defaults['recording_id'])
+			self.rec_dir = os.path.join(rec_dir, self.global_defaults['recording_id'])
+			os.makedirs(os.path.join(self.rec_dir, 'logs'))
 		except OSError:
 			warnings.warn('Recording id %s already exists!'% self.global_defaults['recording_id'])
 
+		self.logger = get_logger('preprocess.ing', dest=os.path.join(self.rec_dir, 'logs', 'preprocessing.log'))
+		self.logger.info('initializing recording directory for id %s' % self.global_defaults['recording_id'])
+
 		for init in self.initialization:
-			logger.debug('initializing %s' % init['name'])
+			self.logger.debug('initializing %s' % init['name'])
 			params = init.get('kwargs', {})
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
 			init['instance'].__init__(**params)
 		for step in self.pipeline:
-			logger.info('initializing %s' % step['name'])
+			self.logger.info('initializing %s' % step['name'])
 			params = step.get('kwargs', dict())
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
@@ -79,11 +78,11 @@ class Preprocessor(object):
 
 	def run(self):
 		self.active = True
-		logger.info('ready')
+		self.logger.info('ready')
 		while self.active:
 			message = self.input_socket.recv()
 			data = message[6:]
-			logger.info('received image data of length %u' % len(data))
+			self.logger.info('received image data of length %u' % len(data))
 			outp = self.process(data)
 			time.sleep(0.1)
 
@@ -93,7 +92,7 @@ class Preprocessor(object):
 		}
 
 		for step in self.pipeline:
-			logger.debug('running %s' % step['name'])
+			self.logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
 			outp = step['instance'].run(*args)
 			if not isinstance(outp, (list, tuple)):
@@ -101,7 +100,7 @@ class Preprocessor(object):
 			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
 			for topic in step.get('send', []):
-				logger.info('sending %s' % topic)
+				self.logger.info('sending %s' % topic)
 				if isinstance(d[topic], dict):
 					self.output_socket.send(topic+' '+json.dumps(d[topic]))
 				elif isinstance(d[topic], (np.ndarray)):
@@ -114,13 +113,6 @@ class PreprocessingStep(object):
 		pass
 	def run(self):
 		raise NotImplementedError
-
-class Debug(PreprocessingStep):
-	def run(self, val):
-		logger.info('debugging')
-		if isinstance(val, np.ndarray):
-			val = str(val[:10])
-		logger.info(val)
 
 class RawToNifti(PreprocessingStep):
 	'''

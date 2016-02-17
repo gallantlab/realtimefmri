@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-package_directory = '/home/robertg/code/python-code/realtimefmri'
+package_directory = os.path.dirname(os.getcwd())#'/home/glab/Documents/realtimefmri'
 database_directory = os.path.join(package_directory, 'database')
 def get_subject_directory(subject):
 	return os.path.join(database_directory, subject)
@@ -56,7 +56,7 @@ def get_logger(name, dest=[]):
 			log_path = os.path.join(log_directory, '%s_%s.log' % (time.strftime('%Y%m%d'), name))
 		else:
 			log_path = d
-			assert os.path.exists(d)
+			assert not os.path.exists(d)
 		formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')
 		fh = logging.FileHandler(log_path)
 		fh.setLevel(logging.DEBUG)
