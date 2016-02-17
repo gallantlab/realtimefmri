@@ -176,8 +176,9 @@ class WeirdSound(Stimulus):
 				{'name': 'input', 'position': 'first', 'value': self.rec_path},
 				{'name': 'output', 'position': 'last', 'value': self.rec_path.replace('.wav', '.mp3')}
 			]
-			cmd = generate_command('sox', params)
-			subprocess.call(cmd)
+			cmd = generate_command('lame', params)
+			with open(os.devnull, 'w') as devnull:
+				subprocess.call(cmd, stdout=devnull, stderr=devnull)
 			os.remove(self.rec_path)
 
 class AudioRecorder(Stimulus):
@@ -204,6 +205,7 @@ class AudioRecorder(Stimulus):
 			{'name': 'input', 'position': 'first', 'value': self.rec_path},
 			{'name': 'output', 'position': 'last', 'value': self.rec_path.replace('.wav', '.mp3')}
 		]
-		cmd = generate_command('sox', params)
-		subprocess.call(cmd)
+		cmd = generate_command('lame', params)
+		with open(os.devnull, 'w') as devnull:
+			subprocess.call(cmd, stdout=devnull, stderr=devnull)
 		os.remove(self.rec_path)

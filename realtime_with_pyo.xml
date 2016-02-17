@@ -1,0 +1,29 @@
+<!DOCTYPE patchbay>
+<patchbay version="0.3.10" name="realtime_with_pyo">
+ <output-sockets>
+  <socket exclusive="off" client="system" type="jack-audio" name="system">
+   <plug>capture_1</plug>
+   <plug>capture_2</plug>
+  </socket>
+  <socket exclusive="off" client="pyo" type="jack-audio" name="pyo">
+   <plug>output_1</plug>
+   <plug>output_2</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket exclusive="off" client="system" type="jack-audio" name="system">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket exclusive="off" client="pyo" type="jack-audio" name="pyo">
+   <plug>input_1</plug>
+   <plug>input_2</plug>
+  </socket>
+  <socket exclusive="off" client="jackrec" type="jack-audio" name="jackrec">
+   <plug>input1</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables/>
+</patchbay>
+

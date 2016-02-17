@@ -2,7 +2,7 @@ import os
 import time
 import logging
 
-package_directory = os.path.dirname(os.getcwd())#'/home/glab/Documents/realtimefmri'
+package_directory = '/home/glab/Documents/realtimefmri'
 database_directory = os.path.join(package_directory, 'database')
 def get_subject_directory(subject):
 	return os.path.join(database_directory, subject)
