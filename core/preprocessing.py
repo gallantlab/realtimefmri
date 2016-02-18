@@ -116,9 +116,10 @@ class Preprocessor(object):
 		}
 
 		for step in self.pipeline:
-			self.logger.debug('running %s' % step['name'])
 			args = [data_dict[i] for i in step['input']]
+			self.logger.debug('running %s' % step['name'])
 			outp = step['instance'].run(*args)
+			self.logger.debug('finished %s' % step['name'])
 			if not isinstance(outp, (list, tuple)):
 				outp = [outp]
 			d = dict(zip(step.get('output', []), outp))

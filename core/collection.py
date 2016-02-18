@@ -1,7 +1,6 @@
 import os
 import time
 import functools
-import random
 from glob import glob
 import zmq
 from itertools import cycle
