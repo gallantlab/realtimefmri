@@ -85,9 +85,9 @@ class Stimulator(object):
 				data = msg[topic_end+1:]
 				for stim in self.pipeline:
 					if topic in stim['topic'].keys():
-						self.logger.debug('sending data of length %i to %s'%(len(data), topic))
+						self.logger.debug('running %s'%topic)
 						stim['instance'].run({stim['topic'][topic]: data})
-						self.logger.debug('%s function returned'%stim['name'])
+						self.logger.debug('finished %s'%stim['name'])
 			except (KeyboardInterrupt, SystemExit):
 				self.active = False
 				for init in self.initialization:
