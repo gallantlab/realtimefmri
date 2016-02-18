@@ -34,22 +34,31 @@ class DataCollector(object):
 		s.send('READY!')
 		logger.info('synchronized with image subscriber')
 
-	def _simulate(self, interval='return', subject='S1'):
+	def _simulate(self, interval, subject):
 		ex_dir = get_example_data_directory(subject)
 		logger.info('simulating from %s' % ex_dir)
 		image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
 		image_fpaths.sort()
 		image_fpaths = cycle(image_fpaths)
+
+		if interval=='sync':
+			ctx = zmq.Context.instance()
+			s = ctx.socket(zmq.PULL)
+			s.connect('tcp://localhost:5554')
+			
 		for image_fpath in image_fpaths:
+			if interval=='return':
+				raw_input('>> Press return for next image')
+			elif interval=='sync':
+				s.recv()
+			else:
+				time.sleep(interval)
+
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
 			msg = 'image '+raw_image_binary
 			logger.info('sending message of length %d\n(%s)' % (len(msg), os.path.basename(image_fpath)))
 			self.image_pub.send(msg)
-			if interval=='return':
-				raw_input('>> Press return for next image')
-			else:
-				time.sleep(interval)
 
 	def _run(self):
 		self.active = True

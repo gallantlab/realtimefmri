@@ -98,9 +98,23 @@ class Preprocessor(object):
 		s.send('READY!')
 		self.logger.info('synchronized with stimuli subscriber')
 
+	def _sync_with_first_image(self):
+		ctx = zmq.Context.instance()
+		s = ctx.socket(zmq.PULL)
+		s.connect('tcp://localhost:5554')
+		self.logger.debug('waiting for first image')
+		s.recv()
+		self._t0 = time.time()
+		self.logger.debug('synchronized with first image at time %.2f'%self._t0)
+
+	@property
+	def timestamp(self):
+		return time.time() - self._t0
+
 	def run(self):
 		self.active = True
-		self.logger.info('ready')
+		self.logger.info('running')
+		self._sync_with_first_image()
 		while self.active:
 			message = self.input_socket.recv()
 			data = message[6:]
