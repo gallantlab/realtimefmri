@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import yaml
-import logging
 import warnings
 
 import numpy as np
@@ -13,12 +12,10 @@ import cortex
 from matplotlib import pyplot as plt
 plt.ion()
 
-from .utils import get_database_directory, get_recording_directory, get_configuration_directory, generate_command
-config_dir = get_configuration_directory()
-db_dir = get_database_directory()
-rec_dir = get_recording_directory()
-
-logger = logging.getLogger('stimulate.ion')
+from .utils import database_directory, recording_directory, configuration_directory, generate_command, get_logger
+config_dir = configuration_directory
+db_dir = database_directory
+rec_dir = recording_directory
 
 class Stimulator(object):
 	def __init__(self, stim_config, in_port=5558):
@@ -39,19 +36,22 @@ class Stimulator(object):
 			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
 				time.strftime('%Y%m%d_%H%M'))
 		try:
-			os.mkdir(os.path.join(rec_dir, self.global_defaults['recording_id']))
-			logger.info('making recording directory for id %s' % self.global_defaults['recording_id'])
+			self.rec_dir = os.path.join(rec_dir, self.global_defaults['recording_id'])
+			os.makedirs(os.path.join(self.rec_dir, 'logs'))
 		except OSError:
 			warnings.warn('Recording id %s already exists!' % self.global_defaults['recording_id'])
 
+		self.logger = get_logger('stimulate.ion', dest=[os.path.join(self.rec_dir, 'logs', 'stimulation.log')])
+		self.logger.info('making recording directory for id %s' % self.global_defaults['recording_id'])
+
 		for init in self.initialization:
-			logger.debug('initializing %s' % init['name'])
+			self.logger.debug('initializing %s' % init['name'])
 			params = init.get('kwargs', {})	
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
 			init['instance'].__init__(**params)
 		for step in self.pipeline:
-			logger.debug('initializing %s' % step['name'])
+			self.logger.debug('initializing %s' % step['name'])
 			params = step.get('kwargs', {})
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
@@ -71,24 +71,24 @@ class Stimulator(object):
 
 	def run(self):
 		self.active = True
-		logger.info('running')
+		self.logger.info('running')
 		for init in self.initialization:
-			logger.debug('starting %s' % init['name'])
+			self.logger.debug('starting %s' % init['name'])
 			init['instance'].run()
 
 		while self.active:
 			try:
-				logger.debug('start receive wait')
+				self.logger.debug('start receive wait')
 				msg = self.input_socket.recv()
-				logger.debug('received message')
+				self.logger.debug('received message')
 				topic_end = msg.find(' ')
 				topic = msg[:topic_end]
 				data = msg[topic_end+1:]
 				for stim in self.pipeline:
 					if topic in stim['topic'].keys():
-						logger.debug('sending data of length %i to %s'%(len(data), topic))
+						self.logger.debug('sending data of length %i to %s'%(len(data), topic))
 						stim['instance'].run({stim['topic'][topic]: data})
-						logger.debug('%s function returned'%stim['name'])
+						self.logger.debug('%s function returned'%stim['name'])
 			except (KeyboardInterrupt, SystemExit):
 				self.active = False
 				for init in self.initialization:
@@ -99,7 +99,7 @@ class Stimulator(object):
 
 class Stimulus(object):
 	def stop(self):
-		logger.info('stopping %s' % type(self))
+		pass
 	def run(self):
 		raise NotImplementedError
 
@@ -119,7 +119,6 @@ class PyCortexViewer(Stimulus):
 		self.vmin = vmin
 		self.vmax = vmax
 		self.active = True
-		logger.debug('initialized PyCortexViewer')
 
 	def run(self, inp):
 		if self.active:
@@ -171,18 +170,14 @@ class RoiBars(Stimulus):
 		plt.show()
 		plt.draw()
 	def run(self, data):
-		logger.info('running RoiBars with data %s'%data)
 		data = json.loads(data)
 		if self.rects is None:
-			logger.info('self.rects is None')
 
 			self.rects = self.ax.bar(range(len(data)), data.values())
 			plt.show()
 			plt.draw()
 		else:
-			logger.info('self.rects is not None')
 			for r, v in zip(self.rects, data.values()):
-				logger.info('setting %s %f' % (r.__repr__(), v))
 				r.set_height(v)
 			plt.show()
 			plt.draw() # should update
@@ -190,4 +185,3 @@ class RoiBars(Stimulus):
 class Debug(Stimulus):
 	def run(self, data):
 		data = np.fromstring(data, dtype=np.float32)
-		logger.info(data)
