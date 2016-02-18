@@ -29,9 +29,10 @@ if __name__=='__main__':
     dtime = starts.join(finishes, lsuffix='_start', rsuffix='_finish')
     dtime['d_seconds'] = (dtime.time_finish - dtime.time_start).apply(lambda x: x / np.timedelta64(1,'s'))
     dtime['step_type'] = dtime.message_start.str.replace('running ', '')
-    dtime_gp = dtime.groupby('step_type')
-    dtime_mean = dtime_gp.mean()
-    dtime_total = dtime_mean.sum()
-    print 'Average time per preprocessing step:\n'
-    print dtime_mean
-    print '\nAverage total time:\t%.3f s' % dtime_total.values[0]
+    dtime_gp = dtime.groupby('step_type').d_seconds
+    summary = pd.DataFrame([dtime_gp.mean(), dtime_gp.min(), dtime_gp.max()]).T
+    summary.columns = ['mean', 'min', 'max']
+    print 'Summary per preprocessing step:\n'
+    print summary
+    print '\nAverage total time:'
+    print summary.sum()
