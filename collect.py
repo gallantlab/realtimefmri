@@ -39,5 +39,5 @@ if __name__ == "__main__":
 		else:
 			raise ValueError
 
-	d = DataCollector(args.directory, simulate=args.simulate, interval=interval, parent_directory=args.parent)
+	d = DataCollector(directory=args.directory, simulate=args.simulate, interval=interval, parent_directory=args.parent)
 	d.run()
