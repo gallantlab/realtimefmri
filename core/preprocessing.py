@@ -122,6 +122,9 @@ class Preprocessor(object):
 			outp = self.process(data)
 			time.sleep(0.1)
 
+	def log(self, msg):
+		self.logger.debug('log:%40s%10.4f'%(msg, self.timestamp))
+
 	def process(self, raw_image_binary):
 		data_dict = {
 			'raw_image_binary': raw_image_binary,
@@ -129,9 +132,9 @@ class Preprocessor(object):
 
 		for step in self.pipeline:
 			args = [data_dict[i] for i in step['input']]
-			self.logger.debug('running %s' % step['name'])
+			self.log('running %s' % step['name'])
 			outp = step['instance'].run(*args)
-			self.logger.debug('finished %s' % step['name'])
+			self.log('finished %s' % step['name'])
 			if not isinstance(outp, (list, tuple)):
 				outp = [outp]
 			d = dict(zip(step.get('output', []), outp))

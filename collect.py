@@ -34,10 +34,10 @@ if __name__ == "__main__":
 	try:
 		interval = float(args.interval)
 	except (TypeError, ValueError):
-		if args.interval=='return':
+		if args.interval in ['return', 'sync']:
 			interval = args.interval
 		else:
-			raise ValueError
+			raise ValueError, '''Interval must be an integer (in seconds), "return", or "sync"'''
 
 	d = DataCollector(directory=args.directory, simulate=args.simulate, interval=interval, parent_directory=args.parent)
 	d.run()

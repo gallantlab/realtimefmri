@@ -80,7 +80,10 @@ class Stimulator(object):
 	@property
 	def timestamp(self):
 		return time.time() - self._t0
-
+	
+	def log(self, msg):
+		self.logger.debug('log:%40s%10.4f'%(msg, self.timestamp))
+	
 	def run(self):
 		self.active = True
 		self.logger.info('running')
@@ -99,9 +102,9 @@ class Stimulator(object):
 				data = msg[topic_end+1:]
 				for stim in self.pipeline:
 					if topic in stim['topic'].keys():
-						self.logger.debug('running %s'%topic)
+						self.log('running %s'%topic)
 						stim['instance'].run({stim['topic'][topic]: data})
-						self.logger.debug('finished %s'%stim['name'])
+						self.log('finished %s'%stim['name'])
 			except (KeyboardInterrupt, SystemExit):
 				self.active = False
 				for init in self.initialization:
