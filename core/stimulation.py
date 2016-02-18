@@ -21,10 +21,11 @@ rec_dir = get_recording_directory()
 logger = logging.getLogger('stimulate.ion')
 
 class Stimulator(object):
-	def __init__(self, stim_config):
+	def __init__(self, stim_config, in_port=5558):
 		zmq_context = zmq.Context()
 		self.input_socket = zmq_context.socket(zmq.SUB)
-		self.input_socket.connect('tcp://localhost:5557')
+		self.input_socket.connect('tcp://localhost:%d'%in_port)
+		self.in_port = in_port
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
 		self.active = False
 
@@ -55,6 +56,18 @@ class Stimulator(object):
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
 			step['instance'].__init__(**params)
+
+		self._sync_with_publisher()
+
+	def _sync_with_publisher(self):
+		ctx = zmq.Context.instance()
+		s = ctx.socket(zmq.REQ)
+		s.connect('tcp://localhost:%d'%self.in_port)
+		logger.debug('requesting synchronization with preprocessing publisher')
+		s.send('READY?')
+		logger.debug('waiting for preprocessing publisher to respond to sync request')
+		s.recv()
+		logger.debug('synchronized with preprocessing publisher')
 
 	def run(self):
 		self.active = True

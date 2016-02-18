@@ -15,19 +15,31 @@ from itertools import cycle
 from .utils import get_example_data_directory, log_directory
 
 class DataCollector(object):
-	def __init__(self, directory=None, parent_directory=False, simulate=None, interval=None):
+	def __init__(self, out_port=5556, directory=None, parent_directory=False, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
 		self.directory = directory
 		self.parent_directory = parent_directory
 
+		self._sync_with_subscriber()
+
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
-		self.image_pub.bind('tcp://*:5556')
+		self.image_pub.bind('tcp://*:%d'%out_port)
+		self.out_port = out_port
 		self.active = False 
 		if not simulate is None:
 			self._run = functools.partial(self._simulate, interval=interval, subject=simulate)
+
+	def _sync_with_subscriber(self):
+		ctx = zmq.Context.instance()
+		s = ctx.socket(zmq.REP)
+		s.bind('tcp://*:%d'%self.out_port+1)
+		logger.debug('waiting for image subscriber to initialize sync')
+		s.recv()
+		s.send('READY!')
+		logger.debug('synchronized with image subscriber')
 
 	def _simulate(self, interval='return', subject='S1'):
 		ex_dir = get_example_data_directory(subject)
@@ -60,6 +72,7 @@ class DataCollector(object):
 			time.sleep(0.2)
 	
 	def run(self):
+		# watch the parent_directory for the first new directory, then use that as the directory to monitor
 		if self.parent_directory:
 			m = MonitorDirectory(self.directory, image_extension='/')
 			while True:

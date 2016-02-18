@@ -34,17 +34,19 @@ class Preprocessor(object):
 	file, initializes the classes for each step, and runs the main loop
 	that receives incoming images from the data collector.
 	'''
-	def __init__(self, preproc_config, **kwargs):
+	def __init__(self, preproc_config, in_port=5556, out_port=5558, **kwargs):
 		super(Preprocessor, self).__init__()
 
 		# initialize input and output sockets
 		context = zmq.Context()
 		self.input_socket = context.socket(zmq.SUB)
-		self.input_socket.connect('tcp://localhost:5556')
+		self.input_socket.connect('tcp://localhost:%d'%in_port)
+		self.in_port = in_port
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
 
 		self.output_socket = context.socket(zmq.PUB)
-		self.output_socket.bind('tcp://*:5557')
+		self.output_socket.bind('tcp://*:%d'%out_port)
+		self.out_port = out_port
 
 		self.active = False
 
@@ -76,6 +78,28 @@ class Preprocessor(object):
 			for k,v in self.global_defaults.iteritems():
 				params.setdefault(k, v)
 			step['instance'].__init__(**params)
+
+		self._sync_with_publisher()
+		self._sync_with_subscriber()
+
+	def _sync_with_publisher(self):
+		ctx = zmq.Context.instance()
+		s = ctx.socket(zmq.REQ)
+		s.connect('tcp://localhost:%d'%self.in_port+1)
+		logger.debug('requesting synchronization with image publisher')
+		s.send('READY?')
+		logger.debug('waiting for image publisher to respond to sync request')
+		s.recv()
+		logger.debug('synchronized with image publisher')
+
+	def _sync_with_subscriber(self):
+		ctx = zmq.Context.instance()
+		s = ctx.socket(zmq.REP)
+		s.bind('tcp://*:%d'%self.out_port+1)
+		logger.debug('waiting for stimuli subscriber to initialize sync')
+		s.recv()
+		s.send('READY!')
+		logger.debug('synchronized with stimuli subscriber')
 
 	def run(self):
 		self.active = True
