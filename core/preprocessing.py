@@ -37,12 +37,10 @@ class Preprocessor(object):
 		context = zmq.Context()
 		self.input_socket = context.socket(zmq.SUB)
 		self.input_socket.connect('tcp://localhost:%d'%in_port)
-		self.in_port = in_port
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
 
 		self.output_socket = context.socket(zmq.PUB)
 		self.output_socket.bind('tcp://*:%d'%out_port)
-		self.out_port = out_port
 
 		self.active = False
 
@@ -78,27 +76,27 @@ class Preprocessor(object):
 				params.setdefault(k, v)
 			step['instance'].__init__(**params)
 
-		self._sync_with_publisher()
-		self._sync_with_subscriber()
+		self._sync_with_publisher(in_port+1)
+		self._sync_with_subscriber(out_port+1)
 
-	def _sync_with_publisher(self):
+	def _sync_with_publisher(self, port):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.REQ)
-		s.connect('tcp://localhost:%d'%self.in_port+1)
-		logger.debug('requesting synchronization with image publisher')
+		s.connect('tcp://localhost:%d'%port)
+		self.logger.info('requesting synchronization with image publisher')
 		s.send('READY?')
-		logger.debug('waiting for image publisher to respond to sync request')
+		self.logger.info('waiting for image publisher to respond to sync request')
 		s.recv()
-		logger.debug('synchronized with image publisher')
+		self.logger.info('synchronized with image publisher')
 
-	def _sync_with_subscriber(self):
+	def _sync_with_subscriber(self, port):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.REP)
-		s.bind('tcp://*:%d'%self.out_port+1)
-		logger.debug('waiting for stimuli subscriber to initialize sync')
+		s.bind('tcp://*:%d'%port)
+		self.logger.info('waiting for stimuli subscriber to initialize sync')
 		s.recv()
 		s.send('READY!')
-		logger.debug('synchronized with stimuli subscriber')
+		self.logger.info('synchronized with stimuli subscriber')
 
 	def run(self):
 		self.active = True

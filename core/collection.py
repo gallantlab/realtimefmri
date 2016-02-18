@@ -17,24 +17,23 @@ class DataCollector(object):
 		self.directory = directory
 		self.parent_directory = parent_directory
 
-		self._sync_with_subscriber()
+		self._sync_with_subscriber(out_port+1)
 
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:%d'%out_port)
-		self.out_port = out_port
 		self.active = False 
 		if not simulate is None:
 			self._run = functools.partial(self._simulate, interval=interval, subject=simulate)
 
-	def _sync_with_subscriber(self):
+	def _sync_with_subscriber(self, port):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.REP)
-		s.bind('tcp://*:%d'%self.out_port+1)
-		logger.debug('waiting for image subscriber to initialize sync')
+		s.bind('tcp://*:%d'%port)
+		logger.info('waiting for image subscriber to initialize sync')
 		s.recv()
 		s.send('READY!')
-		logger.debug('synchronized with image subscriber')
+		logger.info('synchronized with image subscriber')
 
 	def _simulate(self, interval='return', subject='S1'):
 		ex_dir = get_example_data_directory(subject)
