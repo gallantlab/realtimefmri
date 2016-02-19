@@ -1,5 +1,6 @@
 import os
 import time
+import struct
 import functools
 from glob import glob
 import zmq
@@ -9,17 +10,18 @@ from .utils import get_example_data_directory, get_logger
 logger = get_logger('collect.ion') 
 
 class DataCollector(object):
-	def __init__(self, out_port=5556, acq_port=5555, directory=None, parent_directory=False, simulate=None, interval=None):
+	def __init__(self, out_port=5556, acq_port=5554, directory=None, parent_directory=False, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
 		self.directory = directory
 		self.parent_directory = parent_directory
 
+		context = zmq.Context()
 		self.image_acq = context.socket(zmq.SUB)
 		self.image_acq.connect('tcp://localhost:%d'%acq_port)
+		self.image_acq.setsockopt(zmq.SUBSCRIBE, 'time')
 
-		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:%d'%out_port)
 
@@ -44,7 +46,9 @@ class DataCollector(object):
 		self._t0 = time.time()
 
 	def _sync_with_image_acq(self):
+		logger.info('waiting for image')
 		self.image_acq.recv()
+		logger.info('acquired image')
 		return time.time()-self._t0
 
 	def _simulate(self, interval, subject):
@@ -64,13 +68,14 @@ class DataCollector(object):
 				raw_input('>> Press return for next image')
 			elif interval=='sync':
 				t = self._sync_with_image_acq()
+				time.sleep(0.2) # simulate image scan and reconstruction time
 			else:
 				time.sleep(interval)
 
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
-			logger.info('sending message of length %d\n(%s)' % (len(msg), os.path.basename(image_fpath)))
-			self.image_pub.send_multipart([b'image', t, raw_image_binary])
+			logger.info(os.path.basename(image_fpath))
+			self.image_pub.send_multipart([b'image', struct.pack('d', t), raw_image_binary])
 
 	def _run(self):
 		self.active = True

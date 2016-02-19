@@ -70,13 +70,13 @@ class Stimulator(object):
 
 	def _sync_with_first_image(self):
 		ctx = zmq.Context.instance()
-		s = ctx.socket(zmq.PUB)
+		s = ctx.socket(zmq.SUB)
 		s.connect('tcp://localhost:5554')
 		s.setsockopt(zmq.SUBSCRIBE, 'time')
-		self.logger.debug('waiting for first image')
+		self.logger.info('waiting for first image')
 		s.recv()
 		self._t0 = time.time()
-		self.logger.debug('synchronized with first image at time %.2f'%self._t0)
+		self.logger.info('synchronized with first image at time %.2f'%self._t0)
 
 	@property
 	def timestamp(self):

@@ -7,6 +7,7 @@ from itertools import izip
 import time
 import yaml
 import json
+import struct
 import warnings
 from uuid import uuid4
 
@@ -102,10 +103,11 @@ class Preprocessor(object):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.SUB)
 		s.connect('tcp://localhost:5554')
-		self.logger.debug('waiting for first image')
+		s.setsockopt(zmq.SUBSCRIBE, 'time')
+		self.logger.info('waiting for first image')
 		s.recv()
 		self._t0 = time.time()
-		self.logger.debug('synchronized with first image at time %.2f'%self._t0)
+		self.logger.info('synchronized with first image at time %.2f'%self._t0)
 
 	@property
 	def timestamp(self):
@@ -117,7 +119,8 @@ class Preprocessor(object):
 		self._sync_with_first_image()
 		while self.active:
 			topic, t, data = self.input_socket.recv_multipart()
-			self.logger.info('received image (collected at time)%.2f)' % t)
+			t = struct.unpack('d', t)
+			self.logger.info('received image (collected at time %.2f)' % t)
 			outp = self.process(data)
 			time.sleep(0.1)
 
