@@ -26,6 +26,7 @@ class DataCollector(object):
 		self.image_pub.bind('tcp://*:%d'%out_port)
 
 		self._sync_with_subscriber(out_port+1)
+		self._t0 = None
 
 		self.active = False 
 
@@ -41,16 +42,13 @@ class DataCollector(object):
 		s.send('READY!')
 		logger.info('synchronized with image subscriber')
 
-	def _sync_with_first_image(self):
-		logger.info('waiting for first image')
-		self.image_acq.recv()
-		self._t0 = time.time()
-		logger.info('synchronized with first image at time %.2f'%self._t0)
-
 	def _sync_with_image_acq(self):
 		logger.info('waiting for image')
 		self.image_acq.recv()
 		logger.info('acquired image')
+		if self._t0 is None:
+			self._t0 = time.time()
+			logger.info('synchronized with first image at time %.2f'%self._t0)
 		return time.time()-self._t0
 
 	def _simulate(self, interval, subject):
