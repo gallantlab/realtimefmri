@@ -100,7 +100,7 @@ class Preprocessor(object):
 
 	def _sync_with_first_image(self):
 		ctx = zmq.Context.instance()
-		s = ctx.socket(zmq.PULL)
+		s = ctx.socket(zmq.SUB)
 		s.connect('tcp://localhost:5554')
 		self.logger.debug('waiting for first image')
 		s.recv()
@@ -116,9 +116,8 @@ class Preprocessor(object):
 		self.logger.info('running')
 		self._sync_with_first_image()
 		while self.active:
-			message = self.input_socket.recv()
-			data = message[6:]
-			self.logger.info('received image data of length %u' % len(data))
+			topic, t, data = self.input_socket.recv_multipart()
+			self.logger.info('received image (collected at time)%.2f)' % t)
 			outp = self.process(data)
 			time.sleep(0.1)
 

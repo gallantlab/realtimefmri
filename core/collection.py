@@ -9,19 +9,24 @@ from .utils import get_example_data_directory, get_logger
 logger = get_logger('collect.ion') 
 
 class DataCollector(object):
-	def __init__(self, out_port=5556, directory=None, parent_directory=False, simulate=None, interval=None):
+	def __init__(self, out_port=5556, acq_port=5555, directory=None, parent_directory=False, simulate=None, interval=None):
 		super(DataCollector, self).__init__()
 		logger.debug('data collector initialized')
 
 		self.directory = directory
 		self.parent_directory = parent_directory
 
-		self._sync_with_subscriber(out_port+1)
+		self.image_acq = context.socket(zmq.SUB)
+		self.image_acq.connect('tcp://localhost:%d'%acq_port)
 
 		context = zmq.Context()
 		self.image_pub = context.socket(zmq.PUB)
 		self.image_pub.bind('tcp://*:%d'%out_port)
+
+		self._sync_with_subscriber(out_port+1)
+
 		self.active = False 
+
 		if not simulate is None:
 			self._run = functools.partial(self._simulate, interval=interval, subject=simulate)
 
@@ -34,6 +39,14 @@ class DataCollector(object):
 		s.send('READY!')
 		logger.info('synchronized with image subscriber')
 
+	def _sync_with_first_image(self):
+		self.image_acq.recv()
+		self._t0 = time.time()
+
+	def _sync_with_image_acq(self):
+		self.image_acq.recv()
+		return time.time()-self._t0
+
 	def _simulate(self, interval, subject):
 		ex_dir = get_example_data_directory(subject)
 		logger.info('simulating from %s' % ex_dir)
@@ -45,33 +58,34 @@ class DataCollector(object):
 			ctx = zmq.Context.instance()
 			s = ctx.socket(zmq.PULL)
 			s.connect('tcp://localhost:5554')
-			
+
 		for image_fpath in image_fpaths:
 			if interval=='return':
 				raw_input('>> Press return for next image')
 			elif interval=='sync':
-				s.recv()
+				t = self._sync_with_image_acq()
 			else:
 				time.sleep(interval)
 
 			with open(image_fpath, 'r') as f:
 				raw_image_binary = f.read()
-			msg = 'image '+raw_image_binary
 			logger.info('sending message of length %d\n(%s)' % (len(msg), os.path.basename(image_fpath)))
-			self.image_pub.send(msg)
+			self.image_pub.send_multipart([b'image', t, raw_image_binary])
 
 	def _run(self):
 		self.active = True
 		self.monitor = MonitorDirectory(self.directory, image_extension='.PixelData')
 		while self.active:
-			new_image_paths = self.monitor.get_new_image_paths()
-			if len(new_image_paths)>0:
-				with open(os.path.join(self.directory, list(new_image_paths)[0]), 'r') as f:
-					raw_image_binary = f.read()
-				msg = 'image '+raw_image_binary
-				self.image_pub.send(msg)
-			self.monitor.update(new_image_paths)
-			time.sleep(0.2)
+			t = self._sync_with_image_acq()
+			while not new_image_paths:
+				new_image_paths = self.monitor.get_new_image_paths()
+				if len(new_image_paths)>0:
+					with open(os.path.join(self.directory, list(new_image_paths)[0]), 'r') as f:
+						raw_image_binary = f.read()
+					msg = 'image '+raw_image_binary
+					self.image_pub.send_multipart([b'image', t, raw_image_binary])
+					self.monitor.update(new_image_paths)
+				time.sleep(0.1)
 	
 	def run(self):
 		# watch the parent_directory for the first new directory, then use that as the directory to monitor
@@ -84,6 +98,7 @@ class DataCollector(object):
 					logger.info('detected new folder %s, monitoring' % self.directory)
 					break
 				time.sleep(0.2)
+		self._sync_with_first_image()
 		self._run()
 
 class MonitorDirectory(object):

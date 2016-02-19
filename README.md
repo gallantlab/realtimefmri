@@ -65,3 +65,6 @@ As you can see, no `send` value is configured, meaning none of this data will be
 ## 3. Stimulation
 
 Making stimuli that rely on data gathered in real-time; this is where things get interesting. Basically, you can make anything you can imagine. All you need to do is build some software that manages a zmq `SUB` socket subscribed to one of the topics published by the preprocessing code. This can be implemented in any code that has has a zmq library, which is pretty much any code. Some generally useful stimuli are included in this library including a [pycortex](https://github.com/gallantlab/pycortex) viewer and a dumb simple data visualization.
+
+## Timing
+The main processes (collection, preprocessing, stimulation) are able to run on separate machines, which could have different clocks. The scanner outputs a "5" keypress (via the FORP) to stimmy at the onset of each TR. After initializing the processes, each one idles until the first of these "5"s, the clock time of this message is stored and subsequent events are timestamped relative to it, providing some degree of synchronization.
