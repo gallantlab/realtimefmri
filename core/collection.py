@@ -42,8 +42,10 @@ class DataCollector(object):
 		logger.info('synchronized with image subscriber')
 
 	def _sync_with_first_image(self):
+		logger.info('waiting for first image')
 		self.image_acq.recv()
 		self._t0 = time.time()
+		logger.info('synchronized with first image at time %.2f'%self._t0)
 
 	def _sync_with_image_acq(self):
 		logger.info('waiting for image')
