@@ -1,5 +1,6 @@
 import os
 import subprocess
+import json
 import numpy as np
 import pyo64 as pyo
 
@@ -38,10 +39,61 @@ class SoundStimulus(Stimulus):
 				subprocess.call(cmd, stdout=devnull, stderr=devnull)
 			os.remove(self.rec_path)
 
-class BrainJukebox(Stimulus):
-	def __init__(self, sound_paths, **kwargs):
+class BrainJukebox(SoundStimulus):
+	def __init__(self, sound_paths, thresh=-1., **kwargs):
 		super(BrainJukebox, self).__init__(**kwargs)
 		self.nsounds = len(sound_paths)
+		print sound_paths
+		volumes = [pyo.SigTo(0, time=2) for i in xrange(self.nsounds)]
+		speeds = [pyo.SigTo(1, time=2) for i in xrange(self.nsounds)]
+		players = [pyo.SfPlayer(so, mul=v, speed=sp) for so, v, sp in zip(sound_paths, volumes, speeds)]
+
+		self.volumes = volumes
+		self.speeds = speeds
+		self.players = players
+		self.thresh = thresh
+		self._current_track = 0
+		self._current_speed = 1.
+
+	@property
+	def current_track(self):
+		return self._current_track
+	@current_track.setter
+	def current_track(self, track_ix):
+		for i, v in enumerate(self.volumes):
+			if i==track_ix:
+				v.value = 0.05
+			else:
+				v.value = 0.0
+		self._current_track = track_ix
+
+	@property
+	def current_speed(self):
+		return self._current_speed
+	@current_speed.setter
+	def current_speed(self, speed):
+		print 'setting speed to %.2f' % speed
+		for i in xrange(self.nsounds):
+			self.speeds[i].value = speed
+
+
+	def start(self):
+		super(BrainJukebox, self).start()
+		[p.out() for p in self.players]
+
+	def _parse_input(self, inp):
+		return json.loads(inp)
+	def run(self, inp):
+		print inp
+		inp = self._parse_input(inp['mix'])
+		track_selector = inp['V1']
+		speed = inp['M1H']
+		self.current_track = 1 if track_selector>self.thresh else 0
+		self.current_speed = 1.+speed
+
+	def stop(self):
+		super(BrainJukebox, self).stop()
+		[p.stop() for p in self.players]
 
 class WeirdSound(SoundStimulus):
 	def __init__(self, **kwargs):

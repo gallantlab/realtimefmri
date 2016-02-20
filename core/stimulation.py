@@ -103,11 +103,8 @@ class Stimulator(object):
 		while self.active:
 			try:
 				self.log('waiting for message')
-				msg = self.input_socket.recv()
+				topic, data = self.input_socket.recv_multipart()
 				self.log('received message')
-				topic_end = msg.find(' ')
-				topic = msg[:topic_end]
-				data = msg[topic_end+1:]
 				for stim in self.pipeline:
 					if topic in stim['topic'].keys():
 						self.log('running %s'%stim['name'])

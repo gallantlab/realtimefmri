@@ -145,9 +145,9 @@ class Preprocessor(object):
 			for topic in step.get('send', []):
 				self.log('sending %s' % topic)
 				if isinstance(d[topic], dict):
-					self.output_socket.send(topic+' '+json.dumps(d[topic]))
+					self.output_socket.send_multipart([topic, json.dumps(d[topic])])
 				elif isinstance(d[topic], (np.ndarray)):
-					self.output_socket.send(topic+' '+d[topic].astype(np.float32).tostring())
+					self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
 
 		return data_dict
 
