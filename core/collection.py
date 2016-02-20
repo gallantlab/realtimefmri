@@ -103,7 +103,6 @@ class DataCollector(object):
 					logger.info('detected new folder %s, monitoring' % self.directory)
 					break
 				time.sleep(0.2)
-		self._sync_with_first_image()
 		self._run()
 
 class MonitorDirectory(object):

@@ -1,6 +1,7 @@
 import sys
 import time
 import zmq
+import serial
 import argparse
 
 if __name__=='__main__':
@@ -13,6 +14,7 @@ if __name__=='__main__':
 
 	args = parser.parse_args()
 
+	img_msg = '' # what is this
 	ctx = zmq.Context()
 	s = ctx.socket(zmq.PUB)
 	s.bind('tcp://*:5554')
@@ -28,4 +30,9 @@ if __name__=='__main__':
 			print 'stopped'
 			sys.exit(0)
 	else:
-		raise NotImplementedError
+		ser = serial.Serial('/dev/ttyUSB0')
+		while True:
+			msg = ser.read()
+			print msg
+			if msg==img_msg:
+				s.send('time acquiring image')

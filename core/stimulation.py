@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import subprocess
 import yaml
 import warnings
 
@@ -83,38 +84,50 @@ class Stimulator(object):
 		return time.time() - self._t0
 	
 	def log(self, msg):
-		self.logger.debug('log:%40s%10.4f'%(msg, self.timestamp))
+		self.logger.debug('log:%40s%12.4f'%(msg, self.timestamp))
 	
 	def run(self):
 		self.active = True
 		self.logger.info('running')
 		self._sync_with_first_image()
 		for init in self.initialization:
-			self.logger.debug('starting %s' % init['name'])
-			init['instance'].run()
+			self.log('starting %s' % init['name'])
+			init['instance'].start()
+			self.log('started %s' % init['name'])
+
+		for stim in self.pipeline:
+			self.log('starting %s' % stim['name'])
+			stim['instance'].start()
+			self.log('started %s' % stim['name'])
 
 		while self.active:
 			try:
-				self.logger.debug('start receive wait')
+				self.log('waiting for message')
 				msg = self.input_socket.recv()
-				self.logger.debug('received message')
+				self.log('received message')
 				topic_end = msg.find(' ')
 				topic = msg[:topic_end]
 				data = msg[topic_end+1:]
 				for stim in self.pipeline:
 					if topic in stim['topic'].keys():
-						self.log('running %s'%topic)
+						self.log('running %s'%stim['name'])
 						stim['instance'].run({stim['topic'][topic]: data})
 						self.log('finished %s'%stim['name'])
 			except (KeyboardInterrupt, SystemExit):
 				self.active = False
 				for init in self.initialization:
+					self.log('stopping %s'%init['name'])
 					init['instance'].stop()
+					self.log('stopped %s'%init['name'])
 				for stim in self.pipeline:
+					self.log('stopping %s'%stim['name'])
 					stim['instance'].stop()
+					self.log('stopping %s'%stim['name'])
 				sys.exit(0)
 
 class Stimulus(object):
+	def start(self):
+		pass
 	def stop(self):
 		pass
 	def run(self):
@@ -202,3 +215,31 @@ class RoiBars(Stimulus):
 class Debug(Stimulus):
 	def run(self, data):
 		data = np.fromstring(data, dtype=np.float32)
+
+class AudioRecorder(Stimulus):
+	def __init__(self, jack_port, file_name, recording_id, **kwargs):
+		super(AudioRecorder, self).__init__()
+		rec_path = os.path.join(rec_dir, recording_id, 'logs', file_name+'.wav')
+		try:
+			os.makedirs(os.path.dirname(rec_path))
+		except OSError:
+			pass
+		params = [
+			{'name': 'out_path', 'flag': 'f', 'value': rec_path},
+			{'name': 'duration', 'flag': 'd', 'value': '-1'},
+			{'name': 'jack_port', 'position': 'last', 'value': jack_port}
+		]
+		self.cmd = generate_command('jack_rec', params)
+		self.rec_path = rec_path
+	def start(self):
+		self.proc = subprocess.Popen(self.cmd)
+	def stop(self):
+		self.proc.terminate()
+		params = [
+			{'name': 'input', 'position': 'first', 'value': self.rec_path},
+			{'name': 'output', 'position': 'last', 'value': self.rec_path.replace('.wav', '.mp3')}
+		]
+		cmd = generate_command('lame', params)
+		with open(os.devnull, 'w') as devnull:
+			subprocess.call(cmd, stdout=devnull, stderr=devnull)
+		os.remove(self.rec_path)

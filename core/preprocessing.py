@@ -118,14 +118,15 @@ class Preprocessor(object):
 		self.logger.info('running')
 		self._sync_with_first_image()
 		while self.active:
+			self.log('waiting for image')
 			topic, t, data = self.input_socket.recv_multipart()
 			t = struct.unpack('d', t)
-			self.logger.info('received image (collected at time %.2f)' % t)
+			self.log('received image from %.2f s' % t)
 			outp = self.process(data)
 			time.sleep(0.1)
 
 	def log(self, msg):
-		self.logger.debug('log:%40s%10.4f'%(msg, self.timestamp))
+		self.logger.debug('log:%40s%12.4f'%(msg, self.timestamp))
 
 	def process(self, raw_image_binary):
 		data_dict = {
@@ -142,7 +143,7 @@ class Preprocessor(object):
 			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
 			for topic in step.get('send', []):
-				self.logger.info('sending %s' % topic)
+				self.log('sending %s' % topic)
 				if isinstance(d[topic], dict):
 					self.output_socket.send(topic+' '+json.dumps(d[topic]))
 				elif isinstance(d[topic], (np.ndarray)):
