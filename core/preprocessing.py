@@ -79,7 +79,9 @@ class Preprocessor(object):
 
 		self._sync_with_publisher(in_port+1)
 		self._sync_with_subscriber(out_port+1)
-
+		self._i = 0
+		self.nskip = self.global_defaults.get('nskip', 0)
+		print 'nskip ', self.nskip
 	def _sync_with_publisher(self, port):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.REQ)
@@ -123,6 +125,7 @@ class Preprocessor(object):
 			t = struct.unpack('d', t)
 			self.log('received image from %.2f s' % t)
 			outp = self.process(data)
+			self._i += 1
 			time.sleep(0.1)
 
 	def log(self, msg):
@@ -135,19 +138,20 @@ class Preprocessor(object):
 
 		for step in self.pipeline:
 			args = [data_dict[i] for i in step['input']]
-			self.log('running %s' % step['name'])
+			self.log('running %s %4d' % (step['name'], self._i))
 			outp = step['instance'].run(*args)
 			self.log('finished %s' % step['name'])
 			if not isinstance(outp, (list, tuple)):
 				outp = [outp]
 			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
-			for topic in step.get('send', []):
-				self.log('sending %s' % topic)
-				if isinstance(d[topic], dict):
-					self.output_socket.send_multipart([topic, json.dumps(d[topic])])
-				elif isinstance(d[topic], (np.ndarray)):
-					self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
+			if self._i > self.nskip-1:
+				for topic in step.get('send', []):
+					self.log('sending %s' % topic)
+					if isinstance(d[topic], dict):
+						self.output_socket.send_multipart([topic, json.dumps(d[topic])])
+					elif isinstance(d[topic], (np.ndarray)):
+						self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
 
 		return data_dict
 
