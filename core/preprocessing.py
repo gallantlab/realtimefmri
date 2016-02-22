@@ -25,6 +25,51 @@ db_dir = database_directory
 rec_dir = recording_directory
 config_dir = configuration_directory
 
+class Pipeline(object):
+	def __init__(self, config, log=None):
+		self.load(config)
+		self.log = log
+
+		for init in self.initialization:
+			if log: self.log('initializing %s' % init['name'])
+			params = init.get('kwargs', {})
+			for k,v in self.global_defaults.iteritems():
+				params.setdefault(k, v)
+			init['instance'].__init__(**params)
+		for step in self.steps:
+			if log: self.log('initializing %s' % step['name'])
+			params = step.get('kwargs', dict())
+			for k,v in self.global_defaults.iteritems():
+				params.setdefault(k, v)
+			step['instance'].__init__(**params)
+
+	def load(self, preproc_config):
+		# load the pipeline from pipelines.conf
+		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
+			config = yaml.load(f)
+			self.initialization = config.get('initialization', dict())
+			self.steps = config['pipeline']
+			self.global_defaults = config.get('global_defaults', dict())
+
+	def process(self, data_dict):
+		for step in self.steps:
+			args = [data_dict[i] for i in step['input']]
+			if self.log: self.log('running %s' % step['name'])
+			outp = step['instance'].run(*args)
+			if self.log: self.log('finished %s' % step['name'])
+			if not isinstance(outp, (list, tuple)):
+				outp = [outp]
+			d = dict(zip(step.get('output', []), outp))
+			data_dict.update(d)
+			for topic in step.get('send', []):
+				if self.log: self.log('sending %s' % topic)
+				if isinstance(d[topic], dict):
+					self.output_socket.send_multipart([topic, json.dumps(d[topic])])
+				elif isinstance(d[topic], (np.ndarray)):
+					self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
+
+		return data_dict
+
 class Preprocessor(object):
 	'''
 	This class loads the preprocessing pipeline from the configuration
@@ -45,12 +90,7 @@ class Preprocessor(object):
 
 		self.active = False
 
-		# load the pipeline from pipelines.conf
-		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
-			config = yaml.load(f)
-			self.initialization = config.get('initialization', dict())
-			self.pipeline = config['pipeline']
-			self.global_defaults = config.get('global_defaults', dict())
+		self.pipeline = Pipeline(preproc_config)
 
 		if self.global_defaults['recording_id'] is None:
 			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
@@ -64,19 +104,8 @@ class Preprocessor(object):
 		self.logger = get_logger('preprocess.ing', dest=os.path.join(self.rec_dir, 'logs', 'preprocessing.log'))
 		self.logger.info('initializing recording directory for id %s' % self.global_defaults['recording_id'])
 
-		for init in self.initialization:
-			self.logger.debug('initializing %s' % init['name'])
-			params = init.get('kwargs', {})
-			for k,v in self.global_defaults.iteritems():
-				params.setdefault(k, v)
-			init['instance'].__init__(**params)
-		for step in self.pipeline:
-			self.logger.info('initializing %s' % step['name'])
-			params = step.get('kwargs', dict())
-			for k,v in self.global_defaults.iteritems():
-				params.setdefault(k, v)
-			step['instance'].__init__(**params)
 
+	def sync(self):
 		self._sync_with_publisher(in_port+1)
 		self._sync_with_subscriber(out_port+1)
 
@@ -111,7 +140,8 @@ class Preprocessor(object):
 
 	@property
 	def timestamp(self):
-		return time.time() - self._t0
+		if self._t0 is None: return time.time()
+		else: return time.time() - self._t0
 
 	def run(self):
 		self.active = True
@@ -122,34 +152,11 @@ class Preprocessor(object):
 			topic, t, data = self.input_socket.recv_multipart()
 			t = struct.unpack('d', t)
 			self.log('received image from %.2f s' % t)
-			outp = self.process(data)
+			outp = self.pipeline.process({ 'raw_image_binary': raw_image_binary })
 			time.sleep(0.1)
 
 	def log(self, msg):
 		self.logger.debug('log:%40s%12.4f'%(msg, self.timestamp))
-
-	def process(self, raw_image_binary):
-		data_dict = {
-			'raw_image_binary': raw_image_binary,
-		}
-
-		for step in self.pipeline:
-			args = [data_dict[i] for i in step['input']]
-			self.log('running %s' % step['name'])
-			outp = step['instance'].run(*args)
-			self.log('finished %s' % step['name'])
-			if not isinstance(outp, (list, tuple)):
-				outp = [outp]
-			d = dict(zip(step.get('output', []), outp))
-			data_dict.update(d)
-			for topic in step.get('send', []):
-				self.log('sending %s' % topic)
-				if isinstance(d[topic], dict):
-					self.output_socket.send_multipart([topic, json.dumps(d[topic])])
-				elif isinstance(d[topic], (np.ndarray)):
-					self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
-
-		return data_dict
 
 class PreprocessingStep(object):
 	def __init__(self):
