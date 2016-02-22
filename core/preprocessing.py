@@ -26,9 +26,10 @@ rec_dir = recording_directory
 config_dir = configuration_directory
 
 class Pipeline(object):
-	def __init__(self, config, log=None):
+	def __init__(self, config, log=None, output_socket=None):
 		self.load(config)
 		self.log = log
+		self.output_socket = output_socket
 
 		for init in self.initialization:
 			if log: self.log('initializing %s' % init['name'])
@@ -61,12 +62,13 @@ class Pipeline(object):
 				outp = [outp]
 			d = dict(zip(step.get('output', []), outp))
 			data_dict.update(d)
-			for topic in step.get('send', []):
-				if self.log: self.log('sending %s' % topic)
-				if isinstance(d[topic], dict):
-					self.output_socket.send_multipart([topic, json.dumps(d[topic])])
-				elif isinstance(d[topic], (np.ndarray)):
-					self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
+			if self.output_socket:
+				for topic in step.get('send', []):
+					if self.log: self.log('sending %s' % topic)
+					if isinstance(d[topic], dict):
+						self.output_socket.send_multipart([topic, json.dumps(d[topic])])
+					elif isinstance(d[topic], (np.ndarray)):
+						self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
 
 		return data_dict
 
@@ -90,7 +92,7 @@ class Preprocessor(object):
 
 		self.active = False
 
-		self.pipeline = Pipeline(preproc_config)
+		self.pipeline = Pipeline(preproc_config, output_socket=self.output_socket)
 
 		if self.global_defaults['recording_id'] is None:
 			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
@@ -192,7 +194,7 @@ class RawToNifti(PreprocessingStep):
 		return Nifti1Image(volume, self.affine)
 
 class SaveNifti(PreprocessingStep):
-	def __init__(self, recording_id=None, path_format='volume_%4.4u.nii', **kwargs):
+	def __init__(self, recording_id=None, path_format='volume_%4.4d.nii', **kwargs):
 		if recording_id is None:
 			recording_id = str(uuid4())
 		self.recording_dir = os.path.join(rec_dir, recording_id, 'nifti')
@@ -202,7 +204,7 @@ class SaveNifti(PreprocessingStep):
 			os.makedirs(self.recording_dir)
 		except OSError:
 			self._i = self._infer_i()
-			warnings.warn('''Save directory already exists. Beginning file numbering with %u''' % self._i)
+			warnings.warn('''Save directory already exists. Beginning file numbering with %d''' % self._i)
 			
 	def _infer_i(self):
 		from re import compile as re_compile
