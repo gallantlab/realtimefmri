@@ -11,11 +11,9 @@ Launch the data collection script using:
 
 `$ python collect.py`
 
-The fMRI system consists of several computers operating on a local network: the *scanner computer* controlling the scanner itself, the *reconstruction computer*, and the *scanner console*. Of these, the operator only interacts directly with the *scanner console*. To engage in real-time experiments, we need to first connect the *real-time computer* to this network. This is done by connecting it via ethernet to the router switch on top of the scanner computer. This allows the *real-time computer* to access the image files as they appear in a shared directory on the *scanner console*. Once the *real-time computer* is plugged in, the following code will mount the shared folder as a drive on the *real-time computer*:
+The fMRI system consists of several computers operating on a local network: the *scanner computer* controlling the scanner itself, the *reconstruction computer*, and the *scanner console*. Of these, the operator only interacts directly with the *scanner console*. To engage in real-time experiments, we need to first connect the *real-time computer* to this network. This is done by connecting it via ethernet to the router switch on top of the scanner computer. This allows the *real-time computer* to access the image files as they appear in a shared directory on the *scanner console*.
 
-`$ mount -t cifs //192.168.2.1/IMAGES /mnt/scanner/ -o user=meduser`
-
-(When prompted, enter the password: `meduser1`)
+Visit the [wiki](http://www/wiki/Real-time_fMRI) for instructions on how to access images from the shared scanner network.
 
 `collect.py` sits on the shared folder and continuously checks for new images coming off of the scanner. When an image appears, it's data is sent over a zmq messaging socket to the preprocessing script.
 
