@@ -27,7 +27,7 @@ config_dir = configuration_directory
 
 class Pipeline(object):
 	def __init__(self, config, log=None, output_socket=None):
-		self._from_file(config)
+		self._from_path(config)
 		self.log = log
 		self.output_socket = output_socket
 
