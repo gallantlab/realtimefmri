@@ -86,10 +86,12 @@ class Preprocessor(object):
 
 		# initialize input and output sockets
 		context = zmq.Context()
+		self.in_port = in_port
 		self.input_socket = context.socket(zmq.SUB)
 		self.input_socket.connect('tcp://localhost:%d'%in_port)
 		self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
 
+		self.out_port = out_port
 		self.output_socket = context.socket(zmq.PUB)
 		self.output_socket.bind('tcp://*:%d'%out_port)
 
@@ -97,23 +99,25 @@ class Preprocessor(object):
 
 		self.pipeline = Pipeline(preproc_config, output_socket=self.output_socket)
 
-		if self.global_defaults['recording_id'] is None:
-			self.global_defaults['recording_id'] = '%s_%s'%(self.global_defaults['subject'],
+		if self.pipeline.global_defaults['recording_id'] is None:
+			self.pipeline.global_defaults['recording_id'] = '%s_%s'%(self.pipeline.global_defaults['subject'],
 				time.strftime('%Y%m%d_%H%M'))
 		try:
-			self.rec_dir = os.path.join(rec_dir, self.global_defaults['recording_id'])
+			self.rec_dir = os.path.join(rec_dir, self.pipeline.global_defaults['recording_id'])
 			os.makedirs(os.path.join(self.rec_dir, 'logs'))
 		except OSError:
-			warnings.warn('Recording id %s already exists!'% self.global_defaults['recording_id'])
+			warnings.warn('Recording id %s already exists!'% self.pipeline.global_defaults['recording_id'])
 
 		self.logger = get_logger('preprocess.ing', dest=os.path.join(self.rec_dir, 'logs', 'preprocessing.log'))
-		self.logger.info('initializing recording directory for id %s' % self.global_defaults['recording_id'])
+		self.logger.info('initializing recording directory for id %s' % self.pipeline.global_defaults['recording_id'])
 
 
-	def sync(self):
-		self._sync_with_publisher(in_port+1)
-		self._sync_with_subscriber(out_port+1)
-
+	def _sync(self):
+		self._sync_with_publisher(self.in_port+1)
+		self._sync_with_subscriber(self.out_port+1)
+		self._i = 0
+		self.nskip = self.pipeline.global_defaults.get('nskip', 0)
+		print 'nskip ', self.nskip
 	def _sync_with_publisher(self, port):
 		ctx = zmq.Context.instance()
 		s = ctx.socket(zmq.REQ)
@@ -150,13 +154,15 @@ class Preprocessor(object):
 
 	def run(self):
 		self.active = True
+		self._sync()
 		self.logger.info('running')
 		self._sync_with_first_image()
 		while self.active:
 			self.log('waiting for image')
-			topic, t, data = self.input_socket.recv_multipart()
+			topic, t, raw_image_binary = self.input_socket.recv_multipart()
 			t = struct.unpack('d', t)
 			self.log('received image from %.2f s' % t)
+			self._i += 1
 			outp = self.pipeline.process({ 'raw_image_binary': raw_image_binary })
 			time.sleep(0.1)
 
