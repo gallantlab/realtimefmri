@@ -27,7 +27,7 @@ config_dir = configuration_directory
 
 class Pipeline(object):
 	def __init__(self, config, log=None, output_socket=None):
-		self.load(config)
+		self._from_file(config)
 		self.log = log
 		self.output_socket = output_socket
 
@@ -44,9 +44,12 @@ class Pipeline(object):
 				params.setdefault(k, v)
 			step['instance'].__init__(**params)
 
-	def load(self, preproc_config):
+	def _from_path(self, preproc_config):
 		# load the pipeline from pipelines.conf
 		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
+			self._from_file(f)
+
+	def _from_file(self, f):
 			config = yaml.load(f)
 			self.initialization = config.get('initialization', dict())
 			self.steps = config['pipeline']
