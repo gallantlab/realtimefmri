@@ -327,6 +327,19 @@ class ActivityRatio(PreprocessingStep):
 
 class RoiActivity(PreprocessingStep):
 	def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
+		'''
+		Extract activity from an ROI
+		Input
+		--------
+		subject (str) subject ID
+		xfm_name (str) pycortex transform ID
+		pre_mask_name (str) ROI masks returned by pycortex are in volume space, but activity is provided as a vector of gray matter activity. pre_mask_name is the name of the mask that was applied to the raw image volume to produce the gray matter activity vector.
+		roi_names (list of str) names of the ROIs to extract
+
+		Returns
+		--------
+		roi_activities (list of float) mean activity in the requested ROIs
+		'''
 		subj_dir = get_subject_directory(subject)
 		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
 		
