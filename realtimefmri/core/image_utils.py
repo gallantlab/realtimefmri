@@ -1,5 +1,8 @@
 import os
+import os.path as op
 from subprocess import call, STDOUT
+from tempfile import gettempdir
+tempdir = gettempdir()
 
 import numpy as np
 from uuid import uuid4
@@ -11,16 +14,16 @@ def transform(inp, base, output_transform=False):
 	if type(base)==str:
 		base_path = base
 	else:
-		base_path = str(uuid4())+'.nii'
+		base_path = op.join(tempdir, str(uuid4())+'.nii')
 		nbsave(base, base_path)
 
 	if type(inp)==str:
 		inp_path = inp
-	else:	
-		inp_path = str(uuid4())+'.nii'
+	else:
+		inp_path = op.join(tempdir, str(uuid4())+'.nii')
 		nbsave(inp, inp_path)
 
-	out_path = str(uuid4())+'.nii'
+	out_path = op.join(tempdir, str(uuid4())+'.nii')
 	params = [
 		{
 			'name': 'input file path',
@@ -40,7 +43,7 @@ def transform(inp, base, output_transform=False):
 	]
 	
 	if output_transform:
-		transform_path = str(uuid4())+'.aff12.1D'
+		transform_path = op.join(tempdir, str(uuid4())+'.aff12.1D')
 		params.append({
 			'name': 'transform path',
 			'flag': '1Dmatrix_save',
