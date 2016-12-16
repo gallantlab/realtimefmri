@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import os.path as op
 import subprocess
 import cPickle
 from glob import glob
@@ -46,7 +47,7 @@ class Pipeline(object):
 
 	def _from_path(self, preproc_config):
 		# load the pipeline from pipelines.conf
-		with open(os.path.join(config_dir, preproc_config+'.conf'), 'r') as f:
+		with open(op.join(config_dir, preproc_config+'.conf'), 'r') as f:
 			self._from_file(f)
 
 	def _from_file(self, f):
@@ -103,12 +104,12 @@ class Preprocessor(object):
 			self.pipeline.global_defaults['recording_id'] = '%s_%s'%(self.pipeline.global_defaults['subject'],
 				time.strftime('%Y%m%d_%H%M'))
 		try:
-			self.rec_dir = os.path.join(rec_dir, self.pipeline.global_defaults['recording_id'])
-			os.makedirs(os.path.join(self.rec_dir, 'logs'))
+			self.rec_dir = op.join(rec_dir, self.pipeline.global_defaults['recording_id'])
+			os.makedirs(op.join(self.rec_dir, 'logs'))
 		except OSError:
 			warnings.warn('Recording id %s already exists!'% self.pipeline.global_defaults['recording_id'])
 
-		self.logger = get_logger('preprocess.ing', dest=os.path.join(self.rec_dir, 'logs', 'preprocessing.log'))
+		self.logger = get_logger('preprocess.ing', dest=op.join(self.rec_dir, 'logs', 'preprocessing.log'))
 		self.logger.info('initializing recording directory for id %s' % self.pipeline.global_defaults['recording_id'])
 
 
@@ -181,7 +182,7 @@ class RawToNifti(PreprocessingStep):
 	'''
 	def __init__(self, subject=None, reference_name='funcref.nii', **kwargs):
 		if not subject is None:
-			funcref_path = os.path.join(get_subject_directory(subject), reference_name)
+			funcref_path = op.join(get_subject_directory(subject), reference_name)
 			funcref = nbload(funcref_path)
 			self.affine = funcref.affine[:]
 		else:
@@ -206,7 +207,7 @@ class SaveNifti(PreprocessingStep):
 	def __init__(self, recording_id=None, path_format='volume_%4.4d.nii', **kwargs):
 		if recording_id is None:
 			recording_id = str(uuid4())
-		self.recording_dir = os.path.join(rec_dir, recording_id, 'nifti')
+		self.recording_dir = op.join(rec_dir, recording_id, 'nifti')
 		self.path_format = path_format
 		self._i = 0
 		try:
@@ -220,7 +221,7 @@ class SaveNifti(PreprocessingStep):
 		pattern = re_compile("\%[0-9]*\.?[0-9]*[uifd]")
 		match = pattern.split(self.path_format)
 		glob_pattern = '*'.join(match)
-		fpaths = glob(os.path.join(self.recording_dir, glob_pattern))
+		fpaths = glob(op.join(self.recording_dir, glob_pattern))
 
 		i_pattern = re_compile('(?<={})[0-9]*(?={})'.format(*match))
 		try:
@@ -232,13 +233,13 @@ class SaveNifti(PreprocessingStep):
 
 	def run(self, inp):
 		fpath = self.path_format % self._i
-		nbsave(inp, os.path.join(self.recording_dir, fpath))
+		nbsave(inp, op.join(self.recording_dir, fpath))
 		self._i += 1
 
 class MotionCorrect(PreprocessingStep):
 	def __init__(self, subject=None, reference_name='funcref.nii', **kwargs):
 		if (subject is not None):
-			self.load_reference(os.path.join(get_subject_directory(subject), reference_name))
+			self.load_reference(op.join(get_subject_directory(subject), reference_name))
 		else:
 			warnings.warn('''Provide path to reference volume before calling run.''')
 
@@ -257,23 +258,24 @@ class ApplyMask(PreprocessingStep):
 	Mask is applied after transposing mask and data to zyx
 	to match the wm detrend training
 	'''
-	def __init__(self, subject=None, mask_name=None, **kwargs):
+	def __init__(self, subject=None, xfm_name=None, mask_type=None, **kwargs):
 		if (subject is not None) and (mask_name is not None):
-			subj_dir = get_subject_directory(subject)
-			mask_path = os.path.join(subj_dir, mask_name+'.nii')
-			self.load_mask(mask_path)
+                        mask_path = op.join(cortex.database.default_filestore,
+                                            subject, 'transforms', xfm_name,
+                                            'mask_'+mask_name+'.nii.gz')
+                        self.load_mask(mask_path)
 		else:
 			warnings.warn('''Load mask manually before calling run.''')
 
 	def load_mask(self, mask_path):
-			mask_nifti1 = nbload(mask_path)
-			self.mask_affine = mask_nifti1.affine
-			self.mask = mask_nifti1.get_data().astype(bool)
+		mask_nifti1 = nbload(mask_path)
+		self.mask_affine = mask_nifti1.affine
+		self.mask = mask_nifti1.get_data().astype(bool)
 
 	def run(self, volume):
 		assert np.allclose(volume.affine, self.mask_affine)
 		return volume.get_data().T[self.mask.T]
-
+        
 def secondary_mask(mask1, mask2, order='C'):
 	'''
 	Given an array, X and two 3d masks, mask1 and mask2
@@ -302,8 +304,8 @@ class ApplyMask2(PreprocessingStep):
 		mask2.
 		'''
 		subj_dir = get_subject_directory(subject)
-		mask1_path = os.path.join(subj_dir, mask1_name+'.nii')
-		mask2_path = os.path.join(subj_dir, mask2_name+'.nii')
+		mask1_path = op.join(subj_dir, mask1_name+'.nii')
+		mask2_path = op.join(subj_dir, mask2_name+'.nii')
 
 		mask1 = nbload(mask1_path).get_data().astype(bool) # in xyz
 		mask2 = nbload(mask2_path).get_data().astype(bool) # in xyz		
@@ -341,7 +343,7 @@ class RoiActivity(PreprocessingStep):
 		roi_activities (list of float) mean activity in the requested ROIs
 		'''
 		subj_dir = get_subject_directory(subject)
-		pre_mask_path = os.path.join(subj_dir, pre_mask_name+'.nii')
+		pre_mask_path = op.join(subj_dir, pre_mask_name+'.nii')
 		
 		# mask in zyx
 		pre_mask = nbload(pre_mask_path).get_data().T.astype(bool)
@@ -384,11 +386,11 @@ class WMDetrend(PreprocessingStep):
 		self.subj_dir = get_subject_directory(subject)
 		self.subject = subject
 
-		self.funcref_nifti1 = nbload(os.path.join(self.subj_dir, 'funcref.nii'))
+		self.funcref_nifti1 = nbload(op.join(self.subj_dir, 'funcref.nii'))
 
 		try:
-			model_path = os.path.join(self.subj_dir, 'model-%s.pkl'%model_name)
-			pca_path = os.path.join(self.subj_dir, 'pca-%s.pkl'%model_name)
+			model_path = op.join(self.subj_dir, 'model-%s.pkl'%model_name)
+			pca_path = op.join(self.subj_dir, 'pca-%s.pkl'%model_name)
 
 			with open(model_path, 'r') as f:
 				model = cPickle.load(f)
