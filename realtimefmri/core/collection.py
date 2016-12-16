@@ -81,6 +81,7 @@ class DataCollector(object):
 		self.active = True
 		self.monitor = MonitorDirectory(self.directory, image_extension='.PixelData')
 		while self.active:
+                        new_image_paths = None
 			t = self._sync_with_image_acq()
 			while not new_image_paths:
 				new_image_paths = self.monitor.get_new_image_paths()
