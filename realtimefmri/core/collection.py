@@ -6,82 +6,76 @@ from glob import glob
 import zmq
 from itertools import cycle
 
-from .utils import get_example_data_directory, get_logger
+from .utils import get_example_data_directory, get_logger, NetworkTimedObject
 logger = get_logger('collect.ion') 
 
-class DataCollector(object):
-	def __init__(self, out_port=5556, acq_port=5554, directory=None, parent_directory=False, simulate=None, interval=None):
-		super(DataCollector, self).__init__()
-		logger.debug('data collector initialized')
+class DataCollector(NetworkTimedObject):
+    def __init__(self, acq_port=5554, out_port=5556, sync_port=5557, directory=None, parent_directory=None, simulate=None, interval=None):
+        '''
+        Arguments
+        directory, string with directory to watch for files, or if parent_directory is True, new folder
+        parent_directory, bool indicating if provided directory is the image directory or a parent directory to watch
+        simulate, string indicating fake dataset name to use for simulation, or None if not simulating
+        interval, sync, return, or int indicating seconds between simulated image acquisition
+        '''
 
-		self.directory = directory
-		self.parent_directory = parent_directory
+        super(DataCollector, self).__init__()
+        logger.debug('data collector initialized')
 
-		context = zmq.Context()
-		self.image_acq = context.socket(zmq.SUB)
-		self.image_acq.connect('tcp://localhost:%d'%acq_port)
-		self.image_acq.setsockopt(zmq.SUBSCRIBE, 'time')
+        self.directory = directory
+        self.parent_directory = parent_directory
 
-		self.image_pub = context.socket(zmq.PUB)
-		self.image_pub.bind('tcp://*:%d'%out_port)
+        context = zmq.Context()
+        self.acq_port = acq_port
+        self.image_acq = context.socket(zmq.SUB)
+        self.image_acq.connect('tcp://localhost:%d'%acq_port)
+        self.image_acq.setsockopt(zmq.SUBSCRIBE, 'time')
 
-		self._sync_with_subscriber(out_port+1)
-		self._t0 = None
+        self.image_pub = context.socket(zmq.PUB)
+        self.image_pub.bind('tcp://*:%d'%out_port)
 
-		self.active = False 
+        self.active = False
 
-		if not simulate is None:
-			self._run = functools.partial(self._simulate, interval=interval, subject=simulate)
+        if not simulate is None:
+            self._run = functools.partial(self._simulate, interval=interval, simulate=simulate)
 
-	def _sync_with_subscriber(self, port):
-		ctx = zmq.Context.instance()
-		s = ctx.socket(zmq.REP)
-		s.bind('tcp://*:%d'%port)
-		logger.info('waiting for image subscriber to initialize sync')
-        s.recv()
-        s.send('READY!')
-        logger.info('synchronized with image subscriber')
-
-    def _sync_with_image_acq(self):
-        logger.info('waiting for image')
-        self.image_acq.recv()
-        logger.info('acquired image')
-        if self._t0 is None:
-            self._t0 = time.time()
-            logger.info('synchronized with first image at time %.2f'%self._t0)
-        return time.time()-self._t0
-
-    def _simulate(self, interval, subject):
-        ex_dir = get_example_data_directory(subject)
-        logger.info('simulating from %s' % ex_dir)
+    def _simulate(self, interval, simulate):
+        ex_dir = get_example_data_directory(simulate)
         image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
         image_fpaths.sort()
+        logger.info('simulating %d files from %s'.format(len(image_fpaths), ex_dir))
         image_fpaths = cycle(image_fpaths)
 
         if interval=='sync':
             ctx = zmq.Context.instance()
             s = ctx.socket(zmq.PULL)
-            s.connect('tcp://localhost:5554')
+            s.connect('tcp://localhost:%d'%self.acq_port)
 
         for image_fpath in image_fpaths:
             if interval=='return':
                 raw_input('>> Press return for next image')
+                t = self.timestamp
             elif interval=='sync':
                 t = self._sync_with_image_acq()
-                time.sleep(0.2) # simulate image scan and reconstruction time
             else:
                 time.sleep(interval)
+                t = self.timestamp
+            time.sleep(0.2) # simulate image scan and reconstruction time
 
             with open(image_fpath, 'r') as f:
                 raw_image_binary = f.read()
-            logger.info(os.path.basename(image_fpath))
-            self.image_pub.send_multipart([b'image', struct.pack('d', t), raw_image_binary])
+            logger.info('{} {}'.format(os.path.basename(image_fpath), len(raw_image_binary)))
+            self.send_image(raw_image_binary, t)
+            
+
+    def send_image(self, raw_image_binary, t=0.):
+        self.image_pub.send_multipart([b'image', struct.pack('d', t), raw_image_binary])
 
     def _run(self):
         self.active = True
         self.monitor = MonitorDirectory(self.directory, image_extension='.PixelData')
         while self.active:
-                        new_image_paths = None
+            new_image_paths = None
             t = self._sync_with_image_acq()
             while not new_image_paths:
                 new_image_paths = self.monitor.get_new_image_paths()
@@ -89,7 +83,7 @@ class DataCollector(object):
                     with open(os.path.join(self.directory, list(new_image_paths)[0]), 'r') as f:
                         raw_image_binary = f.read()
                     msg = 'image '+raw_image_binary
-                    self.image_pub.send_multipart([b'image', t, raw_image_binary])
+                    self.send_image(raw_image_binary, t)
                     self.monitor.update(new_image_paths)
                 time.sleep(0.1)
     

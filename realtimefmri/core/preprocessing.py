@@ -20,30 +20,31 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory, get_logger
+from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory, get_logger, NetworkTimedObject
 
 db_dir = database_directory
 rec_dir = recording_directory
 config_dir = configuration_directory
 
 class Pipeline(object):
-	def __init__(self, config, log=None, output_socket=None):
-                if log is None:
-                        log = get_logger('preprocess.pipeline', dest=['file', 'console'])
-		self._from_path(config)
-		self.log = log
-		self.output_socket = output_socket
+    def __init__(self, config, log=None, output_socket=None):
+        if log is None:
+            log = get_logger('preprocess.pipeline', dest=['file', 'console'])
+        self._from_path(config)
+        self.log = log
+        self.output_socket = output_socket
 
-		for init in self.initialization:
-                        args = init.get('args', ())
-                        kwargs = init.get('kwargs', {})
+        for init in self.initialization:
+            args = init.get('args', ())
+            kwargs = init.get('kwargs', {})
             if log: self.log.debug('initializing %s' % init['name'])
             for k,v in self.global_defaults.iteritems():
                 params.setdefault(k, v)
             init['instance'].__init__(*args, **kwargs)
+            
         for step in self.steps:
             if log: self.log.debug('initializing %s' % step['name'])
-                        args = step.get('args', ())
+            args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
             for k,v in self.global_defaults.iteritems():
                 kwargs.setdefault(k, v)
@@ -80,7 +81,7 @@ class Pipeline(object):
 
         return data_dict
 
-class Preprocessor(object):
+class Preprocessor(NetworkTimedObject):
     '''
     This class loads the preprocessing pipeline from the configuration
     file, initializes the classes for each step, and runs the main loop
@@ -107,8 +108,9 @@ class Preprocessor(object):
         if self.pipeline.global_defaults['recording_id'] is None:
             self.pipeline.global_defaults['recording_id'] = '%s_%s'%(self.pipeline.global_defaults['subject'],
                 time.strftime('%Y%m%d_%H%M'))
+
+        self.rec_dir = op.join(rec_dir, self.pipeline.global_defaults['recording_id'])
         try:
-            self.rec_dir = op.join(rec_dir, self.pipeline.global_defaults['recording_id'])
             os.makedirs(op.join(self.rec_dir, 'logs'))
         except OSError:
             warnings.warn('Recording id %s already exists!'% self.pipeline.global_defaults['recording_id'])
@@ -116,63 +118,24 @@ class Preprocessor(object):
         self.logger = get_logger('preprocess.ing', dest=op.join(self.rec_dir, 'logs', 'preprocessing.log'))
         self.logger.info('initializing recording directory for id %s' % self.pipeline.global_defaults['recording_id'])
 
-
-    def _sync(self):
-        self._sync_with_publisher(self.in_port+1)
-        self._sync_with_subscriber(self.out_port+1)
         self._i = 0
         self.nskip = self.pipeline.global_defaults.get('nskip', 0)
         print 'nskip ', self.nskip
-    def _sync_with_publisher(self, port):
-        ctx = zmq.Context.instance()
-        s = ctx.socket(zmq.REQ)
-        s.connect('tcp://localhost:%d'%port)
-        self.logger.info('requesting synchronization with image publisher')
-        s.send('READY?')
-        self.logger.info('waiting for image publisher to respond to sync request')
-        s.recv()
-        self.logger.info('synchronized with image publisher')
 
-    def _sync_with_subscriber(self, port):
-        ctx = zmq.Context.instance()
-        s = ctx.socket(zmq.REP)
-        s.bind('tcp://*:%d'%port)
-        self.logger.info('waiting for stimuli subscriber to initialize sync')
-        s.recv()
-        s.send('READY!')
-        self.logger.info('synchronized with stimuli subscriber')
-
-    def _sync_with_first_image(self):
-        ctx = zmq.Context.instance()
-        s = ctx.socket(zmq.SUB)
-        s.connect('tcp://localhost:5554')
-        s.setsockopt(zmq.SUBSCRIBE, 'time')
-        self.logger.info('waiting for first image')
-        s.recv()
-        self._t0 = time.time()
-        self.logger.info('synchronized with first image at time %.2f'%self._t0)
-
-    @property
-    def timestamp(self):
-        if self._t0 is None: return time.time()
-        else: return time.time() - self._t0
+    def receive_image(self):
+        topic, t, raw_image_binary = self.input_socket.recv_multipart()
+        return raw_image_binary
 
     def run(self):
         self.active = True
-        self._sync()
         self.logger.info('running')
-        self._sync_with_first_image()
         while self.active:
-            self.log('waiting for image')
-            topic, t, raw_image_binary = self.input_socket.recv_multipart()
-            t = struct.unpack('d', t)
-            self.log('received image from %.2f s' % t)
+            self.logger.debug('waiting for image')
+            raw_image_binary = self.receive_image()
+            self.logger.debug('received image {:3d}'.format(self._i))
             self._i += 1
             outp = self.pipeline.process({ 'raw_image_binary': raw_image_binary })
             time.sleep(0.1)
-
-    def log(self, msg):
-        self.logger.debug('log:%40s%12.4f'%(msg, self.timestamp))
 
 class PreprocessingStep(object):
     def __init__(self):
@@ -310,8 +273,8 @@ class ApplyMask2(PreprocessingStep):
         from the vector output of mask1 applied to a volume that are also in
         mask2.
         '''
-                mask1 = cortex.db.get_mask(subject, xfm_name, mask_type_1).T # in xyz
-                mask2 = cortex.db.get_mask(subject, xfm_name, mask_type_2).T # in xyz
+        mask1 = cortex.db.get_mask(subject, xfm_name, mask_type_1).T # in xyz
+        mask2 = cortex.db.get_mask(subject, xfm_name, mask_type_2).T # in xyz
         self.mask = secondary_mask(mask1, mask2, order='F')
 
     def run(self, x):

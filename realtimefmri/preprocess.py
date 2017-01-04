@@ -9,8 +9,8 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Preprocess data')
     parser.add_argument('config',
-        action='store',
-        help='Name of configuration file')
+                        action='store',
+                        help='Name of configuration file')
     args = parser.parse_args()
     logger.info('Loading preprocessing pipeline from %s' % args.config)
 
