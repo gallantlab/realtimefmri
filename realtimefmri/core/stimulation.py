@@ -4,6 +4,7 @@ import time
 import subprocess
 import yaml
 import warnings
+import pdb
 
 import numpy as np
 import json
@@ -113,26 +114,33 @@ class PyCortexViewer(Stimulus):
         super(PyCortexViewer, self).__init__()
         npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
         
-        data = np.zeros(npts)
+        # data = np.random.randn(100, npts)
+        data = np.zeros((100, npts))
         vol = cortex.Volume(data, subject, xfm_name)
 
         self.subject = subject
         self.xfm_name = xfm_name
         self.mask_type = mask_type
 
-        self.ctx_client = cortex.webshow(vol)
+        self.view = cortex.webshow(vol)
         self.vmin = vmin
         self.vmax = vmax
         self.active = True
+        self.i = 0
 
     def run(self, inp):
         if self.active:
             try:
                 data = np.fromstring(inp['data'], dtype=np.float32)
-                vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
-                self.ctx_client.addData(data=vol)
+                vol = cortex.Volume(data, self.subject, self.xfm_name)
+                mos, _ = cortex.mosaic(vol.volume[0])
+                self.view.dataviews.data.data[0]._setData(self.i+1, mos*10000.)
+                self.view.setFrame(self.i)
+                self.i += 1
+
             except IndexError:
                 self.active = False
+        return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
 
 class ConsolePlot(Stimulus):
     def __init__(self, xmin=-2., xmax=2., width=40, **kwargs):
