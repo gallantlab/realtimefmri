@@ -114,8 +114,9 @@ class PyCortexViewer(Stimulus):
         super(PyCortexViewer, self).__init__()
         npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
         
-        # data = np.random.randn(100, npts)
-        data = np.zeros((100, npts))
+        data = np.random.randn(100, npts)
+        # data = np.tile(np.arange(npts), (100,1))
+        # data = np.ones((100, npts))
         vol = cortex.Volume(data, subject, xfm_name)
 
         self.subject = subject
@@ -131,10 +132,10 @@ class PyCortexViewer(Stimulus):
     def run(self, inp):
         if self.active:
             try:
-                data = np.fromstring(inp['data'], dtype=np.float32)
+                data = np.fromstring(inp['data'], dtype=np.float32, vmin=vmin, vmax=vmax)
                 vol = cortex.Volume(data, self.subject, self.xfm_name)
                 mos, _ = cortex.mosaic(vol.volume[0])
-                self.view.dataviews.data.data[0]._setData(self.i+1, mos*10000.)
+                self.view.dataviews.data.data[0]._setData(self.i+1, mos*100.)
                 self.view.setFrame(self.i)
                 self.i += 1
 

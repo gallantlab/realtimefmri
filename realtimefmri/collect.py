@@ -13,16 +13,16 @@ if __name__ == "__main__":
         action='store', 
         dest='simulate', 
         default=None,
-        help='''Simulate data collection''')
+        help='''default None. Simulated dataset name, or None if not simulating''')
     parser.add_argument('-i', '--interval',
         action='store',
         dest='interval',
         default='2',
-        help='''Designate interval between scans. \n
-        `return`, simulate image acquisition every time the return key is pressed, \n
-        `sync`, synchronize to TTL pulse, \n
-        int, interval in seconds between image acquisition. \n
-        Only active if simulate is True''')
+        help=('''Default 2. Designate interval between scans. 
+                `return`, simulate image acquisition every time the return key is pressed, 
+                `sync`, synchronize to TTL pulse, 
+                int, interval in seconds between image acquisition. 
+                Only active if simulate is True'''))
     parser.add_argument('-d', '--directory',
         action='store',
         dest='directory',
@@ -31,8 +31,10 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--parent',
         action='store_true',
         dest='parent',
-        default=None,
-        help='Monitor the provided directory for the first new folder, then monitor that folder for new files')
+        default=False,
+        help=('''Default False. Use with `-d`. If true, monitor the provided
+                 directory for the first new folder, then monitor that folder
+                 for new files'''))
     args = parser.parse_args()
     
     try:

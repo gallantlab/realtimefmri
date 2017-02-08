@@ -86,7 +86,7 @@ def get_logger(name, dest=[]):
         else:
             log_path = d
             if os.path.exists(log_path):
-                choice = confirm('File {} exists. Overwrite?'.format(log_path))
+                choice = confirm('File {} exists. Append?'.format(log_path))
                 if choice=='n':
                     raise IOError, 'Log for {} exists'.format(log_path)
         formatter = logging.Formatter('%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s')

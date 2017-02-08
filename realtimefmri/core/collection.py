@@ -10,7 +10,7 @@ from .utils import get_example_data_directory, get_logger, NetworkTimedObject
 logger = get_logger('collect.ion') 
 
 class DataCollector(NetworkTimedObject):
-    def __init__(self, acq_port=5554, out_port=5556, sync_port=5557, directory=None, parent_directory=None, simulate=None, interval=None):
+    def __init__(self, acq_port=5554, out_port=5556, sync_port=5557, directory=None, parent_directory=False, simulate=None, interval=None):
         '''
         Arguments
         directory, string with directory to watch for files, or if parent_directory is True, new folder
@@ -43,7 +43,7 @@ class DataCollector(NetworkTimedObject):
         ex_dir = get_example_data_directory(simulate)
         image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
         image_fpaths.sort()
-        logger.info('simulating %d files from %s'.format(len(image_fpaths), ex_dir))
+        logger.info('simulating {} files from {}'.format(len(image_fpaths), ex_dir))
         image_fpaths = cycle(image_fpaths)
 
         if interval=='sync':

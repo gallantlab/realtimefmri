@@ -7,6 +7,8 @@ if __name__=='__main__':
 	parser = argparse.ArgumentParser(description='Serve the clock')
 	parser.add_argument('-p', '--port', action='store',
 						dest='port', default=5550)
+	parser.add_argument('-v', '--verbose', action='store_true',
+						dest='verbose', default=False)
 
 	args = parser.parse_args()
 
@@ -17,4 +19,4 @@ if __name__=='__main__':
 	while True:
 		s.recv()
 		s.send(struct.pack('d', time.time()))
-		time.sleep(0.01)
+		if args.verbose: print 'time served'
