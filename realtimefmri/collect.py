@@ -3,8 +3,10 @@ import os
 import time
 import argparse
 from core.collection import DataCollector
-from core.utils import get_logger
-logger = get_logger('collect', dest=['console', 'file'])
+from core.utils import get_logger, log_directory
+
+log_path = os.path.join(log_directory, 'collect.log')
+logger = get_logger('collect', dest=['console', log_path])
 
 if __name__ == "__main__":
 

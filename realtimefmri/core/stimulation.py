@@ -43,7 +43,7 @@ class Stimulator(NetworkTimedObject):
         except OSError:
             warnings.warn('Recording id %s already exists!' % self.global_defaults['recording_id'])
 
-        self.logger = get_logger('stimulate.ion', dest=[os.path.join(self.rec_dir, 'logs', 'stimulation.log')])
+        self.logger = get_logger('stimulate.ion', dest=['console', os.path.join(self.rec_dir, 'logs', 'stimulation.log')])
         self.log('making recording directory for id %s' % self.global_defaults['recording_id'])
 
         for init in self.initialization:
@@ -132,8 +132,8 @@ class PyCortexViewer(Stimulus):
     def run(self, inp):
         if self.active:
             try:
-                data = np.fromstring(inp['data'], dtype=np.float32, vmin=vmin, vmax=vmax)
-                vol = cortex.Volume(data, self.subject, self.xfm_name)
+                data = np.fromstring(inp['data'], dtype=np.float32)
+                vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
                 mos, _ = cortex.mosaic(vol.volume[0])
                 self.view.dataviews.data.data[0]._setData(self.i+1, mos*100.)
                 self.view.setFrame(self.i)

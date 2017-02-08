@@ -29,7 +29,7 @@ config_dir = configuration_directory
 class Pipeline(object):
     def __init__(self, config, log=None, output_socket=None):
         if log is None:
-            log = get_logger('preprocess.pipeline', dest=['file', 'console'])
+            log = get_logger('preprocess.pipeline', dest=['console'])
         self._from_path(config)
         self.log = log
         self.output_socket = output_socket
@@ -115,7 +115,7 @@ class Preprocessor(NetworkTimedObject):
         except OSError:
             warnings.warn('Recording id %s already exists!'% self.pipeline.global_defaults['recording_id'])
 
-        self.logger = get_logger('preprocess.ing', dest=op.join(self.rec_dir, 'logs', 'preprocessing.log'))
+        self.logger = get_logger('preprocess.ing', dest=['console', op.join(self.rec_dir, 'logs', 'preprocessing.log')])
         self.logger.info('initializing recording directory for id %s' % self.pipeline.global_defaults['recording_id'])
 
         self._i = 0
