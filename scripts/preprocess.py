@@ -1,8 +1,8 @@
 import os
 import time
 import argparse
-from core.preprocessing import Preprocessor
-from core.utils import get_logger, log_directory
+from realtimefmri.preprocessing import Preprocessor
+from realtimefmri.utils import get_logger, log_directory
 
 log_path = os.path.join(log_directory, 'preprocess.log')
 logger = get_logger('preprocess', dest=['console', log_path])

@@ -2,8 +2,8 @@
 import os
 import time
 import argparse
-from core.stimulation import Stimulator
-from core.utils import get_logger, log_directory
+from realtimefmri.stimulation import Stimulator
+from realtimefmri.utils import get_logger, log_directory
 
 log_path = os.path.join(log_directory, 'stimulate.log')
 logger = get_logger('stimulate', dest=['console', log_path])

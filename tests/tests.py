@@ -1,10 +1,10 @@
 import unittest
 from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
-from realtimefmri.core.collection import MonitorDirectory, get_example_data_directory
-from realtimefmri.core.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
-from realtimefmri.core.image_utils import transform, load_afni_xfm
-from realtimefmri.core.utils import test_data_directory
+from realtimefmri.collection import MonitorDirectory, get_example_data_directory
+from realtimefmri.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
+from realtimefmri.image_utils import transform, load_afni_xfm
+from realtimefmri.utils import test_data_directory
 import logging
 FORMAT = '%(levelname)s: %(name)s %(funcName)s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -157,7 +157,7 @@ class PreprocessingTests(unittest.TestCase):
 
 class RoiActivityTests(unittest.TestCase):
 	def test_secondary_mask_C(self):
-		from realtimefmri.core.preprocessing import secondary_mask
+		from realtimefmri.preprocessing import secondary_mask
 		done = False
 		while not done:
 			mask1 = np.random.random((10,10,10))>0.9

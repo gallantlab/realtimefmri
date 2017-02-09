@@ -113,19 +113,16 @@ class PyCortexViewer(Stimulus):
     def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1., **kwargs):
         super(PyCortexViewer, self).__init__()
         npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
-        
-        data = np.random.randn(100, npts)
-        # data = np.tile(np.arange(npts), (100,1))
-        # data = np.ones((100, npts))
-        vol = cortex.Volume(data, subject, xfm_name)
+        data = np.zeros((100, npts), 'float32')
+        vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
+        view = cortex.webshow(vol)
+        view.dataviews.data.rate = 0.5
 
         self.subject = subject
         self.xfm_name = xfm_name
         self.mask_type = mask_type
 
-        self.view = cortex.webshow(vol)
-        self.vmin = vmin
-        self.vmax = vmax
+        self.view = view
         self.active = True
         self.i = 0
 
@@ -133,10 +130,10 @@ class PyCortexViewer(Stimulus):
         if self.active:
             try:
                 data = np.fromstring(inp['data'], dtype=np.float32)
-                vol = cortex.Volume(data, self.subject, self.xfm_name, vmin=self.vmin, vmax=self.vmax)
-                mos, _ = cortex.mosaic(vol.volume[0])
-                self.view.dataviews.data.data[0]._setData(self.i+1, mos*100.)
-                self.view.setFrame(self.i)
+                vol = cortex.Volume(data, self.subject, self.xfm_name)
+                mos, _ = cortex.mosaic(vol.volume[0], show=False)
+                self.view.dataviews.data.data[0]._setData(self.i+1, mos)
+                # self.view.setFrame(self.i)
                 self.i += 1
 
             except IndexError:

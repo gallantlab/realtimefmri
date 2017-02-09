@@ -2,8 +2,8 @@ import sys
 import os
 import time
 import argparse
-from core.collection import DataCollector
-from core.utils import get_logger, log_directory
+from realtimefmri.collection import DataCollector
+from realtimefmri.utils import get_logger, log_directory
 
 log_path = os.path.join(log_directory, 'collect.log')
 logger = get_logger('collect', dest=['console', log_path])
