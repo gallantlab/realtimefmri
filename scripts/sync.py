@@ -24,20 +24,20 @@ if __name__=='__main__':
     s = ctx.socket(zmq.PUSH)
     s.bind('tcp://*:%d' % args.port)
 
-    if args.simulate:
-        raw_input('press return to start simulated acquisition >>')
-        try:
+    try:
+        if args.simulate:
+            raw_input('press return to start simulated acquisition >>')
             print 'starting'
             while True:
                 s.send('time acquiring image')
                 time.sleep(2)
-        except KeyboardInterrupt:
+        else:
+            ser = serial.Serial('/dev/ttyUSB0')
+            while True:
+                msg = ser.read()
+                print msg
+                if msg==img_msg:
+                    s.send('time acquiring image')
+    except KeyboardInterrupt:
             print 'stopped'
             sys.exit(0)
-    else:
-        ser = serial.Serial('/dev/ttyUSB0')
-        while True:
-            msg = ser.read()
-            print msg
-            if msg==img_msg:
-                s.send('time acquiring image')

@@ -1,7 +1,7 @@
 import unittest
 from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
-from realtimefmri.collection import MonitorDirectory, get_example_data_directory
+from realtimefmri.collecting import MonitorDirectory, get_example_data_directory
 from realtimefmri.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
 from realtimefmri.image_utils import transform, load_afni_xfm
 from realtimefmri.utils import test_data_directory

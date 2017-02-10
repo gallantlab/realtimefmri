@@ -97,7 +97,7 @@ class DataCollector(NetworkTimedObject):
                     self.directory = os.path.join(self.directory, new_image_paths.pop())
                     logger.info('detected new folder %s, monitoring' % self.directory)
                     break
-                time.sleep(0.2)
+                time.sleep(0.1)
         self._run()
 
 class MonitorDirectory(object):

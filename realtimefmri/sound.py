@@ -4,7 +4,7 @@ import json
 import numpy as np
 import pyo64 as pyo
 
-from .stimulation import Stimulus
+from .stimulating import Stimulus
 from .utils import generate_command, recording_directory, get_logger
 logger = get_logger('stimulate.ion')
 

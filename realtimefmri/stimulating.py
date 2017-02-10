@@ -43,7 +43,7 @@ class Stimulator(NetworkTimedObject):
         except OSError:
             warnings.warn('Recording id %s already exists!' % self.global_defaults['recording_id'])
 
-        self.logger = get_logger('stimulate.ion', dest=['console', os.path.join(self.rec_dir, 'logs', 'stimulation.log')])
+        self.logger = get_logger('stimulate.ion', dest=['console', os.path.join(self.rec_dir, 'logs', 'stimulating.log')])
         self.log('making recording directory for id %s' % self.global_defaults['recording_id'])
 
         for init in self.initialization:
