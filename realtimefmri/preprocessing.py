@@ -20,16 +20,61 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from image_utils import transform, mosaic_to_volume
-from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory, get_logger, NetworkTimedObject
+from .utils import database_directory, recording_directory, get_subject_directory, configuration_directory, get_logger
 
 db_dir = database_directory
 rec_dir = recording_directory
 config_dir = configuration_directory
 
+class Preprocessor(object):
+    '''
+    This class loads the preprocessing pipeline from the configuration
+    file, initializes the classes for each step, and runs the main loop
+    that receives incoming images from the data collector.
+    '''
+    def __init__(self, preproc_config, in_port=5556, out_port=5558, verbose=False, log=True, **kwargs):
+        super(Preprocessor, self).__init__()
+
+        # initialize input and output sockets
+        context = zmq.Context()
+        self.in_port = in_port
+        self.input_socket = context.socket(zmq.SUB)
+        self.input_socket.connect('tcp://localhost:%d'%in_port)
+        self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
+
+        self.out_port = out_port
+        self.output_socket = context.socket(zmq.PUB)
+        self.output_socket.bind('tcp://*:%d'%out_port)
+
+        self.active = False
+
+        self.pipeline = Pipeline(preproc_config, output_socket=self.output_socket)
+
+        self.logger = get_logger('preprocessing', to_console=verbose, to_network=log)
+
+        self._i = 0
+        self.nskip = self.pipeline.global_defaults.get('nskip', 0)
+        print 'nskip ', self.nskip
+
+    def receive_image(self):
+        topic, raw_image_binary = self.input_socket.recv_multipart()
+        return raw_image_binary
+
+    def run(self):
+        self.active = True
+        self.logger.info('running')
+        while self.active:
+            self.logger.debug('waiting for image')
+            raw_image_binary = self.receive_image()
+            self.logger.info('received image {:3d}'.format(self._i))
+            self._i += 1
+            outp = self.pipeline.process({ 'raw_image_binary': raw_image_binary })
+            time.sleep(0.1)
+
 class Pipeline(object):
     def __init__(self, config, log=None, output_socket=None):
         if log is None:
-            log = get_logger('preprocess.pipeline', dest=['console'])
+            log = get_logger('preprocess.pipeline', to_console=False, to_network=True)
         self._from_path(config)
         self.log = log
         self.output_socket = output_socket
@@ -80,62 +125,6 @@ class Pipeline(object):
                         self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
 
         return data_dict
-
-class Preprocessor(NetworkTimedObject):
-    '''
-    This class loads the preprocessing pipeline from the configuration
-    file, initializes the classes for each step, and runs the main loop
-    that receives incoming images from the data collector.
-    '''
-    def __init__(self, preproc_config, in_port=5556, out_port=5558, **kwargs):
-        super(Preprocessor, self).__init__()
-
-        # initialize input and output sockets
-        context = zmq.Context()
-        self.in_port = in_port
-        self.input_socket = context.socket(zmq.SUB)
-        self.input_socket.connect('tcp://localhost:%d'%in_port)
-        self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
-
-        self.out_port = out_port
-        self.output_socket = context.socket(zmq.PUB)
-        self.output_socket.bind('tcp://*:%d'%out_port)
-
-        self.active = False
-
-        self.pipeline = Pipeline(preproc_config, output_socket=self.output_socket)
-
-        if self.pipeline.global_defaults['recording_id'] is None:
-            self.pipeline.global_defaults['recording_id'] = '%s_%s'%(self.pipeline.global_defaults['subject'],
-                time.strftime('%Y%m%d_%H%M'))
-
-        self.rec_dir = op.join(rec_dir, self.pipeline.global_defaults['recording_id'])
-        try:
-            os.makedirs(op.join(self.rec_dir, 'logs'))
-        except OSError:
-            warnings.warn('Recording id %s already exists!'% self.pipeline.global_defaults['recording_id'])
-
-        self.logger = get_logger('preprocess.ing', dest=['console', op.join(self.rec_dir, 'logs', 'preprocessing.log')])
-        self.logger.info('initializing recording directory for id %s' % self.pipeline.global_defaults['recording_id'])
-
-        self._i = 0
-        self.nskip = self.pipeline.global_defaults.get('nskip', 0)
-        print 'nskip ', self.nskip
-
-    def receive_image(self):
-        topic, t, raw_image_binary = self.input_socket.recv_multipart()
-        return raw_image_binary
-
-    def run(self):
-        self.active = True
-        self.logger.info('running')
-        while self.active:
-            self.logger.debug('waiting for image')
-            raw_image_binary = self.receive_image()
-            self.logger.debug('received image {:3d}'.format(self._i))
-            self._i += 1
-            outp = self.pipeline.process({ 'raw_image_binary': raw_image_binary })
-            time.sleep(0.1)
 
 class PreprocessingStep(object):
     def __init__(self):

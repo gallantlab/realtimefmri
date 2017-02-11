@@ -1,12 +1,10 @@
+#!/usr/bin/env python
 import sys
 import os
 import time
 import argparse
-from realtimefmri.collection import DataCollector
+from realtimefmri.collecting import DataCollector
 from realtimefmri.utils import get_logger, log_directory
-
-log_path = os.path.join(log_directory, 'collect.log')
-logger = get_logger('collect', dest=['console', log_path])
 
 if __name__ == "__main__":
 
@@ -22,7 +20,6 @@ if __name__ == "__main__":
         default='2',
         help=('''Default 2. Designate interval between scans. 
                 `return`, simulate image acquisition every time the return key is pressed, 
-                `sync`, synchronize to TTL pulse, 
                 int, interval in seconds between image acquisition. 
                 Only active if simulate is True'''))
     parser.add_argument('-d', '--directory',
@@ -37,7 +34,13 @@ if __name__ == "__main__":
         help=('''Default False. Use with `-d`. If true, monitor the provided
                  directory for the first new folder, then monitor that folder
                  for new files'''))
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        default=False, dest='verbose',
+                        help=('''Print log messages to console if true'''))
     args = parser.parse_args()
+
+
+    logger = get_logger('collect', to_console=args.verbose, to_network=True)
     
     try:
         interval = float(args.interval)
@@ -48,5 +51,5 @@ if __name__ == "__main__":
             raise ValueError, '''Interval must be an integer (in seconds), "return", or "sync"'''
 
     d = DataCollector(directory=args.directory, simulate=args.simulate,
-                      interval=interval, parent_directory=args.parent)
+                      interval=interval, parent_directory=args.parent, verbose=args.verbose)
     d.run()

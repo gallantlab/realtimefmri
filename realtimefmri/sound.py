@@ -1,11 +1,12 @@
 import os
 import subprocess
+import shlex
 import json
 import numpy as np
 import pyo64 as pyo
 
 from .stimulating import Stimulus
-from .utils import generate_command, recording_directory, get_logger
+from .utils import recording_directory, get_logger
 logger = get_logger('stimulate.ion')
 
 rec_dir = recording_directory
@@ -30,11 +31,9 @@ class SoundStimulus(Stimulus):
     def stop(self):
         if self.record:
             server.recstop()
-            params = [
-                {'name': 'input', 'position': 'first', 'value': self.rec_path},
-                {'name': 'output', 'position': 'last', 'value': self.rec_path.replace('.wav', '.mp3')}
-            ]
-            cmd = generate_command('lame', params)
+            inpath = self.rec_path
+            outpath = self.rec_path.replace('.wav', '.mp3')
+            cmd = shlex.split('lame {} {}'.format(inpath, outpath))
             with open(os.devnull, 'w') as devnull:
                 subprocess.call(cmd, stdout=devnull, stderr=devnull)
             os.remove(self.rec_path)

@@ -1,14 +1,13 @@
 import os
 import os.path as op
 from subprocess import call, STDOUT
+import shlex
 from tempfile import gettempdir
 tempdir = gettempdir()
 
 import numpy as np
 from uuid import uuid4
 from nibabel import load as nbload, save as nbsave
-
-from utils import generate_command
 
 def transform(inp, base, output_transform=False):
     if isinstance(base, basestring):
@@ -24,34 +23,12 @@ def transform(inp, base, output_transform=False):
         nbsave(inp, inp_path)
 
     out_path = op.join(tempdir, str(uuid4())+'.nii')
-    params = [
-        {
-            'name': 'input file path',
-            'position': 'last',
-            'value': inp_path
-        },
-        {
-            'name': 'reference path',
-            'flag': 'base',
-            'value': base_path
-        },
-        {
-            'name': 'output file path',
-            'flag': 'prefix',
-            'value': out_path
-        }
-    ]
-    
+    cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(base_path, out_path))
     if output_transform:
         transform_path = op.join(tempdir, str(uuid4())+'.aff12.1D')
-        params.append({
-            'name': 'transform path',
-            'flag': '1Dmatrix_save',
-            'value': transform_path
-        })
-
-    cmd = generate_command('3dvolreg', params)
-
+        cmd.append(['-1Dmatrix_save', transform_path])        
+    cmd.append(inp_path)
+    
     devnull = open(os.devnull, 'w')
     ret = call(cmd, stdout=devnull, stderr=STDOUT, close_fds=True)
     if ret>0:

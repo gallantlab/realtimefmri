@@ -1,43 +1,23 @@
-import sys
-import time
-import zmq
-import serial
+#!/usr/bin/env python
 import argparse
+from realtimefmri.scanner import Scanner
+
+def main(simulate=False, verbose=False):
+    log_dest = ['network']
+    if args.verbose:
+        log_dest.append('console')
+
+    scanner = Scanner(simulate=simulate, log_dest=log_dest)
+    scanner.run()
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='Receive sync pulses from scanner.')
-    parser.add_argument('-s', '--simulate',
-        action='store_true',
-        dest='simulate',
-        default=False,
-        help='Simulate image acquisition')
-    parser.add_argument('-p', '--port',
-        action='store',
-        dest='port',
-        default=5554,
-        help='''Port to which zmq sync messages are pushed''')
+    parser = argparse.ArgumentParser(description='Record TR times')
+    parser.add_argument('-s', '--simulate', action='store_true',
+                        dest='simulate', default=False)
+    parser.add_argument('-v', '--verboes', action='store_true',
+                        dest='verbose', default=False)
 
-    args = parser.parse_args()
+    args = parser.parse_args()    
 
-    img_msg = '' # what is this
-    ctx = zmq.Context()
-    s = ctx.socket(zmq.PUSH)
-    s.bind('tcp://*:%d' % args.port)
 
-    try:
-        if args.simulate:
-            raw_input('press return to start simulated acquisition >>')
-            print 'starting'
-            while True:
-                s.send('time acquiring image')
-                time.sleep(2)
-        else:
-            ser = serial.Serial('/dev/ttyUSB0')
-            while True:
-                msg = ser.read()
-                print msg
-                if msg==img_msg:
-                    s.send('time acquiring image')
-    except KeyboardInterrupt:
-            print 'stopped'
-            sys.exit(0)
+    main(simulate=args.simulate, verbose=args.verbose)
