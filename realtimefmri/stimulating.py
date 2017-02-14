@@ -99,11 +99,12 @@ class Stimulus(object):
         raise NotImplementedError
 
 class PyCortexViewer(Stimulus):
+    nframes = 3
     def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1., **kwargs):
         super(PyCortexViewer, self).__init__()
         npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
         
-        data = np.zeros(npts, 'float32')
+        data = np.zeros((self.nframes, npts), 'float32')
         vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
         view = cortex.webshow(vol)
 
@@ -115,18 +116,36 @@ class PyCortexViewer(Stimulus):
         self.active = True
         self.i = 0
 
+    def update_volume(self, mos):
+        i, = self.view.setFrame()
+        i = round(i)
+        new_frame = (i+1)%self.nframes
+        print 'update_volume', new_frame
+        self.view.dataviews.data.data[0]._setData(new_frame, mos)
+
+    def advance_frame(self):
+        i, = self.view.setFrame()
+        i = round(i)
+        print 'advance_frame', i
+        self.view.playpause('play')
+        time.sleep(1)
+        self.view.playpause('pause')
+        self.view.setFrame(i+0.99)
+
     def run(self, inp):
         if self.active:
             try:
                 data = np.fromstring(inp['data'], dtype=np.float32)
                 vol = cortex.Volume(data, self.subject, self.xfm_name)
                 mos, _ = cortex.mosaic(vol.volume[0], show=False)
-                self.view.dataviews.data.data[0]._setData(self.i, mos)
-                self.view.setFrame(self.i)
+                self.update_volume(mos)
+                self.advance_frame()
 
             except IndexError:
                 self.active = False
             return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
+    def stop(self):
+        self.view.close()
 
 class ConsolePlot(Stimulus):
     def __init__(self, xmin=-2., xmax=2., width=40, **kwargs):
