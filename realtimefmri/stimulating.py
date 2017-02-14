@@ -99,12 +99,12 @@ class Stimulus(object):
         raise NotImplementedError
 
 class PyCortexViewer(Stimulus):
-    nframes = 3
+    bufferlen = 3
     def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1., **kwargs):
         super(PyCortexViewer, self).__init__()
         npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
         
-        data = np.zeros((self.nframes, npts), 'float32')
+        data = np.zeros((self.bufferlen, npts), 'float32')
         vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
         view = cortex.webshow(vol)
 
@@ -119,7 +119,7 @@ class PyCortexViewer(Stimulus):
     def update_volume(self, mos):
         i, = self.view.setFrame()
         i = round(i)
-        new_frame = (i+1)%self.nframes
+        new_frame = (i+1)%self.bufferlen
         print 'update_volume', new_frame
         self.view.dataviews.data.data[0]._setData(new_frame, mos)
 
