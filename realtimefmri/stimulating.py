@@ -77,6 +77,7 @@ class Stimulator(object):
                         ret = stim['instance'].run({stim['topic'][topic]: data})
                         self.logger.debug('finished {} {}'.format(stim['name'], ret))
             except (KeyboardInterrupt, SystemExit):
+                print 'stopping'
                 self.active = False
                 for init in self.initialization:
                     self.logger.debug('stopping %s'%init['name'])
@@ -120,13 +121,11 @@ class PyCortexViewer(Stimulus):
         i, = self.view.setFrame()
         i = round(i)
         new_frame = (i+1)%self.bufferlen
-        print 'update_volume', new_frame
         self.view.dataviews.data.data[0]._setData(new_frame, mos)
 
     def advance_frame(self):
         i, = self.view.setFrame()
         i = round(i)
-        print 'advance_frame', i
         self.view.playpause('play')
         time.sleep(1)
         self.view.playpause('pause')

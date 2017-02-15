@@ -3,6 +3,7 @@ import sys
 import time
 from subprocess import Popen
 import argparse
+import signal
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Preprocess data')
@@ -41,5 +42,5 @@ if __name__=='__main__':
 
     except KeyboardInterrupt:
         print 'killing processes'
-        [p.kill() for p in proc]
-        # sys.exit(0)
+        [p.send_signal(signal.SIGINT) for p in proc]
+        sys.exit(0)
