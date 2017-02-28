@@ -10,12 +10,10 @@ import json
 import zmq
 import cortex
 
-from matplotlib import pyplot as plt
-plt.ion()
-
 from .utils import database_directory, recording_directory, configuration_directory, get_logger
 config_dir = configuration_directory
 rec_dir = recording_directory
+
 
 class Stimulator(object):
     def __init__(self, stim_config, in_port=5558, log=True, verbose=False):
@@ -181,6 +179,7 @@ class ConsolePlot(Stimulus):
 class RoiBars(Stimulus):
     def __init__(self, **kwargs):
         super(RoiBars, self).__init__()
+        from matplotlib import pyplot as plt
         self.fig = plt.figure();
         self.ax = self.fig.add_subplot(111);
         self.rects = None
