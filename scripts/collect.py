@@ -10,10 +10,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Collect data')
     parser.add_argument('-s', '--simulate', 
-        action='store', 
-        dest='simulate', 
+        action='store_true', 
+        dest='simulate',
         default=None,
-        help='''default None. Simulated dataset name, or None if not simulating''')
+        help='''default False. Simulate from directory''')
     parser.add_argument('-i', '--interval',
         action='store',
         dest='interval',
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         action='store',
         dest='directory',
         default='tmp',
-        help='Directory to watch')
+        help='Directory to watch. If simulate is True, simulate from this directory')
     parser.add_argument('-p', '--parent',
         action='store_true',
         dest='parent',

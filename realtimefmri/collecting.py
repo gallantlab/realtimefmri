@@ -9,12 +9,12 @@ from itertools import cycle
 from .utils import get_example_data_directory, get_logger
 
 class DataCollector(object):
-    def __init__(self, acq_port=5554, out_port=5556, directory=None, parent_directory=False, simulate=None, interval=None, verbose=False):
+    def __init__(self, acq_port=5554, out_port=5556, directory=None, parent_directory=False, simulate=False, interval=None, verbose=False):
         '''
         Arguments
         directory, string with directory to watch for files, or if parent_directory is True, new folder
         parent_directory, bool indicating if provided directory is the image directory or a parent directory to watch
-        simulate, string indicating fake dataset name to use for simulation, or None if not simulating
+        simulate, bool, True indicates we should simulate from provided directory
         interval, return, or int indicating seconds between simulated image acquisition
         '''
 
@@ -36,11 +36,12 @@ class DataCollector(object):
 
         self.active = False
         self.logger = logger
-        if not simulate is None:
-            self._run = functools.partial(self._simulate, interval=interval, simulate=simulate)
+        if simulate:
+            self._run = functools.partial(self._simulate, interval=interval,
+                                          directory=directory)
 
-    def _simulate(self, interval, simulate):
-        ex_dir = get_example_data_directory(simulate)
+    def _simulate(self, interval, directory):
+        ex_dir = get_example_data_directory(directory)
         image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
         image_fpaths.sort()
         self.logger.info('simulating {} files from {}'.format(len(image_fpaths), ex_dir))
