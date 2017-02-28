@@ -29,7 +29,7 @@ if __name__=='__main__':
         if args.simulate:
             p = Popen(['python', 'collect.py', '-s', args.dicom_dir])
         else:
-            p = Popen(['python', 'logger.py', args.dicom_dir])
+            p = Popen(['python', 'collect.py', args.dicom_dir])
 
         proc.append(p)
 
