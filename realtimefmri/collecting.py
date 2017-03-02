@@ -1,12 +1,12 @@
 '''Data collection code
 '''
-
 import os
 import time
-import functools
 from glob import glob
-import zmq
 from itertools import cycle
+import zmq
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler, FileSystemEventHandler
 
 from .utils import get_example_data_directory, get_logger
 
@@ -14,8 +14,7 @@ from .utils import get_example_data_directory, get_logger
 class DataCollector(object):
     '''Connects to
     '''
-    def __init__(self, out_port=5556, directory=None, parent_directory=False,
-                 simulate=False, interval=None, verbose=False):
+    def __init__(self, out_port=5556, verbose=False):
         '''
         Arguments
         directory: string with directory to watch for files, or if
@@ -32,21 +31,38 @@ class DataCollector(object):
         logger = get_logger('collecting', to_console=verbose, to_network=True)
         logger.debug('data collector initialized')
 
-        self.directory = directory
-        self.parent_directory = parent_directory
-
         context = zmq.Context()
         self.image_pub = context.socket(zmq.PUB)
         self.image_pub.bind('tcp://*:%d' % out_port)
 
-        self.active = False
         self.logger = logger
-        if simulate:
-            self._run = functools.partial(self._simulate, interval=interval,
-                                          directory=directory)
 
-    def _simulate(self, interval, directory):
-        ex_dir = get_example_data_directory(directory)
+    def send_image(self, image_fpath):
+        '''Load image from path and publish to subscribers
+        '''
+        with open(image_fpath, 'r') as f:
+            raw_image_binary = f.read()
+
+        self.logger.info('%s %u', os.path.basename(image_fpath),
+                         len(raw_image_binary))
+
+        self.image_pub.send_multipart([b'image', raw_image_binary])
+
+
+class Simulator(DataCollector):
+    '''Class to simulate from sample directory
+    '''
+    def __init__(self, out_port=5556, directory=None, interval=2,
+                 verbose=False):
+        super(Simulator, self).__init__(out_port=out_port,
+                                        verbose=verbose)
+        self.interval = interval
+        self.directory = directory
+
+    def run(self):
+        '''run
+        '''
+        ex_dir = get_example_data_directory(self.directory)
         image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
         image_fpaths.sort()
         self.logger.info('simulating %u files from %s',
@@ -55,107 +71,85 @@ class DataCollector(object):
         image_fpaths = cycle(image_fpaths)
 
         for image_fpath in image_fpaths:
-            if interval == 'return':
+            if self.interval == 'return':
                 raw_input('>> Press return for next image')
             else:
-                time.sleep(interval)
+                time.sleep(self.interval)
+            self.send_image(image_fpath)
             time.sleep(0.2)  # simulate image scan and reconstruction time
 
-            with open(image_fpath, 'r') as f:
-                raw_image_binary = f.read()
-            self.logger.info('{} {}'.format(os.path.basename(image_fpath),
-                                            len(raw_image_binary)))
-            self.send_image(raw_image_binary)
 
-    def send_image(self, raw_image_binary):
-        self.image_pub.send_multipart([b'image', raw_image_binary])
-
-    def _run(self):
-        '''Continuously check the monitored directory for new files
+class Collector(object):
+    '''Class to manage monitoring and loading from a directory
+    '''
+    def __init__(self, out_port=5556, directory=None, parent_directory=False,
+                 extension='.PixelData', verbose=False):
+        '''Monitor a directory
+        Args:
+            out_port: port to publish images to
+            directory: path that will be monitored for new files
+            parent_directory: if True, indicates that `directory` should be
+                              monitored for the first new directory and then
+                              that directory should be monitored for new files
+            extension: file extension to detect
+            verbose: if True, log to console
         '''
-        self.active = True
-        self.monitor = MonitorDirectory(self.directory,
-                                        image_extension='.PixelData')
-        while self.active:
-            new_image_paths = set()
-            while len(new_image_paths) > 0:
-                new_image_paths = self.monitor.get_new_image_paths()
-                if len(new_image_paths) > 0:
-                    with open(os.path.join(self.directory,
-                                           list(new_image_paths)[0]), 'r') as f:
-                        raw_image_binary = f.read()
-                    self.send_image(raw_image_binary)
-                    self.monitor.update(new_image_paths)
-                time.sleep(0.1)
+        if parent_directory:
+            directory = detect_new_directory(directory)
+
+        observer = Observer()
+        handler = MonitorDirectory(out_port, extension, verbose)
+        observer.schedule(handler, path=directory)
+
+        self.observer = observer
 
     def run(self):
-        '''Watch the parent_directory for the first new directory, then use
-           that as the directory to monitor
+        '''Run continuously
         '''
-        if self.parent_directory:
-            m = MonitorDirectory(self.directory, image_extension='/')
+        self.observer.start()
+        try:
             while True:
-                new_image_paths = m.get_new_image_paths()
-                if len(new_image_paths) > 0:
-                    self.directory = os.path.join(self.directory,
-                                                  new_image_paths.pop())
-                    self.logger.info(('detected new folder %s, monitoring'
-                                      % self.directory))
-                    break
-                time.sleep(0.1)
-        self._run()
+                time.sleep(0.001)
+        except KeyboardInterrupt:
+            self.observer.stop()
+
+        self.observer.join()
 
 
-class MonitorDirectory(object):
+class MonitorDirectory(DataCollector, PatternMatchingEventHandler):
+    '''Monitor a directory for newly created files
     '''
-    monitor the file contents of a directory
-    Example usage:
-        m = MonitorDirectory(dir_path)
-        # add a file to that directory
-        new_image_paths = m.get_new_image_paths()
-        # use the new images
-        # update image paths list to contain newly acquired images
-        m.update(new_image_paths)
-        # no images added
-        new_image_paths = m.get_new_image_paths()
-        len(new_image_paths)==0 # True
+    def __init__(self, out_port, extension, verbose=False):
+        DataCollector.__init__(self, out_port=out_port, verbose=verbose)
+        PatternMatchingEventHandler.__init__(self, patterns=['*'+extension])
+
+    def on_created(self, event):
+        '''After an file creation is detected send the image
+        '''
+        self.send_image(event.src_path)
+
+
+def detect_new_directory(directory):
+    '''Monitors a directory and returns the first new directory is
+       is created inside
     '''
-    def __init__(self, directory, image_extension='.PixelData'):
-        if image_extension == '/':
-            self._is_valid = self._is_valid_directories
-        else:
-            self._is_valid = self._is_valid_files
-
-        self.directory = directory
-        self.image_extension = image_extension
-        self.image_paths = self.get_directory_contents()
-
-    def _is_valid_directories(self, val):
-        return os.path.isdir(os.path.join(self.directory, val))
-
-    def _is_valid_files(self, val):
-        return val.endswith(self.image_extension)
-
-    def get_directory_contents(self):
+    class MonitorNewDirectory(FileSystemEventHandler):
+        '''Event handler that does the monitoring and stops itself upon
+           detection of first new directory
         '''
-        returns entire contents of directory with image_extension
-        '''
-        return set([i for i in os.listdir(self.directory)
-                    if self._is_valid(i)])
+        def __init__(self, observer):
+            super(MonitorNewDirectory, self).__init__()
+            self.observer = observer
+            self.detected_directory = None
 
-    def get_new_image_paths(self):
-        '''Gets entire contents of directory and returns paths that were not
-           present since last update
-        '''
-        directory_contents = self.get_directory_contents()
-        if len(directory_contents) > len(self.image_paths):
-            new_image_paths = set(directory_contents) - self.image_paths
-        else:
-            new_image_paths = set()
+        def on_created(self, event):
+            if event.is_directory:
+                self.detected_directory = event.src_path
+                self.observer.stop()
 
-        return new_image_paths
-
-    def update(self, new_image_paths):
-        '''Adds paths to set of all image paths'''
-        if len(new_image_paths) > 0:
-            self.image_paths = self.image_paths.union(new_image_paths)
+    observer = Observer()
+    handler = MonitorNewDirectory(observer)
+    observer.schedule(handler, path=directory)
+    observer.start()
+    observer.join()
+    return handler.detected_directory
