@@ -8,7 +8,8 @@ import zmq
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEventHandler
 
-from .utils import get_example_data_directory, get_logger
+from realtimefmri.utils import get_logger
+from realtimefmri.config import get_example_data_directory
 
 
 class DataCollector(object):

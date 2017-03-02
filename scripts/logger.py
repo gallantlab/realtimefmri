@@ -8,9 +8,8 @@ import logging.handlers
 import SocketServer
 import struct
 
-from realtimefmri.utils import get_logger, recording_directory, LOG_LEVEL
-
-REC_DIR = recording_directory
+from realtimefmri.utils import get_logger
+from realtimefmri.config import RECORDING_DIR, LOG_LEVEL
 
 
 class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
@@ -85,7 +84,7 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
 
 def main(recording_id):
     if recording_id is not None:
-        log_path = op.join(REC_DIR, recording_id, 'recording.log')
+        log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
         if not op.exists(op.dirname(log_path)):
             makedirs(op.dirname(log_path))
             print 'making recording directory {}'.format(op.dirname(log_path))

@@ -5,11 +5,12 @@ import json
 import numpy as np
 import pyo64 as pyo
 
-from .stimulating import Stimulus
-from .utils import recording_directory, get_logger
+from realtimefmri.stimulating import Stimulus
+from realtimefmri.utils import get_logger
+from realtimefmri.config import RECORDING_DIR
+
 logger = get_logger('stimulate.ion')
 
-rec_dir = recording_directory
 server = pyo.Server(audio='jack').boot()
 server.start()
 
@@ -20,7 +21,7 @@ class SoundStimulus(Stimulus):
         self.record = kwargs.get('record')
         self.name = self.__class__.__name__.split('.')[-1]
         if self.record:
-            self.rec_path = os.path.join(rec_dir,
+            self.rec_path = os.path.join(RECORDING_DIR,
                 recording_id, 'logs',
                 self.name+'.wav')
 

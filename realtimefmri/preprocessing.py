@@ -18,11 +18,9 @@ from nibabel.nifti1 import Nifti1Image
 import cortex
 
 from realtimefmri.image_utils import transform, mosaic_to_volume
-from realtimefmri.utils import (recording_directory, get_subject_directory,
-                                configuration_directory, get_logger)
-
-RECORDING_DIR = recording_directory
-CONFIG_DIR = configuration_directory
+from realtimefmri.utils import get_logger
+from realtimefmri.config import (get_subject_directory,
+                                 RECORDING_DIR, PIPELINE_DIR)
 
 
 class Preprocessor(object):
@@ -110,7 +108,7 @@ class Pipeline(object):
 
     def _from_path(self, preproc_config):
         # load the pipeline from pipelines.conf
-        with open(op.join(CONFIG_DIR, preproc_config+'.yaml'), 'r') as f:
+        with open(op.join(PIPELINE_DIR, preproc_config+'.yaml'), 'r') as f:
             self._from_file(f)
 
     def _from_file(self, f):

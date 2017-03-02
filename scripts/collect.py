@@ -5,7 +5,8 @@
 
 import argparse
 from realtimefmri.collecting import Collector, Simulator
-from realtimefmri.utils import get_logger, get_example_data_directory
+from realtimefmri.utils import get_logger
+from realtimefmri.config import get_example_data_directory
 
 
 def main():

@@ -10,9 +10,8 @@ import numpy as np
 import zmq
 import cortex
 
-from .utils import recording_directory, configuration_directory, get_logger
-CONFIG_DIR = configuration_directory
-REC_DIR = recording_directory
+from realtimefmri.utils import get_logger
+from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR
 
 
 class Stimulator(object):
@@ -28,7 +27,7 @@ class Stimulator(object):
         self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
         self.active = False
 
-        with open(os.path.join(CONFIG_DIR, stim_config+'.yaml'), 'r') as f:
+        with open(os.path.join(PIPELINE_DIR, stim_config+'.yaml'), 'r') as f:
             config = yaml.load(f)
             self.initialization = config.get('initialization', dict())
             self.pipeline = config['pipeline']
@@ -184,7 +183,7 @@ class AudioRecorder(object):
     '''
     def __init__(self, jack_port, file_name, recording_id, **kwargs):
         super(AudioRecorder, self).__init__()
-        rec_path = os.path.join(REC_DIR, recording_id, file_name+'.wav')
+        rec_path = os.path.join(RECORDING_DIR, recording_id, file_name+'.wav')
         if not os.path.exists(os.path.dirname(rec_path)):
             os.makedirs(os.path.dirname(rec_path))
 

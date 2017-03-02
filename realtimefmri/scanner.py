@@ -1,7 +1,7 @@
 import sys
 import time
 import serial
-from .utils import get_logger
+from realtimefmri.utils import get_logger
 
 class Scanner(object):
     def __init__(self, simulate=False, log_dest=['console', 'network']):
