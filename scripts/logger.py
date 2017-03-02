@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os.path as op
-import pickle
+import cPickle
 import logging
 import logging.handlers
 import SocketServer
@@ -31,12 +31,12 @@ class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
             chunk = self.connection.recv(slen)
             while len(chunk) < slen:
                 chunk = chunk + self.connection.recv(slen - len(chunk))
-            obj = self.unPickle(chunk)
+            obj = self.unpickle(chunk)
             record = logging.makeLogRecord(obj)
             self.handleLogRecord(record)
 
-    def unPickle(self, data):
-        return pickle.loads(data)
+    def unpickle(self, data):
+        return cPickle.loads(data)
 
     def handleLogRecord(self, record):
         # if a name is specified, we use the named logger rather than the one
@@ -51,6 +51,7 @@ class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
         # to do filtering, do it at the client end to save wasting
         # cycles and network bandwidth!
         logger.handle(record)
+
 
 class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
     """
@@ -78,6 +79,7 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
                 self.handle_request()
             abort = self.abort
 
+
 def main(experiment_id):
     if experiment_id is not None:
         log_path = op.join(recording_directory, experiment_id)
@@ -91,7 +93,7 @@ def main(experiment_id):
     tcpserver.serve_until_stopped()
 
 if __name__ == '__main__':
-    if len(sys.argv)>1:
+    if len(sys.argv) > 1:
         experiment_id = sys.argv[1]
     else:
         experiment_id = None
