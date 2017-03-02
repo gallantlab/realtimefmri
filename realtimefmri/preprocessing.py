@@ -102,7 +102,7 @@ class Pipeline(object):
 
     def _from_path(self, preproc_config):
         # load the pipeline from pipelines.conf
-        with open(op.join(CONFIG_DIR, preproc_config+'.conf'), 'r') as f:
+        with open(op.join(CONFIG_DIR, preproc_config+'.yaml'), 'r') as f:
             self._from_file(f)
 
     def _from_file(self, f):

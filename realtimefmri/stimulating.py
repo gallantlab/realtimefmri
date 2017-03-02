@@ -24,7 +24,7 @@ class Stimulator(object):
         self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
         self.active = False
 
-        with open(os.path.join(config_dir, stim_config+'.conf'), 'r') as f:
+        with open(os.path.join(config_dir, stim_config+'.yaml'), 'r') as f:
             config = yaml.load(f)
             self.initialization = config.get('initialization', dict())
             self.pipeline = config['pipeline']
