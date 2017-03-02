@@ -1,0 +1,24 @@
+global_defaults:
+  subject: &SUBJECT TZfs2
+  recording_id: &RECORDING_ID example
+
+initialization:
+  - name: record_microphone_input 
+    instance: !!python/object:realtimefmri.stimulating.AudioRecorder {}
+    kwargs:
+      jack_port: "system:capture_1"
+      file_name: microphone
+
+pipeline:
+  - name: pycortex_viewer
+    instance: !!python/object:realtimefmri.stimulating.PyCortexViewer {}
+    topic: { gm_activity_zscore: data }
+    kwargs:
+      subject: *SUBJECT
+      xfm_name: "controller_test_20161026TZ2"
+      mask_type: thick
+      vmin: -0.01
+      vmax: 0.01
+  - name: debug
+    instance: !!python/object:realtimefmri.stimulating.Debug {}
+    topic: { gm_activity_zscore: data }
