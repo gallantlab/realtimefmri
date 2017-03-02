@@ -1,6 +1,5 @@
 global_defaults:
   subject: &SUBJECT TZfs2
-  recording_id: &RECORDING_ID example
 
 initialization:
   - name: record_microphone_input 

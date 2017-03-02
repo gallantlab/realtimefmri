@@ -6,16 +6,15 @@ from time import strftime
 import logging
 import logging.handlers
 
-package_directory = '/home/glab/code/realtimefmri'
-# package_directory = '/auto/k1/robertg/code/realtimefmri'
-log_directory = op.join(package_directory, 'log')
+# package_directory = '/home/glab/code/realtimefmri'
+package_directory = '/auto/k1/robertg/code/realtimefmri'
 database_directory = op.join(package_directory, 'database')
 test_data_directory = op.join(package_directory, 'tests/data')
 recording_directory = op.join(package_directory, 'recordings')
 configuration_directory = op.join(package_directory, 'pipelines')
 
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-
+LOG_LEVEL = logging.DEBUG
 
 def get_subject_directory(subject):
     '''Subject directory'''

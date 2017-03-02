@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+from os import makedirs
 import os.path as op
 import cPickle
 import logging
@@ -7,7 +8,9 @@ import logging.handlers
 import SocketServer
 import struct
 
-from realtimefmri.utils import recording_directory, get_logger
+from realtimefmri.utils import get_logger, recording_directory, LOG_LEVEL
+
+REC_DIR = recording_directory
 
 
 class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
@@ -80,15 +83,18 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
             abort = self.abort
 
 
-def main(experiment_id):
-    if experiment_id is not None:
-        log_path = op.join(recording_directory, experiment_id)
+def main(recording_id):
+    if recording_id is not None:
+        log_path = op.join(REC_DIR, recording_id, 'recording.log')
+        if not op.exists(op.dirname(log_path)):
+            makedirs(op.dirname(log_path))
+            print 'making recording directory {}'.format(op.dirname(log_path))
         print 'saving log file to {}'.format(log_path)
     else:
         log_path = False
     
     _ = get_logger('root', to_console=True, to_file=log_path,
-                   level=logging.INFO)
+                   level=LOG_LEVEL)
 
     tcpserver = LogRecordSocketReceiver()
     print('About to start TCP server...')
@@ -96,7 +102,7 @@ def main(experiment_id):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        experiment_id = sys.argv[1]
+        recording_id = sys.argv[1]
     else:
-        experiment_id = None
-    main(experiment_id)
+        recording_id = None
+    main(recording_id)

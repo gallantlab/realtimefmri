@@ -7,7 +7,7 @@ import signal
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Preprocess data')
-    parser.add_argument('experiment_id', action='store')
+    parser.add_argument('recording_id', action='store')
     parser.add_argument('dicom_dir', action='store',
                         help='Directory containing dicom files (or simulation files)')
     parser.add_argument('preproc_config', action='store',
@@ -25,7 +25,7 @@ if __name__=='__main__':
         proc = []
 
         ## Logging
-        p = Popen(['python', 'logger.py', args.experiment_id])
+        p = Popen(['python', 'logger.py', args.recording_id])
         proc.append(p)
 
         ## Synchronize to TR
@@ -43,12 +43,12 @@ if __name__=='__main__':
         proc.append(p)
 
         ## Preprocessing
-        opts = [args.preproc_config]
+        opts = [args.preproc_config, args.recording_id]
         p = Popen(['python', 'preprocess.py'] + opts)
         proc.append(p)
 
         ## Stimulation
-        opts = [args.stim_config]
+        opts = [args.stim_config, args.recording_id]
         p = Popen(['python', 'stimulate.py'] + opts)
         proc.append(p)
         while True:

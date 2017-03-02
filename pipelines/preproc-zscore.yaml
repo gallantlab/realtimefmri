@@ -1,7 +1,6 @@
 global_defaults:
   subject: &SUBJECT TZfs2
   xfm_name: &XFMNAME controller_test_20161026TZ2
-  recording_id: &RECORDING_ID example
   nskip: 5
 
 pipeline:
@@ -14,6 +13,10 @@ pipeline:
     instance: !!python/object:realtimefmri.preprocessing.MotionCorrect {}
     input: [ image_nifti ]
     output: [ image_nifti_mc ]
+  
+  - name: save_nifti
+    instance: !!python/object:realtimefmri.preprocessing.SaveNifti {}
+    input: [ image_nifti_mc ]
 
   - name: extract_gm_mask
     instance: !!python/object:realtimefmri.preprocessing.ApplyMask {}

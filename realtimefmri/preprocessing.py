@@ -31,8 +31,8 @@ class Preprocessor(object):
     file, initializes the classes for each step, and runs the main loop
     that receives incoming images from the data collector.
     '''
-    def __init__(self, preproc_config, in_port=5556, out_port=5558,
-                 verbose=False, log=True, **kwargs):
+    def __init__(self, preproc_config, recording_id=None, in_port=5556,
+                 out_port=5558, verbose=False, log=True, **kwargs):
         super(Preprocessor, self).__init__()
 
         # initialize input and output sockets
@@ -75,10 +75,18 @@ class Preprocessor(object):
 
 
 class Pipeline(object):
-    def __init__(self, config, log=None, output_socket=None):
+    def __init__(self, config, recording_id=None, log=None,
+                 output_socket=None):
+
         if log is None:
             log = get_logger('preprocess.pipeline', to_console=False, to_network=True)
+
         self._from_path(config)
+        if recording_id is None:
+            recording_id = '%s_%s' % (self.global_defaults['subject'],
+                                      time.strftime('%Y%m%d_%H%M'))
+        self.global_defaults['recording_id'] = recording_id
+
         self.log = log
         self.output_socket = output_socket
 
@@ -138,6 +146,7 @@ class Pipeline(object):
 class PreprocessingStep(object):
     def __init__(self):
         pass
+
     def run(self):
         raise NotImplementedError
 
@@ -148,6 +157,7 @@ def load_mask(subject, xfm_name, mask_type):
                             'mask_'+mask_type+'.nii.gz')
         return nbload(mask_path)
 
+
 def load_reference(subject, xfm_name):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
@@ -157,7 +167,7 @@ def load_reference(subject, xfm_name):
 
 class RawToNifti(PreprocessingStep):
     '''
-    takes data_dict containing raw_image_binary and adds 
+    takes data_dict containing raw_image_binary and adds
     '''
     def __init__(self, subject, xfm_name, **kwargs):
                 self.affine = load_reference(subject, xfm_name).affine
@@ -170,8 +180,8 @@ class RawToNifti(PreprocessingStep):
         returns a nifti1 image of the same data in xyz
         '''
         # siements mosaic format is strange
-        mosaic = np.fromstring(inp, dtype=np.uint16).reshape(600,600,
-                                                             order='C')
+        mosaic = np.fromstring(inp, dtype='uint16').reshape(600, 600,
+                                                            order='C')
         # axes 0 and 1 must be swapped because mosaic is PLS and we need LPS
         # voxel data (affine values are -/-/+ for dimensions 1-3, yielding RAS)
         # we want the voxel data orientation to match that of the functional
