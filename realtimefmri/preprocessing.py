@@ -46,7 +46,7 @@ class Preprocessor(object):
 
         self.active = False
 
-        self.pipeline = Pipeline(preproc_config,
+        self.pipeline = Pipeline(preproc_config, recording_id,
                                  output_socket=self.output_socket)
 
         self.logger = get_logger('preprocessing', to_console=verbose,
