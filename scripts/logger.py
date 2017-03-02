@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+\#!/usr/bin/env python
 import sys
 import os.path as op
 import cPickle
@@ -86,8 +86,10 @@ def main(experiment_id):
         print 'saving log file to {}'.format(log_path)
     else:
         log_path = False
-    logger = get_logger('root', to_console=True, to_file=log_path,
-                        level=logging.INFO)
+    
+    _ = get_logger('root', to_console=True, to_file=log_path,
+                   level=logging.INFO)
+
     tcpserver = LogRecordSocketReceiver()
     print('About to start TCP server...')
     tcpserver.serve_until_stopped()

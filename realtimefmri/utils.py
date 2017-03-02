@@ -6,8 +6,8 @@ from time import strftime
 import logging
 import logging.handlers
 
-# package_directory = '/home/glab/Documents/realtimefmri'
-package_directory = '/auto/k1/robertg/code/realtimefmri'
+package_directory = '/home/glab/code/realtimefmri'
+# package_directory = '/auto/k1/robertg/code/realtimefmri'
 log_directory = op.join(package_directory, 'log')
 database_directory = op.join(package_directory, 'database')
 test_data_directory = op.join(package_directory, 'tests/data')
@@ -74,9 +74,6 @@ def get_logger(name, to_console=False, to_file=False, to_network=False,
     '''
     formatter = logging.Formatter(formatting)
 
-    if to_file:
-        log_name = '%s_%s.log' % (strftime('%Y%m%d'), name)
-        to_file = op.join(log_directory, log_name)
     if to_network:
         to_network = logging.handlers.DEFAULT_TCP_LOGGING_PORT
 

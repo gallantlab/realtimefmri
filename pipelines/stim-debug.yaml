@@ -1,0 +1,8 @@
+global_defaults:
+  subject: &SUBJECT TZfs2
+  recording_id: &RECORDING_ID example
+
+pipeline:
+  - name: debug
+    instance: !!python/object:realtimefmri.stimulating.Debug {}
+    topic: { gm_activity_zscore: data }

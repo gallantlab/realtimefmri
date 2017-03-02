@@ -23,6 +23,8 @@ if __name__=='__main__':
 
     try:
         proc = []
+
+        ## Logging
         p = Popen(['python', 'logger.py', args.experiment_id])
         proc.append(p)
 
@@ -41,11 +43,13 @@ if __name__=='__main__':
         proc.append(p)
 
         ## Preprocessing
-        p = Popen(['python', 'preprocess.py', args.preproc_config])
+        opts = [args.preproc_config]
+        p = Popen(['python', 'preprocess.py'] + opts)
         proc.append(p)
 
         ## Stimulation
-        p = Popen(['python', 'stimulate.py', args.stim_config])
+        opts = [args.stim_config]
+        p = Popen(['python', 'stimulate.py'] + opts)
         proc.append(p)
         while True:
             time.sleep(1)
