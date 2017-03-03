@@ -15,7 +15,7 @@ And two smaller scripts to provide:
 _`Data collection` (``collect.py``)
 -----------------------------------
 
-``collect.py`` sits on the shared folder and continuously checks for new images coming off of the scanner. When an image appears, it is sent over a ``zmq`` messaging socket to the preprocessing script.
+The first step is to load in the images as they are collected come off the scanner. This script monitors a shared folder containing the images and loads them as they appear. It then sends over a ``zmq`` messaging socket to the preprocessing script.
 
 _`Preprocessing` (``preprocess.py``)
 ------------------------------------
