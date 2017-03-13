@@ -202,7 +202,7 @@ class PyCortexViewer(Stimulus):
             return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
 
     def stop(self):
-        self.view.close()
+        self.view.playpause('pause')
 
 
 class RoiBars(Stimulus):
