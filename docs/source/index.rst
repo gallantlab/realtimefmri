@@ -14,7 +14,6 @@ Contents
     overview
     network
     pipelines
-    preprocessing
     together
 
 API

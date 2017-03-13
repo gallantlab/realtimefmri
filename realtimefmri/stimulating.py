@@ -223,8 +223,8 @@ class Debug(Stimulus):
 class AudioRecorder(object):
     '''Record the microphone and save to file
 
-    Record from the microphone and save as a .wav file inside of the recording
-    folder
+    Record from the microphone and save as a ``.wav`` file inside of the
+    recording folder
 
     Parameters
     ----------

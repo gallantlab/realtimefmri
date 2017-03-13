@@ -3,6 +3,8 @@ Putting it all together
 
 Real-time experiments have a lot of moving parts, so here's a step-by-step list of how to get one up and running.
 
+Step-by-step
+------------
 
 1. Configure your :ref:`preprocessing and stimulation pipelines <pipelines>`. Names the files ``<preprocessing_pipeline_name>.yaml`` and ``<stimulus_pipeline_name>.yaml`` and add them to ``realtimefmri/pipelines``.
 
@@ -24,3 +26,5 @@ Real-time experiments have a lot of moving parts, so here's a step-by-step list 
 (The ``-p`` is just a flag that says the provided ``<parent_directory>`` is a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.)
 
 4. Log files containing the timing of all of the different aspects of the experiment are stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
+
+5. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.

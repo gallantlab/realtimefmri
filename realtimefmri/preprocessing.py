@@ -36,8 +36,7 @@ class Preprocessor(object):
         Name of preprocessing configuration to use. Should be a file in the
         `pipeline` filestore
     recording_id : str
-        A unique identifier for the recording. If none is provided, one will be
-        generated from the subject name and date
+        A unique identifier for the recording
     in_port : int
         Port number to which data are sent from data collector
     out_port : int
@@ -96,7 +95,8 @@ class Preprocessor(object):
         self.active = False
 
         self.pipeline = Pipeline(preproc_config, recording_id,
-                                 output_socket=self.output_socket)
+                                 output_socket=self.output_socket,
+                                 log=log, verbose=verbose)
 
         self.logger = get_logger('preprocessing', to_console=verbose,
                                  to_network=log)
@@ -122,11 +122,53 @@ class Preprocessor(object):
 
 
 class Pipeline(object):
-    def __init__(self, config, recording_id=None, log=None,
-                 output_socket=None):
+    """Construct and run a preprocessing pipeline
 
-        if log is None:
-            log = get_logger('preprocess.pipeline', to_console=False, to_network=True)
+    Load a preprocessing configuration file, intialize all of the steps, and
+    process each image through the pipeline.
+
+    Parameters
+    ----------
+    config : str
+        Path to the preprocessing configuration file
+    recording_id : str
+        A unique identifier for the recording. If none is provided, one will be
+        generated from the subject name and date
+    output_socket : zmq.socket.Socket
+        Socket (zmq.PUB) to which preprocessed outputs are sent
+    log : bool
+        Log to network logger
+    verbose : bool
+        Log to console
+
+    Attributes
+    ----------
+    global_defaults : dict
+        Dictionary of arguments that are sent as keyword arguments to every
+        preprocessing step. Useful for values that are required in multiple
+        steps like recording identifier, subject name, and transform name
+    initialization : list
+        List of dictionaries that configure initialization steps. These are run
+        once at the outset of the program.
+    steps : list
+        List of dictionaries that configure steps in the pipeline. These are
+        run for each image that arrives at the pipeline.
+    log : logging.Logger
+        The logger object
+    output_socket : zmq.socket.Socket
+        Socket (zmq.PUB) to which preprocessed outputs are sent
+    
+    Methods
+    -------
+    process(data_dict)
+        Run the data in ```data_dict``` through each of the preprocessing steps
+    """
+    def __init__(self, config, recording_id=None, log=False,
+                 output_socket=None, verbose=False):
+
+        log = get_logger('preprocess.pipeline',
+                         to_console=verbose,
+                         to_network=log)
 
         self._from_path(config)
         if recording_id is None:
@@ -140,18 +182,16 @@ class Pipeline(object):
         for init in self.initialization:
             args = init.get('args', ())
             kwargs = init.get('kwargs', {})
-            if log:
-                self.log.debug('initializing %s' % init['name'])
-            for k, v in self.global_defaults.iteritems():
+            self.log.debug('initializing %s' % init['name'])
+            for k, v in self.global_defaults.items():
                 params.setdefault(k, v)
             init['instance'].__init__(*args, **kwargs)
 
         for step in self.steps:
-            if log:
-                self.log.debug('initializing %s' % step['name'])
+            self.log.debug('initializing %s' % step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
-            for k, v in self.global_defaults.iteritems():
+            for k, v in self.global_defaults.items():
                 kwargs.setdefault(k, v)
             step['instance'].__init__(*args, **kwargs)
 
@@ -162,26 +202,23 @@ class Pipeline(object):
 
     def _from_file(self, f):
         config = yaml.load(f)
-        self.initialization = config.get('initialization', dict())
+        self.initialization = config.get('initialization', [])
         self.steps = config['pipeline']
         self.global_defaults = config.get('global_defaults', dict())
 
     def process(self, data_dict):
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
-            if self.log:
-                self.log.debug('running %s' % step['name'])
+            self.log.debug('running %s' % step['name'])
             outp = step['instance'].run(*args)
-            if self.log:
-                self.log.debug('finished %s' % step['name'])
+            self.log.debug('finished %s' % step['name'])
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
             d = dict(zip(step.get('output', []), outp))
             data_dict.update(d)
             if self.output_socket:
                 for topic in step.get('send', []):
-                    if self.log:
-                        self.log.debug('sending %s' % topic)
+                    self.log.debug('sending %s' % topic)
                     if isinstance(d[topic], dict):
                         self.output_socket.send_multipart([topic, json.dumps(d[topic])])
                     elif isinstance(d[topic], (np.ndarray)):
@@ -744,10 +781,39 @@ class OnlineMoments(PreprocessingStep):
 
 
 class RunningMeanStd(PreprocessingStep):
+    """Compute a running mean and standard deviation for a set of voxels
+
+    Compute a running mean and standard deviation, looking back a set number of
+    samples.
+    
+    Parameters
+    ----------
+    n : int
+        The number of past samples over which to compute mean and standard
+        deviation
+
+    Attributes
+    ----------
+    n : int
+        The number of past samples over which to compute mean and standard
+        deviation
+    mean : numpy.ndarray
+        The mean for the samples
+    std : numpy.ndarray
+        The standard deviation for the samples
+    samples : numpy.ndarray
+        The stored samples
+
+    Methods
+    -------
+    run(inp)
+        Adds the input vector to the stored samples (discard the oldest sample)
+        and compute and return the mean and standard deviation.
+    """
     def __init__(self, n=20, **kwargs):
         self.n = n
         self.mean = None
-
+        self.samples = None
     def run(self, inp):
         if self.mean is None:
             self.samples = np.empty((self.n, inp.size))*np.nan
@@ -760,6 +826,25 @@ class RunningMeanStd(PreprocessingStep):
 
 
 class VoxelZScore(PreprocessingStep):
+    """Compute a z-score of a vector
+
+    Z-score a vector given precomputed mean and standard deviation
+
+    Attributes
+    ----------
+    mean : numpy.ndarray
+        A vector of voxel means
+    std : numpy.ndarray
+        A vector of voxel standard deviations
+
+    Methods
+    -------
+    zscore(data)
+        Apply the mean and standard deviation to compute and return a z-scored
+        version of the data
+    run(inp, mean=None, std=None)
+        Return the z-scored version of the data
+    """
     def __init__(self, **kwargs):
         self.mean = None
         self.std = None
@@ -768,11 +853,13 @@ class VoxelZScore(PreprocessingStep):
         return (data-self.mean)/self.std
 
     def run(self, inp, mean=None, std=None):
+        # update mean and std if provided
         if mean is not None:
             self.mean = mean
         if std is not None:
             self.std = std
 
+        # zscore
         if self.mean is None:
             z = inp
         else:
