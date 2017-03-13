@@ -17,7 +17,6 @@ pycortex==0.1.1
 pyparsing==2.1.10
 pyserial==3.2.1
 pyzmq==16.0.2
--e git+git@github.com:gallantlab/realtimefmri.git@f944462387081722da64c6ff3e548498b2a8d783#egg=realtimefmri-master
 scipy==0.18.1
 singledispatch==3.4.0.3
 six==1.10.0
