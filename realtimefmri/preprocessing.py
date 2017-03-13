@@ -24,11 +24,60 @@ from realtimefmri.config import (get_subject_directory,
 
 
 class Preprocessor(object):
-    '''
+    """Highest-level class for running preprocessing
+
     This class loads the preprocessing pipeline from the configuration
     file, initializes the classes for each step, and runs the main loop
     that receives incoming images from the data collector.
-    '''
+
+    Parameters
+    ----------
+    preproc_config : str
+        Name of preprocessing configuration to use. Should be a file in the
+        `pipeline` filestore
+    recording_id : str
+        A unique identifier for the recording. If none is provided, one will be
+        generated from the subject name and date
+    in_port : int
+        Port number to which data are sent from data collector
+    out_port : int
+        Port number to publish preprocessed data to. Stimulation script will
+        read from this port
+    log : bool
+        Whether to send log messages to the network logger
+    verbose : bool
+        Whether to log to the console
+
+
+    Attributes
+    ----------
+    in_port : int
+        Port number to which data are sent from data collector.
+    input_socket : zmq.socket.Socket
+        The subscriber socket that receives data sent over from the data
+        collector.
+    out_port : int
+        Port number to publish preprocessed data to. Stimulation script will
+        read from this port.
+    output_socket : zmq.socket.Socket
+        The publisher socket that sends data over to the stimulator.
+    active : bool
+        Indicates whether the pipeline should be run when data are received.
+    pipeline : dict
+        Dictionary that specifies preprocessing steps that receive each
+        incoming volume.
+    global_defaults : dict
+        Parameters that are sent to every stimulation step as keyword
+        arguments.
+    nskip : int
+        Number of volumes to skip at start of run
+
+    Methods
+    -------
+    run()
+        Initialize and listen for incoming volumes, processing them through the
+        pipeline as they arrive
+    """
     def __init__(self, preproc_config, recording_id=None, in_port=5556,
                  out_port=5558, verbose=False, log=True, **kwargs):
         super(Preprocessor, self).__init__()
@@ -164,11 +213,32 @@ def load_reference(subject, xfm_name):
 
 
 class RawToNifti(PreprocessingStep):
-    '''
-    takes data_dict containing raw_image_binary and adds
-    '''
+    """Converts a mosaic image to a nifti image.
+
+    Takes a 600 x 600 mosaic image of ``uint16`` and turns it into a volume.
+    Applies the affine provided from the given transform name.
+
+    Parameters
+    ----------
+    subject : str
+        Subject identifier
+    xfm_name : str
+        Pycortex transform name
+
+    Attributes
+    ----------
+    affine : numpy.ndarray
+        Affine transform
+
+    Methods
+    -------
+    run(inp)
+        Returns a nifti image of the raw data using the provided affine
+        transform
+
+    """
     def __init__(self, subject, xfm_name, **kwargs):
-                self.affine = load_reference(subject, xfm_name).affine
+        self.affine = load_reference(subject, xfm_name).affine
 
     def run(self, inp):
         '''
@@ -189,6 +259,33 @@ class RawToNifti(PreprocessingStep):
 
 
 class SaveNifti(PreprocessingStep):
+    """Saves nifti images to files
+
+    Creates a subfolder in the recording directory and saves each incoming
+    image as a nifti file.
+
+    Parameters
+    ----------
+    recording_id : str
+        Unique identifier for the run
+    path_format : str
+        Filename formatting string that is compatible with "%" string
+        formatting. Must be able to format an integer containing the TR number.
+
+    Attributes
+    ----------
+    recording_id : str
+        Unique identifier for the run
+    path_format : str
+        Filename formatting string that is compatible with "%" string
+        formatting. Must be able to format an integer containing the TR number.
+
+    Methods
+    --------
+    run(inp)
+        Saves the input image to a file and iterates the counter.
+    """
+
     def __init__(self, recording_id=None, path_format='volume_%4.4d.nii',
                  **kwargs):
         if recording_id is None:
@@ -225,6 +322,31 @@ class SaveNifti(PreprocessingStep):
 
 
 class MotionCorrect(PreprocessingStep):
+    """Motion corrects images to a reference image
+
+    Uses AFNI ``3dvolreg`` to motion correct the incoming images to a reference
+    image stored in the pycortex database.
+
+    Parameters
+    ----------
+    subject : str
+        Subject name in pycortex filestore
+    xfm_name : str
+        Transform name for the subject in pycortex filestore
+
+    Attributes
+    ----------
+    reference_affine : numpy.ndarray
+        Affine transform for the reference image
+    reference_path : str
+        Path to the reference image
+
+    Methods
+    -------
+    run(input_volume)
+        Motion corrects the incoming image to the provided reference image and
+        returns the motion corrected volume
+    """
     def __init__(self, subject, xfm_name, **kwargs):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
@@ -240,11 +362,32 @@ class MotionCorrect(PreprocessingStep):
 
 
 class ApplyMask(PreprocessingStep):
-    '''
-    Loads a mask from the realtimefmri database
-    Mask should be in xyz format to match data.
-    Mask is applied after transposing mask and data to zyx
-    to match the wm detrend training
+    '''Apply a voxel mask to the volume.
+
+    Loads a mask from the realtimefmri database. Mask should be in xyz format
+    to match data. Mask is applied after transposing mask and data to zyx to
+    match the wm detrend training.
+
+    Parameters
+    ----------
+    subject : str
+        Subject name
+    xfm_name : str
+        Pycortex transform name
+    mask_type : str
+        Type of mask
+
+    Attributes
+    ----------
+    mask : numpy.ndarray
+        Boolean voxel mask
+    mask_affine : numpy.ndarray
+        Affine transform for the mask
+
+    Methods
+    -------
+    run(volume)
+        Apply the mask to the input volume
     '''
     def __init__(self, subject, xfm_name, mask_type=None, **kwargs):
         mask_path = op.join(cortex.database.default_filestore,
@@ -279,17 +422,38 @@ def secondary_mask(mask1, mask2, order='C'):
 
 
 class ApplyMask2(PreprocessingStep):
-    def __init__(self, subject, xfm_name, mask_type_1, mask_type_2, **kwargs):
-        '''
-        Input:
-        -----
-        mask1_path: path to a boolean mask in xyz format
-        mask2_path: path to a boolean mask in xyz format
+    """Apply a second mask to a vector produced by a first mask.
 
-        Initialization will generate a boolean vector that selects elements
-        from the vector output of mask1 applied to a volume that are also in
-        mask2.
-        '''
+    Given a vector of voxel activity from a primary mask, return voxel activity
+    for a secondary mask. Both masks are 3D voxel masks and resulting vector
+    will be as if the intersection of primary and secondary masks was applied
+    to the original 3D volume.
+
+    Parameters
+    ----------
+    subject : str
+        Subject name
+    xfm_name : str
+        Pycortex transform name
+    mask_type_1 : str
+        Mask type for initial mask. Incoming vector results from applying this
+        mask to the 3D volume
+    mask_type_2 : str
+        Mask type for secondary mask.
+
+    Attributes
+    ----------
+    mask : numpy.ndarray
+       A boolean vector that selects elements from the vector output of primary
+       mask applied to a volume that are also in secondary mask.
+
+    Methods
+    -------
+    run(x)
+        Returns a vector of voxel activity of the intersection between primary
+        and secondary masks
+    """
+    def __init__(self, subject, xfm_name, mask_type_1, mask_type_2, **kwargs):
         mask1 = cortex.db.get_mask(subject, xfm_name, mask_type_1).T  # in xyz
         mask2 = cortex.db.get_mask(subject, xfm_name, mask_type_2).T  # in xyz
         self.mask = secondary_mask(mask1, mask2, order='F')
@@ -314,23 +478,36 @@ class ActivityRatio(PreprocessingStep):
 
 
 class RoiActivity(PreprocessingStep):
-    def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
-        '''
-        Extract activity from an ROI
-        Args:
-            subject (str): subject ID
-            xfm_name (str): pycortex transform ID
-            pre_mask_name (str): ROI masks returned by pycortex are in volume
-                                 space, but activity is provided as a vector of
-                                 gray matter activity. pre_mask_name is the
-                                 name of the mask that was applied to the raw
-                                 image volume to produce the gray matter
-                                 activity vector.
-            roi_names (list of str): names of the ROIs to extract
+    """Extract activity from an ROI.
 
-        Returns:
-            a list of floats of mean activity in the requested ROIs
-        '''
+    Placeholder
+
+    Parameters
+    ----------
+    subject : str
+        subject ID
+    xfm_name : str
+        pycortex transform ID
+    pre_mask_name : str
+        ROI masks returned by pycortex are in volume space, but activity is
+        provided as a vector of gray matter activity. ``pre_mask_name`` is the
+        name of the mask that was applied to the raw image volume to produce
+        the gray matter activity vector.
+    roi_names : list of str
+        names of the ROIs to extract
+
+    Attributes
+    ----------
+    masks : dict
+        A dictionary containing the voxel masks for each named ROI
+
+    Methods
+    -------
+    run():
+        Returns a list of floats of mean activity in the requested ROIs
+    """
+    def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
+
         subj_dir = get_subject_directory(subject)
         pre_mask_path = op.join(subj_dir, pre_mask_name+'.nii')
 
@@ -355,24 +532,49 @@ class RoiActivity(PreprocessingStep):
 
 
 class WMDetrend(PreprocessingStep):
-    '''
-    Stores the white matter mask in functional reference space
-    when a new image comes in, motion corrects it to reference image
-    then applies wm mask
-    '''
+    """Detrend a volume using white matter detrending
+
+    Uses a pre-trained white matter detrender to remove the trend from a
+    volume. This should set up the class instance to be ready to take an image
+    input and output the detrended gray matter activation. To do this, it needs
+    ``wm_mask_funcref``, the white matter masks in functional reference space,
+    ``gm_mask_funcref``, the grey matter masks in functional reference space,
+    ``funcref_nifti1``, the functional reference image, ``input_affine``,
+    affine transform for the input images. Since we'll be dealing withraw pixel
+    data, we need to have a predetermined image orientation.
+
+    Parameters
+    ----------
+    subject : str
+        Subject identifier
+    model_name : str
+        Name of the pre-trained white matter detrending model
+
+    Attributes
+    ----------
+    subject : str
+        Subject identifier
+    subj_dir : str
+        Path to the subject's filestore
+    funcref_nifti1 : nibabel.NiftiImage1
+        Functional space reference image
+    model : sklearn.linear_regression.LinearRegression
+        Linear regression that predicts grey matter trend from white matter
+        activity
+    pca : sklearn.decomposition.PCA
+        Principal component analysis that decomposes white matter activity into
+        principal components
+
+    Methods
+    -------
+    run(wm_activity, gm_activity)
+        Returns detrended grey matter activity given raw gray and white matter
+        activity
+    """
     def __init__(self, subject, model_name=None, **kwargs):
         '''
-        This should set up the class instance to be ready to take an image
-        input and output the detrended gray matter activation
-
-        To do this, it needs:
-            wm_mask_funcref: white matter masks in functional reference space
-            gm_mask_funcref: gray matter masks in functional reference space
-            funcref_nifti1: the functional reference image
-            input_affine: affine transform for the input images
-                since we'll be dealing with raw pixel data, we need to
-                have a predetermined image orientation
         '''
+        super(WMDetrend, self).__init__()
         self.subj_dir = get_subject_directory(subject)
         self.subject = subject
 
@@ -405,6 +607,7 @@ def compute_raw2var(raw1, raw2, *args):
     VAR(X) = E[X^2] - E[X]^2
     '''
     return raw2 - raw1**2
+
 
 def compute_raw2skew(raw1, raw2, raw3, *args):
     '''Use the raw moments to compute the 3rd standardized moment
@@ -468,13 +671,37 @@ def convert_parallel2moments(node_raw_moments, nsamples):
 
 
 class OnlineMoments(PreprocessingStep):
-    '''Compute 1-Nth raw moments online
+    """Compute 1-Nth raw moments online
 
-    For the Ith moment: E[X^i] = (1/n)*\Sum(X^i)
-    This function only stores \Sum(X^i) and keeps
-    track of the number of observations.
-    '''
-    def __init__(self, order=4, **kwargs):
+    For the Ith moment: E[X^i] = (1/n)*\Sum(X^i). This function only stores
+    \Sum(X^i) and keeps track of the number of observations.
+
+    Parameters
+    ----------
+    order : int
+        The number of moments to compute
+
+    Attributes
+    ----------
+    order : int
+        The number of moments to compute
+    all_raw_moments : numpy.ndarray
+        All of the raw moments
+
+    Methods
+    -------
+    update(x)
+        Update the moments given the new observations
+    get_statistics()
+        Compute the statistics for the data
+    get_raw_moments()
+        Return the raw moments
+    get_norm_raw_moments
+        Return normalized raw moments
+    run(inp)
+        Return the mean and standard deviation
+    """
+    def __init__(self, order=2, **kwargs):
         self.n = 0.0
         self.order = order
         self.all_raw_moments = [0.0]*self.order
@@ -502,7 +729,8 @@ class OnlineMoments(PreprocessingStep):
     def get_statistics(self):
         '''Return the 1,2,3,4-moment estimates'''
         # mean,var,skew,kurt
-        return convert_parallel2moments([self.get_raw_moments()[:4]], self.n)
+        return convert_parallel2moments([self.get_raw_moments()[:self.order]],
+                                        self.n)
 
     def get_raw_moments(self):
         return self.all_raw_moments
@@ -524,7 +752,7 @@ class RunningMeanStd(PreprocessingStep):
         if self.mean is None:
             self.samples = np.empty((self.n, inp.size))*np.nan
         else:
-            self.samples[:-1, :] = self.samples[1:,:]
+            self.samples[:-1, :] = self.samples[1:, :]
         self.samples[-1, :] = inp
         self.mean = np.nanmean(self.samples, 0)
         self.std = np.nanstd(self.samples, 0)

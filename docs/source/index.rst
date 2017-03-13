@@ -6,16 +6,23 @@
 **realtimefmri** documentation
 ==============================
 
-Contents:
-
+Contents
+--------
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   overview
-   network
-   pipelines
-   preprocessing
-   together
+    overview
+    network
+    pipelines
+    preprocessing
+    together
+
+API
+---
+.. toctree::
+    :maxdepth: 2
+
+    api/stimulating
 
 Indices and tables
 ==================

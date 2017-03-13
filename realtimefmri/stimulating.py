@@ -15,11 +15,53 @@ from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR
 
 
 class Stimulator(object):
-    '''Class that loads the stimulation pipeline and runs all of the steps
-       together
-    '''
+    """Highest-level class for running stimulation
+
+    This class reads in the stimulation configuration, connects to the output
+    of the preprocessing script, and runs each stimulus as new images arrive.
+
+    Parameters
+    ----------
+    stim_config : str
+        Name of stimulus configuration to use. Should be a file in the
+        `pipeline` filestore
+    recording_id : str
+        A unique identifier for the recording. If none is provided, one will be
+        generated from the subject name and date
+    in_port : int
+        Port number to which data are sent from preprocessing pipeline
+    log : bool
+        Whether to send log messages to the network logger
+    verbose : bool
+        Whether to log to the console
+
+    Attributes
+    ----------
+    input_socket : zmq.socket.Socket
+        The subscriber socket that receives data sent over from the
+        preprocessing script
+    active : bool
+        Indicates whether the pipeline should be run when data are received
+    initialization : dict
+        Dictionary that specifies stimulation steps that occurs once at the
+        start of the experiment (i.e., it does not receive input with each
+        incoming datum)
+    pipeline : dict
+        Dictionary that specifies stimulation steps that receive each incoming
+        datum
+    global_defaults : dict
+        Parameters that are sent to every stimulation step as keyword arguments
+
+    Methods
+    -------
+    run()
+        Initialize and listen for incoming volumes, processing them as they
+        arrive
+    """
     def __init__(self, stim_config, recording_id=None, in_port=5558, log=True,
                  verbose=False):
+        """
+        """
         super(Stimulator, self).__init__()
         zmq_context = zmq.Context()
         self.input_socket = zmq_context.socket(zmq.SUB)
@@ -179,7 +221,33 @@ class Debug(Stimulus):
 
 
 class AudioRecorder(object):
-    '''Records from microphone and saves to file
+    '''Record the microphone and save to file
+
+    Record from the microphone and save as a .wav file inside of the recording
+    folder
+
+    Parameters
+    ----------
+    jack_port : str
+        Name of the jack port
+    file_name : str
+        Relative path to file name. Will be saved inside the recording folder
+    recording_id : str
+        Identifier for the recording. Used as the name of the recording folder
+
+    Attributes
+    ----------
+    rec_path : str
+        Path where recording is saves
+
+    Methods
+    -------
+    start()
+        Start the recording
+    stop()
+        Stop the recording
+
+
     '''
     def __init__(self, jack_port, file_name, recording_id, **kwargs):
         super(AudioRecorder, self).__init__()
