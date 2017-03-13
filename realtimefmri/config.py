@@ -8,6 +8,7 @@ DATABASE_DIR = op.join(PACKAGE_DIR, 'database')
 TEST_DATA_DIR = op.join(PACKAGE_DIR, 'tests/data')
 RECORDING_DIR = op.join(PACKAGE_DIR, 'recordings')
 PIPELINE_DIR = op.join(PACKAGE_DIR, 'pipelines')
+SCRIPTS_DIR = op.join(PACKAGE_DIR, 'scripts')
 
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
 LOG_LEVEL = logging.DEBUG
