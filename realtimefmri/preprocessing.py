@@ -738,7 +738,7 @@ class OnlineMoments(PreprocessingStep):
     run(inp)
         Return the mean and standard deviation
     """
-    def __init__(self, order=2, **kwargs):
+    def __init__(self, order=4, **kwargs):
         self.n = 0.0
         self.order = order
         self.all_raw_moments = [0.0]*self.order
@@ -766,7 +766,7 @@ class OnlineMoments(PreprocessingStep):
     def get_statistics(self):
         '''Return the 1,2,3,4-moment estimates'''
         # mean,var,skew,kurt
-        return convert_parallel2moments([self.get_raw_moments()[:self.order]],
+        return convert_parallel2moments([self.get_raw_moments()[:4]],
                                         self.n)
 
     def get_raw_moments(self):

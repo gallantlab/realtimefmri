@@ -9,19 +9,21 @@
 Contents
 --------
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
+    installation
     overview
     network
     pipelines
     together
+    logging
 
 API
 ---
 .. toctree::
     :maxdepth: 2
 
-    api/stimulating
+    api
 
 Indices and tables
 ==================

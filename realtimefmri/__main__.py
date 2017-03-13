@@ -71,7 +71,9 @@ def run_realtimefmri(parser):
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print('killing processes')
+        print('****************************')
+        print('* killing processes')
+        print('****************************')
         for proc in processes:
             proc.send_signal(signal.SIGINT)
 

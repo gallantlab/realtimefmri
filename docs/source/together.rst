@@ -10,13 +10,12 @@ Step-by-step
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
-3. Use ``scripts/realtime.py`` to run everything from one place. This script wraps  ``logging.py``, ``collect.py``, ``preprocess.py``, ``stimulate.py``, and ``sync.py`` for your convenience. Run it like this:
+3. Use the ``realtimefmri`` command to run everything from one place. This command wraps  ``logging.py``, ``collect.py``, ``preprocess.py``, ``stimulate.py``, and ``sync.py`` for your convenience. Choose a unique <recording_id> for this run and enter the following command:
 
 
 .. code-block:: bash
 
-  cd realtimefmri/scripts
-  python collect.py <recording_id> \
+  realtimefmri <recording_id> \
     <parent_directory> \
     <preprocessing_pipeline_name> \
     <stimulus_pipeline_name> \
