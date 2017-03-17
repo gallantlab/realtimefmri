@@ -1,84 +1,74 @@
 '''Data collection code
 '''
 import os
+import os.path as op
+import shutil
 import time
 from glob import glob
 from itertools import cycle
 import zmq
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler, FileSystemEventHandler
 
-from realtimefmri.utils import get_logger
+from realtimefmri.utils import get_logger, get_temporary_file_name
 from realtimefmri.config import get_example_data_directory
 
 
-class DataCollector(object):
-    '''Connects to
-    '''
-    def __init__(self, out_port=5556, verbose=False):
-        '''
-        Arguments
-        directory: string with directory to watch for files, or if
-                   parent_directory is True, new folder
-        parent_directory: bool indicating if provided directory is the image
-                          directory or a parent directory to watch
-        simulate: True indicates we should simulate from provided
-                  directory
-        interval: return, or int indicating seconds between simulated image
-                  acquisition
-        '''
-
-        super(DataCollector, self).__init__()
-        logger = get_logger('collecting', to_console=verbose, to_network=True)
-        logger.debug('data collector initialized')
-
-        context = zmq.Context()
-        self.image_pub = context.socket(zmq.PUB)
-        self.image_pub.bind('tcp://*:%d' % out_port)
-
-        self.logger = logger
-
-    def send_image(self, image_fpath):
-        '''Load image from path and publish to subscribers
-        '''
-        with open(image_fpath, 'r') as f:
-            raw_image_binary = f.read()
-
-        self.logger.info('%s %u', os.path.basename(image_fpath),
-                         len(raw_image_binary))
-
-        self.image_pub.send_multipart([b'image', raw_image_binary])
-
-
-class Simulator(DataCollector):
+class Simulator(object):
     '''Class to simulate from sample directory
     '''
-    def __init__(self, out_port=5556, directory=None, interval=2,
-                 verbose=False):
-        super(Simulator, self).__init__(out_port=out_port,
-                                        verbose=verbose)
+    def __init__(self, out_port=5556, simulate_directory=None,
+                 destination_directory=None, parent_directory=False,
+                 interval=2, verbose=False):
+
+        if not op.exists(destination_directory):
+            os.makedirs(destination_directory)
+
         self.interval = interval
-        self.directory = directory
+        self.simulate_directory = simulate_directory
+        self.destination_directory = destination_directory
+        self.parent_directory = parent_directory
+        self.logger = get_logger('simulator', to_console=verbose,
+                                 to_network=True)
 
     def run(self):
         '''run
         '''
-        ex_dir = get_example_data_directory(self.directory)
-        image_fpaths = glob(os.path.join(ex_dir, '*.PixelData'))
-        image_fpaths.sort()
-        self.logger.info('simulating %u files from %s',
-                         len(image_fpaths),
-                         ex_dir)
-        image_fpaths = cycle(image_fpaths)
+        if self.parent_directory:
+            dirname = get_temporary_file_name(self.destination_directory)
+            self.destination_directory = dirname
+            self.logger.debug('making simulation directory %s', dirname)
+            os.makedirs(dirname)
 
-        for image_fpath in image_fpaths:
-            if self.interval == 'return':
-                raw_input('>> Press return for next image')
-            else:
-                time.sleep(self.interval)
-            self.send_image(image_fpath)
-            time.sleep(0.2)  # simulate image scan and reconstruction time
+        try:
+            ex_dir = get_example_data_directory(self.simulate_directory)
+            image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
+            image_fpaths.sort()
+            self.logger.debug('simulating %u files from %s',
+                             len(image_fpaths), ex_dir)
+            image_fpaths = cycle(image_fpaths)
 
+            for image_fpath in image_fpaths:
+                if self.interval == 'return':
+                    raw_input('>> Press return for next image')
+                else:
+                    time.sleep(self.interval)
+                _, image_fname = op.split(image_fpath)
+                new_image_fpath = op.join(self.destination_directory,
+                                          image_fname)
+                self.logger.debug('copying %s to %s', image_fpath,
+                                 self.destination_directory)
+                shutil.copy(image_fpath, new_image_fpath)
+                time.sleep(0.2)  # simulate image scan and reconstruction time
+        except (KeyboardInterrupt, SystemExit):
+            self.stop()
+
+    def stop(self):
+        if self.parent_directory:
+            root_directory = op.join(self.destination_directory, op.pardir)
+        else:
+            root_directory = self.destination_directory
+
+        self.logger.debug('removing %s', root_directory)
+        shutil.rmtree(root_directory)
 
 class Collector(object):
     '''Class to manage monitoring and loading from a directory
@@ -95,62 +85,119 @@ class Collector(object):
             extension: file extension to detect
             verbose: if True, log to console
         '''
-        if parent_directory:
-            directory = detect_new_directory(directory)
 
-        observer = Observer()
-        handler = MonitorDirectory(out_port, extension, verbose)
-        observer.schedule(handler, path=directory)
+        logger = get_logger('collecting', to_console=verbose, to_network=True)
+        logger.info('data collector initialized')
 
-        self.observer = observer
+        context = zmq.Context()
+        self.image_pub = context.socket(zmq.PUB)
+        self.image_pub.bind('tcp://*:%d' % out_port)
+        self.parent_directory = parent_directory
+        self.directory = directory
+        self.extension = extension
+        self.active = False
+        self.logger = logger
+
+    def send_image(self, image_fpath):
+        '''Load image from path and publish to subscribers
+        '''
+        with open(image_fpath, 'r') as f:
+            raw_image_binary = f.read()
+
+        self.logger.info('%s %u', op.basename(image_fpath),
+                         len(raw_image_binary))
+
+        self.image_pub.send_multipart([b'image', raw_image_binary])
+
+    def detect_parent(self):
+        monitor = MonitorDirectory(self.directory, image_extension='/')
+        while True:
+            new_image_paths = monitor.get_new_image_paths()
+            if len(new_image_paths) > 0:
+                self.directory = op.join(self.directory,
+                                              new_image_paths.pop())
+                self.logger.debug('detected new folder %s monitoring',
+                                 self.directory)
+                break
+            time.sleep(0.1)
+
 
     def run(self):
         '''Run continuously
         '''
-        self.observer.start()
+        if self.parent_directory:
+            self.logger.debug('detecting next subfolder in %s', self.directory)
+            self.detect_parent()
+
+        monitor = MonitorDirectory(self.directory,
+                                   image_extension=self.extension)
+
+        self.active = True
+        while self.active:
+            new_image_paths = monitor.get_new_image_paths()
+            monitor.update(new_image_paths)
+            while len(new_image_paths) > 0:
+                new_image_path = new_image_paths.pop()
+                self.logger.debug('new image at %s', new_image_path)
+                self.send_image(op.join(self.directory, new_image_path))
+            time.sleep(0.1)
+
+
+class MonitorDirectory(object):
+    '''
+    monitor the file contents of a directory
+    Example usage:
+        m = MonitorDirectory(dir_path)
+        # add a file to that directory
+        new_image_paths = m.get_new_image_paths()
+        # use the new images
+        # update image paths list to contain newly acquired images
+        m.update(new_image_paths)
+        # no images added
+        new_image_paths = m.get_new_image_paths()
+        len(new_image_paths)==0 # True
+    '''
+    def __init__(self, directory, image_extension='.PixelData'):
+        if image_extension == '/':
+            self._is_valid = self._is_valid_directories
+        else:
+            self._is_valid = self._is_valid_files
+
+        self.directory = directory
+        self.image_extension = image_extension
+        self.image_paths = self.get_directory_contents()
+
+    def _is_valid_directories(self, val):
+        return op.isdir(op.join(self.directory, val))
+
+    def _is_valid_files(self, val):
+        return val.endswith(self.image_extension)
+
+    def get_directory_contents(self):
+        '''
+        returns entire contents of directory with image_extension
+        '''
         try:
-            while True:
-                time.sleep(0.001)
-        except KeyboardInterrupt:
-            self.observer.stop()
+            new_paths = set([i for i in os.listdir(self.directory)
+                             if self._is_valid(i)])
+        except OSError:
+            new_paths = set()
+        
+        return new_paths
 
-        self.observer.join()
-
-
-class MonitorDirectory(DataCollector, PatternMatchingEventHandler):
-    '''Monitor a directory for newly created files
-    '''
-    def __init__(self, out_port, extension, verbose=False):
-        DataCollector.__init__(self, out_port=out_port, verbose=verbose)
-        PatternMatchingEventHandler.__init__(self, patterns=['*'+extension])
-
-    def on_created(self, event):
-        '''After an file creation is detected send the image
+    def get_new_image_paths(self):
+        '''Gets entire contents of directory and returns paths that were not
+           present since last update
         '''
-        self.send_image(event.src_path)
+        directory_contents = self.get_directory_contents()
+        if len(directory_contents) > len(self.image_paths):
+            new_image_paths = set(directory_contents) - self.image_paths
+        else:
+            new_image_paths = set()
 
+        return list(new_image_paths)
 
-def detect_new_directory(directory):
-    '''Monitors a directory and returns the first new directory is
-       is created inside
-    '''
-    class MonitorNewDirectory(FileSystemEventHandler):
-        '''Event handler that does the monitoring and stops itself upon
-           detection of first new directory
-        '''
-        def __init__(self, observer):
-            super(MonitorNewDirectory, self).__init__()
-            self.observer = observer
-            self.detected_directory = None
-
-        def on_created(self, event):
-            if event.is_directory:
-                self.detected_directory = event.src_path
-                self.observer.stop()
-
-    observer = Observer()
-    handler = MonitorNewDirectory(observer)
-    observer.schedule(handler, path=directory)
-    observer.start()
-    observer.join()
-    return handler.detected_directory
+    def update(self, new_image_paths):
+        '''Adds paths to set of all image paths'''
+        if len(new_image_paths) > 0:
+            self.image_paths = self.image_paths.union(new_image_paths)

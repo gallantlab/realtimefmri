@@ -1,12 +1,12 @@
 global_defaults:
   subject: &SUBJECT TZfs2
 
-initialization:
-  - name: record_microphone_input 
-    instance: !!python/object:realtimefmri.stimulating.AudioRecorder {}
-    kwargs:
-      jack_port: "system:capture_1"
-      file_name: microphone
+# initialization:
+#   - name: record_microphone_input 
+#     instance: !!python/object:realtimefmri.stimulating.AudioRecorder {}
+#     kwargs:
+#       jack_port: "system:capture_1"
+#       file_name: microphone
 
 pipeline:
   - name: pycortex_viewer

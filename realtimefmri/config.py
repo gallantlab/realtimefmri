@@ -11,7 +11,7 @@ PIPELINE_DIR = op.join(PACKAGE_DIR, 'pipelines')
 SCRIPTS_DIR = op.join(PACKAGE_DIR, 'scripts')
 
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 
 def get_subject_directory(subject):

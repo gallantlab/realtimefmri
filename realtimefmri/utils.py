@@ -4,8 +4,26 @@ Utility functions and configuration
 import os.path as op
 import logging
 import logging.handlers
+import tempfile
 
 from realtimefmri.config import LOG_FORMAT
+
+
+def get_temporary_file_name(root=tempfile.gettempdir()):
+    from random import choice
+    from string import ascii_letters, digits
+
+    done = False
+    characters = ascii_letters + digits
+    while not done:
+
+        unique_part = ''.join([choice(characters) for i in range(10)])
+        temp_fname = op.join(root, tempfile.gettempprefix() + unique_part)
+        if not op.exists(temp_fname):
+            done = True
+
+    return temp_fname
+
 
 def confirm(prompt, choices=('y', 'n')):
     '''
