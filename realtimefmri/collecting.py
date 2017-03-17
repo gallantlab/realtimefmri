@@ -135,11 +135,11 @@ class Collector(object):
         while self.active:
             new_image_paths = monitor.get_new_image_paths()
             monitor.update(new_image_paths)
+            time.sleep(0.1)
             while len(new_image_paths) > 0:
                 new_image_path = new_image_paths.pop()
                 self.logger.debug('new image at %s', new_image_path)
                 self.send_image(op.join(self.directory, new_image_path))
-            time.sleep(0.1)
 
 
 class MonitorDirectory(object):
