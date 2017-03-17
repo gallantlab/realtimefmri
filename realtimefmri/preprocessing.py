@@ -118,7 +118,6 @@ class Preprocessor(object):
             self.logger.info('received image {:3d}'.format(self._i))
             self._i += 1
             _ = self.pipeline.process({'raw_image_binary': raw_image_binary})
-            time.sleep(0.1)
 
 
 class Pipeline(object):
