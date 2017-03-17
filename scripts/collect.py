@@ -3,10 +3,10 @@
 '''Script to run data collection
 '''
 
+import sys
 import argparse
 from realtimefmri.collecting import Collector
 from realtimefmri.utils import get_logger
-from realtimefmri.config import get_example_data_directory
 
 
 def main():
@@ -38,8 +38,12 @@ def main():
                                parent_directory=args.parent_directory,
                                verbose=args.verbose)
 
-    logger.info('running collection')
-    data_collector.run()
+    print('running collection')
+    try:
+        data_collector.run()
+    except KeyboardInterrupt:
+        print('shutting down collection')
+        sys.exit(0)
 
 
 if __name__ == "__main__":

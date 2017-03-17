@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+import sys
 import argparse
 from realtimefmri.stimulating import Stimulator
 
@@ -6,11 +8,15 @@ from realtimefmri.stimulating import Stimulator
 def main(config, recording_id, verbose=False):
 
     stim = Stimulator(config, recording_id=recording_id, verbose=verbose)
-    stim.run()  # this will start an infinite run loop
+    try:
+        stim.run()  # this will start an infinite run loop
+    except KeyboardInterrupt:
+        print('shutting down stimulation')
+        stim.active = False
+        stim.stop()
 
 
-if __name__ == '__main__':
-
+def parse_arguments():
     parser = argparse.ArgumentParser(description='Preprocess data')
     parser.add_argument('config', action='store',
                         help='Name of configuration file')
@@ -20,4 +26,9 @@ if __name__ == '__main__':
                         default=False, dest='verbose')
 
     args = parser.parse_args()
-    main(args.config, args.recording_id, args.verbose)
+    return args.config, args.recording_id, args.verbose
+
+
+if __name__ == '__main__':
+
+    main(*parse_arguments())

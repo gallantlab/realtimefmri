@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import sys
 from os import makedirs
 import os.path as op
@@ -87,8 +88,8 @@ def main(recording_id):
         log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
         if not op.exists(op.dirname(log_path)):
             makedirs(op.dirname(log_path))
-            print 'making recording directory {}'.format(op.dirname(log_path))
-        print 'saving log file to {}'.format(log_path)
+            print('making recording directory {}'.format(op.dirname(log_path)))
+        print('saving log file to {}'.format(log_path))
     else:
         log_path = False
     
@@ -96,12 +97,19 @@ def main(recording_id):
                    level=LOG_LEVEL)
 
     tcpserver = LogRecordSocketReceiver()
-    print('About to start TCP server...')
-    tcpserver.serve_until_stopped()
+    
+    try:
+        print('starting logging...')
+        tcpserver.serve_until_stopped()
+    except KeyboardInterrupt:
+        print('shutting down logging')
+        sys.exit(0)
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         recording_id = sys.argv[1]
     else:
         recording_id = None
+    
     main(recording_id)

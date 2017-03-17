@@ -1,16 +1,11 @@
 #!/usr/bin/env python
+
+import sys
 import argparse
 from realtimefmri.preprocessing import Preprocessor
 
 
-def main(config, recording_id, verbose=False):
-
-    preproc = Preprocessor(config, recording_id=recording_id, verbose=verbose)
-    preproc.run()
-
-
-if __name__ == '__main__':
-
+def parse_arguments():
     parser = argparse.ArgumentParser(description='Preprocess data')
     parser.add_argument('config',
                         action='store',
@@ -21,4 +16,18 @@ if __name__ == '__main__':
                         default=False, dest='verbose')
 
     args = parser.parse_args()
-    main(args.config, args.recording_id, args.verbose)
+    return args.config, args.recording_id, args.verbose    
+
+
+def main(config, recording_id, verbose=False):
+
+    preproc = Preprocessor(config, recording_id=recording_id, verbose=verbose)
+    try:
+        preproc.run()
+    except KeyboardInterrupt:
+        print('shutting down preprocessing')
+        sys.exit(0)
+
+
+if __name__ == '__main__':
+    main(*parse_arguments())

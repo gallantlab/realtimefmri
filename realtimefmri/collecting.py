@@ -32,38 +32,37 @@ class Simulator(object):
     def run(self):
         '''run
         '''
+        self.active = True
         if self.parent_directory:
             dirname = get_temporary_file_name(self.destination_directory)
             self.destination_directory = dirname
             self.logger.debug('making simulation directory %s', dirname)
             os.makedirs(dirname)
 
-        try:
-            ex_dir = get_example_data_directory(self.simulate_directory)
-            image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
-            image_fpaths.sort()
-            self.logger.debug('simulating %u files from %s',
-                             len(image_fpaths), ex_dir)
-            image_fpaths = cycle(image_fpaths)
+        ex_dir = get_example_data_directory(self.simulate_directory)
+        image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
+        image_fpaths.sort()
+        self.logger.debug('simulating %u files from %s',
+                         len(image_fpaths), ex_dir)
+        image_fpaths = cycle(image_fpaths)
 
-            for image_fpath in image_fpaths:
-                if self.interval == 'return':
-                    raw_input('>> Press return for next image')
-                else:
-                    time.sleep(self.interval)
-                _, image_fname = op.split(image_fpath)
-                new_image_fpath = op.join(self.destination_directory,
-                                          image_fname)
-                self.logger.debug('copying %s to %s', image_fpath,
-                                 self.destination_directory)
-                shutil.copy(image_fpath, new_image_fpath)
-                time.sleep(0.2)  # simulate image scan and reconstruction time
-        except (KeyboardInterrupt, SystemExit):
-            self.stop()
+        while self.active:
+            image_fpath = next(image_fpaths)
+            if self.interval == 'return':
+                raw_input('>> Press return for next image')
+            else:
+                time.sleep(self.interval)
+            _, image_fname = op.split(image_fpath)
+            new_image_fpath = op.join(self.destination_directory,
+                                      image_fname)
+            self.logger.debug('copying %s to %s', image_fpath,
+                             self.destination_directory)
+            shutil.copy(image_fpath, new_image_fpath)
+            time.sleep(0.2)  # simulate image scan and reconstruction time
 
     def stop(self):
         if self.parent_directory:
-            root_directory = op.join(self.destination_directory, op.pardir)
+            root_directory, _ = op.split(self.destination_directory)
         else:
             root_directory = self.destination_directory
 

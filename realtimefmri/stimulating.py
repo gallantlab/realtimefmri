@@ -116,28 +116,26 @@ class Stimulator(object):
             self.logger.debug('started %s' % stim['name'])
 
         while self.active:
-            try:
-                self.logger.debug('waiting for message')
-                topic, data = self.input_socket.recv_multipart()
-                self.logger.debug('received message')
-                for stim in self.pipeline:
-                    if topic in stim['topic'].keys():
-                        self.logger.info('running %s' % stim['name'])
-                        # call run function with kwargs
-                        ret = stim['instance'].run({stim['topic'][topic]: data})
-                        self.logger.debug('finished {} {}'.format(stim['name'], ret))
-            except (KeyboardInterrupt, SystemExit):
-                print 'stopping'
-                self.active = False
-                for init in self.initialization:
-                    self.logger.debug('stopping %s' % init['name'])
-                    init['instance'].stop()
-                    self.logger.debug('stopped %s' % init['name'])
-                for stim in self.pipeline:
-                    self.logger.debug('stopping %s' % stim['name'])
-                    stim['instance'].stop()
-                    self.logger.debug('stopping %s' % stim['name'])
-                sys.exit(0)
+            self.logger.debug('waiting for message')
+            topic, data = self.input_socket.recv_multipart()
+            self.logger.debug('received message')
+            for stim in self.pipeline:
+                if topic in stim['topic'].keys():
+                    self.logger.info('running %s' % stim['name'])
+                    # call run function with kwargs
+                    ret = stim['instance'].run({stim['topic'][topic]: data})
+                    self.logger.debug('finished {} {}'.format(stim['name'], ret))
+
+
+    def stop(self):
+        for init in self.initialization:
+            self.logger.debug('stopping %s' % init['name'])
+            init['instance'].stop()
+            self.logger.debug('stopped %s' % init['name'])
+        for stim in self.pipeline:
+            self.logger.debug('stopping %s' % stim['name'])
+            stim['instance'].stop()
+            self.logger.debug('stopped %s' % stim['name'])
 
 
 class Stimulus(object):
