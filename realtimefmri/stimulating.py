@@ -1,9 +1,7 @@
 import os
-import sys
 import time
 import shlex
 import subprocess
-import json
 
 import yaml
 import numpy as np
