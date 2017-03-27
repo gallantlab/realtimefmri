@@ -70,17 +70,17 @@ def run_realtimefmri(parser):
     # Collection
     if args.simulate_dataset:
         temp_directory = get_temporary_file_name()
-        print 'using temporary directory at {}'.format(temp_directory)
+        print('using temporary directory at {}'.format(temp_directory))
         opts = ['--directory', temp_directory]
     else:
-        opts = ['--directory', args.dicom_dir]
+        opts = ['--directory', args.dicom_directory]
     if args.parent_directory:
         opts.append('--parent_directory')
     if args.verbose:
         opts.append('--verbose')
-    print 'starting collection'
+    print('starting collection')
     cmd = ['python', op.join(SCRIPTS_DIR, 'collect.py')] + opts
-    print 'starting collection:\n{}'.format(' '.join(cmd))
+    print('starting collection:\n{}'.format(' '.join(cmd)))
     proc = Popen(cmd)
     processes.append(proc)
 
@@ -95,7 +95,7 @@ def run_realtimefmri(parser):
         if args.verbose:
             opts.append('--verbose')
         cmd = ['python', op.join(SCRIPTS_DIR, 'simulate.py')] + opts
-        print 'starting simulation:\n{}'.format(' '.join(cmd))
+        print('starting simulation:\n{}'.format(' '.join(cmd)))
         proc = Popen(cmd)
         processes.append(proc)
 
