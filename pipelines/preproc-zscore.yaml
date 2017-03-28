@@ -1,7 +1,7 @@
 global_defaults:
   subject: &SUBJECT TZfs2
   xfm_name: &XFMNAME controller_test_20161026TZ2
-  nskip: 5
+  nskip: 0
 
 pipeline:
   - name: raw_to_nifti

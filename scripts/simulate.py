@@ -14,8 +14,8 @@ def main():
     '''
     parser = argparse.ArgumentParser(description='Simulate data collection')
     parser.add_argument('-i', '--interval', action='store',
-                        dest='interval', default=2,
-                        help=('''Default 2. Designate interval between scans.
+                        dest='interval', default=1, type=float,
+                        help=('''Default 1. Designate interval between scans.
                                 `return`, simulate image acquisition every time
                                 the return key is pressed, int, interval in
                                 seconds between image acquisition. Only active

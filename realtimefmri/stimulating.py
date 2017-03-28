@@ -2,6 +2,7 @@ import os
 import time
 import shlex
 import subprocess
+import struct
 
 import yaml
 import numpy as np
@@ -10,6 +11,8 @@ import cortex
 
 from realtimefmri.utils import get_logger
 from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR
+
+STIM_PORT = 5559
 
 
 class Stimulator(object):
@@ -56,8 +59,8 @@ class Stimulator(object):
         Initialize and listen for incoming volumes, processing them as they
         arrive
     """
-    def __init__(self, stim_config, recording_id=None, in_port=5558, log=True,
-                 verbose=False):
+    def __init__(self, stim_config, recording_id=None, in_port=STIM_PORT,
+                 log=True, verbose=False):
         """
         """
         super(Stimulator, self).__init__()
@@ -115,14 +118,17 @@ class Stimulator(object):
 
         while self.active:
             self.logger.debug('waiting for message')
-            topic, data = self.input_socket.recv_multipart()
+            topic, sync_time, data = self.input_socket.recv_multipart()
+            sync_time = struct.unpack('d', sync_time)
             self.logger.debug('received message')
             for stim in self.pipeline:
                 if topic in stim['topic'].keys():
-                    self.logger.info('running %s' % stim['name'])
+                    self.logger.info('running %s at (%s) recvd at (%s)',
+                                     stim['name'], sync_time[0], time.time())
                     # call run function with kwargs
                     ret = stim['instance'].run({stim['topic'][topic]: data})
-                    self.logger.debug('finished {} {}'.format(stim['name'], ret))
+                    self.logger.debug('finished %s %s',
+                                      stim['name'], ret)
 
 
     def stop(self):

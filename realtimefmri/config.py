@@ -1,6 +1,7 @@
 import os.path as op
 import logging
 
+# PATHS
 # PACKAGE_DIR = '/home/glab/code/realtimefmri'
 PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
 
@@ -10,6 +11,13 @@ RECORDING_DIR = op.join(PACKAGE_DIR, 'recordings')
 PIPELINE_DIR = op.join(PACKAGE_DIR, 'pipelines')
 SCRIPTS_DIR = op.join(PACKAGE_DIR, 'scripts')
 
+# PORTS
+SYNC_PORT = 5556
+VOLUME_PORT = 5557
+PREPROC_PORT = 5558
+STIM_PORT = 5559
+
+# LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
 LOG_LEVEL = logging.INFO
 

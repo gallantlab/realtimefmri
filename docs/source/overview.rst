@@ -10,7 +10,8 @@ It consists of three main scripts that provide the following functionality:
 
 And two smaller scripts to provide:
  * `Logging`_
- * `Synchronization with the scanner`_
+ * `Scanner TTL pulses`_
+ * `Synchronization of volumes with scanner`_
 
 _`Data collection` (``collect.py``)
 -----------------------------------
@@ -34,6 +35,12 @@ _`Logging` (``logger.py``)
 
 The main processes (collection, preprocessing, stimulation) are able to run on separate machines, which could have different clocks. To record all of these events to a single clock, each process can output log events over the network to a central logging process that saves a record of the run.
 
-_`Synchronization with the scanner` (``sync.py``)
--------------------------------------------------
+_`Scanner TTL pulses` (``scanner.py``)
+--------------------------------------
+
 The scanner outputs a "5" keypress (via the FORP) to the **real-time computer** at the onset of each TR. This process captures those key presses and sends them off to the logger.
+
+_`Synchronization of volumes with scanner` (``sync.py``)
+--------------------------------------------------------
+
+Strict timing of data acquisition events comes from the TTL pulses that mark the onset of each TR. After image reconstruction, the image file appears on the scanner console and is passed through the preprocessing pipeline. This code attaches a timestamp to each element of preprocessed data by matching it to the time of its corresponding acquisition TTL pulse. This timestamped data is then passed along to stimulation code.

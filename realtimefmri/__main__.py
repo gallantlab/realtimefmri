@@ -54,16 +54,20 @@ def run_realtimefmri(parser):
 
     processes = []
 
+    # Synchronize everything
+    proc = Popen(['python3', op.join(SCRIPTS_DIR, 'sync.py')])
+    processes.append(proc)
+
     # Logging
     proc = Popen(['python', op.join(SCRIPTS_DIR, 'logger.py'),
                   args.recording_id])
     processes.append(proc)
 
-    # Synchronize to TR
+    # Scanner pulse
     opts = []
     if args.simulate_dataset:
         opts.append('--simulate')
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'sync.py')] +
+    proc = Popen(['python', op.join(SCRIPTS_DIR, 'scanner.py')] +
                  opts)
     processes.append(proc)
 
@@ -78,7 +82,6 @@ def run_realtimefmri(parser):
         opts.append('--parent_directory')
     if args.verbose:
         opts.append('--verbose')
-    print('starting collection')
     cmd = ['python', op.join(SCRIPTS_DIR, 'collect.py')] + opts
     print('starting collection:\n{}'.format(' '.join(cmd)))
     proc = Popen(cmd)
@@ -86,7 +89,7 @@ def run_realtimefmri(parser):
 
     time.sleep(1)
 
-    # Simulate
+    # Simulate data appearing in the collection folder
     if args.simulate_dataset:
         opts = ['--simulate_directory', simulate_directory,
                 '--destination_directory', temp_directory]

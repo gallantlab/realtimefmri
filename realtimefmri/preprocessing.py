@@ -22,6 +22,9 @@ from realtimefmri.utils import get_logger
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR)
 
+VOLUME_PORT = 5557
+PREPROC_PORT = 5558
+
 
 class Preprocessor(object):
     """Highest-level class for running preprocessing
@@ -77,8 +80,8 @@ class Preprocessor(object):
         Initialize and listen for incoming volumes, processing them through the
         pipeline as they arrive
     """
-    def __init__(self, preproc_config, recording_id=None, in_port=5556,
-                 out_port=5558, verbose=False, log=True, **kwargs):
+    def __init__(self, preproc_config, recording_id=None, in_port=VOLUME_PORT,
+                 out_port=PREPROC_PORT, verbose=False, log=True, **kwargs):
         super(Preprocessor, self).__init__()
 
         # initialize input and output sockets
@@ -86,7 +89,7 @@ class Preprocessor(object):
         self.in_port = in_port
         self.input_socket = context.socket(zmq.SUB)
         self.input_socket.connect('tcp://localhost:%d' % in_port)
-        self.input_socket.setsockopt(zmq.SUBSCRIBE, 'image')
+        self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         self.out_port = out_port
         self.output_socket = context.socket(zmq.PUB)
@@ -101,23 +104,24 @@ class Preprocessor(object):
         self.logger = get_logger('preprocessing', to_console=verbose,
                                  to_network=log)
 
-        self._i = 0
         self.nskip = self.pipeline.global_defaults.get('nskip', 0)
-        print 'nskip', self.nskip
 
     def receive_image(self):
-        _, raw_image_binary = self.input_socket.recv_multipart()
-        return raw_image_binary
+        (_,
+         raw_image_id,
+         raw_image_binary) = self.input_socket.recv_multipart()
+        return raw_image_id, raw_image_binary
 
     def run(self):
         self.active = True
         self.logger.info('running')
         while self.active:
             self.logger.debug('waiting for image')
-            raw_image_binary = self.receive_image()
-            self.logger.info('received image {:3d}'.format(self._i))
-            self._i += 1
-            _ = self.pipeline.process({'raw_image_binary': raw_image_binary})
+            raw_image_id, raw_image_binary = self.receive_image()
+            self.logger.info('received image %s', raw_image_id)
+            data_dict = {'raw_image_id': raw_image_id,
+                         'raw_image_binary': raw_image_binary}
+            _ = self.pipeline.process(data_dict)
 
 
 class Pipeline(object):
@@ -206,22 +210,30 @@ class Pipeline(object):
         self.global_defaults = config.get('global_defaults', dict())
 
     def process(self, data_dict):
+        raw_image_id = data_dict['raw_image_id']
+        
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
+            
             self.log.debug('running %s' % step['name'])
             outp = step['instance'].run(*args)
+            
             self.log.debug('finished %s' % step['name'])
+            
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
+            
             d = dict(zip(step.get('output', []), outp))
             data_dict.update(d)
-            if self.output_socket:
-                for topic in step.get('send', []):
-                    self.log.debug('sending %s' % topic)
-                    if isinstance(d[topic], dict):
-                        self.output_socket.send_multipart([topic, json.dumps(d[topic])])
-                    elif isinstance(d[topic], (np.ndarray)):
-                        self.output_socket.send_multipart([topic, d[topic].astype(np.float32).tostring()])
+            
+            for topic in step.get('send', []):
+                self.log.debug('sending %s' % topic)
+                if isinstance(d[topic], dict):
+                    msg = json.dumps(d[topic])
+                elif isinstance(d[topic], (np.ndarray)):
+                    msg = d[topic].astype(np.float32).tostring()
+                
+                self.output_socket.send_multipart([topic, raw_image_id, msg])
 
         return data_dict
 

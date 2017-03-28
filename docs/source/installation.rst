@@ -1,3 +1,9 @@
+Dependencies
+============
+
+`realtimefmri` relies on `asyncio` to perform some asynchronous operations. This module is only available in `python3`.
+
+
 Installation
 ============
 

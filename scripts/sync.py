@@ -1,35 +1,82 @@
-#!/usr/bin/env python
+"""Collect files and align them to sync pulses from scanner
 
+or coroutine waits for pulses adds them to queue
+and coroutine waits for images, pulls pulse from pulse queue
+join them in order
+
+"""
 import sys
-import argparse
-from realtimefmri.scanner import Scanner
+import struct
+import asyncio
+import zmq
+import zmq.asyncio
+from realtimefmri.config import (SYNC_PORT, VOLUME_PORT,
+                                 PREPROC_PORT, STIM_PORT)
 
 
-def main(simulate=False, verbose=False):
-    log_dest = ['network']
-    if verbose:
-        log_dest.append('console')
+def main():
 
-    scanner = Scanner(simulate=simulate, log_dest=log_dest)
-    
+    context = zmq.asyncio.Context()
+    loop = zmq.asyncio.ZMQEventLoop()
+    asyncio.set_event_loop(loop)
+
+    sync_queue = asyncio.Queue(loop=loop)
+    volume_queue = asyncio.Queue(loop=loop)
+    sync_times = dict()
+
+
+    @asyncio.coroutine
+    def consume_syncs(sync_queue):
+        socket = context.socket(zmq.PULL)
+        socket.connect('tcp://127.0.0.1:{}'.format(SYNC_PORT))
+
+        while True:
+            sync_time = yield from socket.recv()
+            sync_time = struct.unpack('d', sync_time)[0]
+            yield from sync_queue.put(sync_time)
+
+
+    @asyncio.coroutine
+    def consume_volumes(sync_queue, volume_queue):
+        socket = context.socket(zmq.SUB)
+        socket.connect('tcp://127.0.0.1:{}'.format(VOLUME_PORT))
+        socket.setsockopt(zmq.SUBSCRIBE, b'')
+        
+        while True:
+            (_, raw_image_id, _) = yield from socket.recv_multipart()
+            sync_time = yield from sync_queue.get()
+            sync_times[raw_image_id] = sync_time
+
+
+    @asyncio.coroutine
+    def produce_stimuli():
+        in_socket = context.socket(zmq.SUB)
+        in_socket.connect('tcp://127.0.0.1:{}'.format(PREPROC_PORT))
+        in_socket.setsockopt(zmq.SUBSCRIBE, b'')
+
+        out_socket = context.socket(zmq.PUB)
+        out_socket.bind('tcp://127.0.0.1:{}'.format(STIM_PORT))
+
+        while True:
+            (topic, raw_image_id, msg) = yield from in_socket.recv_multipart()
+            sync_time = sync_times[raw_image_id]
+            yield from out_socket.send_multipart([topic,
+                                                  struct.pack('d', sync_time),
+                                                  msg])
+
+
+    tasks = asyncio.gather(consume_syncs(sync_queue),
+                           consume_volumes(sync_queue, volume_queue),
+                           produce_stimuli())
+
+
     try:
-        scanner.run()
+        loop.run_until_complete(tasks)
     except KeyboardInterrupt:
-        print('shutting down syncing')
-        sys.exit(0)
+        print('shutting down synchronizer')
+        tasks.cancel()
+        loop.close()
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Record TR times')
-    parser.add_argument('-s', '--simulate', action='store_true',
-                        dest='simulate', default=False)
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        dest='verbose', default=False)
-
-    args = parser.parse_args()
-
-    return args.simulate, args.verbose
-
-
-if __name__=='__main__':
-    main(*parse_arguments())
+if __name__ == '__main__':
+    main()

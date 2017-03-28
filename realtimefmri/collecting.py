@@ -6,18 +6,20 @@ import shutil
 import time
 from glob import glob
 from itertools import cycle
+from uuid import uuid4
 import zmq
 
 from realtimefmri.utils import get_logger, get_temporary_file_name
 from realtimefmri.config import get_example_data_directory
 
+VOLUME_PORT = 5557
+
 
 class Simulator(object):
     '''Class to simulate from sample directory
     '''
-    def __init__(self, out_port=5556, simulate_directory=None,
-                 destination_directory=None, parent_directory=False,
-                 interval=2, verbose=False):
+    def __init__(self, simulate_directory=None, destination_directory=None,
+                 parent_directory=False, interval=1, verbose=False):
 
         if not op.exists(destination_directory):
             os.makedirs(destination_directory)
@@ -39,11 +41,10 @@ class Simulator(object):
             self.logger.debug('making simulation directory %s', dirname)
             os.makedirs(dirname)
 
-        ex_dir = get_example_data_directory(self.simulate_directory)
-        image_fpaths = glob(op.join(ex_dir, '*.PixelData'))
+        image_fpaths = glob(op.join(self.simulate_directory, '*.PixelData'))
         image_fpaths.sort()
         self.logger.debug('simulating %u files from %s',
-                         len(image_fpaths), ex_dir)
+                         len(image_fpaths), self.simulate_directory)
         image_fpaths = cycle(image_fpaths)
 
         while self.active:
@@ -54,8 +55,8 @@ class Simulator(object):
                 time.sleep(self.interval)
             _, image_fname = op.split(image_fpath)
             new_image_fpath = op.join(self.destination_directory,
-                                      image_fname)
-            self.logger.debug('copying %s to %s', image_fpath,
+                                      str(uuid4())+'.PixelData')
+            self.logger.info('copying %s to %s', image_fpath,
                              self.destination_directory)
             shutil.copy(image_fpath, new_image_fpath)
             time.sleep(0.2)  # simulate image scan and reconstruction time
@@ -72,8 +73,9 @@ class Simulator(object):
 class Collector(object):
     '''Class to manage monitoring and loading from a directory
     '''
-    def __init__(self, out_port=5556, directory=None, parent_directory=False,
-                 extension='.PixelData', verbose=False):
+    def __init__(self, out_port=VOLUME_PORT, directory=None,
+                 parent_directory=False, extension='.PixelData',
+                 verbose=False):
         '''Monitor a directory
         Args:
             out_port: port to publish images to
@@ -89,24 +91,27 @@ class Collector(object):
         logger.info('data collector initialized')
 
         context = zmq.Context()
-        self.image_pub = context.socket(zmq.PUB)
-        self.image_pub.bind('tcp://*:%d' % out_port)
+        self.out_socket = context.socket(zmq.PUB)
+        self.out_socket.bind('tcp://127.0.0.1:%d' % out_port)
         self.parent_directory = parent_directory
         self.directory = directory
         self.extension = extension
         self.active = False
         self.logger = logger
+        self.image_number = 0
 
     def send_image(self, image_fpath):
         '''Load image from path and publish to subscribers
         '''
-        with open(image_fpath, 'r') as f:
+        with open(image_fpath, 'rb') as f:
             raw_image_binary = f.read()
 
         self.logger.info('%s %u', op.basename(image_fpath),
                          len(raw_image_binary))
 
-        self.image_pub.send_multipart([b'image', raw_image_binary])
+        self.out_socket.send_multipart([b'image',
+                                        b'{:08}'.format(self.image_number),
+                                        raw_image_binary])
 
     def detect_parent(self):
         monitor = MonitorDirectory(self.directory, image_extension='/')
@@ -138,9 +143,10 @@ class Collector(object):
             time.sleep(0.1)
             while len(new_image_paths) > 0:
                 new_image_path = new_image_paths.pop()
-                self.logger.debug('new image at %s', new_image_path)
-                self.send_image(op.join(self.directory, new_image_path))
-
+                if (self.image_number % 2) == 1: # only use odd/magnitude images
+                    self.logger.debug('new image at %s', new_image_path)
+                    self.send_image(op.join(self.directory, new_image_path))
+                self.image_number += 1
 
 class MonitorDirectory(object):
     '''

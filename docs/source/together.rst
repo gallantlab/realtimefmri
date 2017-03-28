@@ -16,13 +16,14 @@ Step-by-step
 .. code-block:: bash
 
   realtimefmri <recording_id> \
-    <parent_directory> \
     <preprocessing_pipeline_name> \
     <stimulus_pipeline_name> \
+    -d <parent_directory_of_dicom_directory> \
     -p
 
 
-(The ``-p`` is just a flag that says the provided ``<parent_directory>`` is a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.)
+
+(The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.)
 
 4. Log files containing the timing of all of the different aspects of the experiment are stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
 
