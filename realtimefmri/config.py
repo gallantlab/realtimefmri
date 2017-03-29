@@ -2,8 +2,8 @@ import os.path as op
 import logging
 
 # PATHS
-# PACKAGE_DIR = '/home/glab/code/realtimefmri'
-PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
+PACKAGE_DIR = '/home/glab/code/realtimefmri'
+# PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
 
 DATABASE_DIR = op.join(PACKAGE_DIR, 'database')
 TEST_DATA_DIR = op.join(PACKAGE_DIR, 'tests/data')
