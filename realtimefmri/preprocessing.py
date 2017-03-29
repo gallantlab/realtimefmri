@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+import six
 import os
 import os.path as op
-import cPickle
+if six.PY2:
+    import cPickle as pickle
+elif six.PY3:
+    import pickle
 from glob import glob
 from itertools import izip
 import time
@@ -633,11 +637,11 @@ class WMDetrend(PreprocessingStep):
             pca_path = op.join(self.subj_dir, 'pca-%s.pkl' % model_name)
 
             with open(model_path, 'r') as f:
-                model = cPickle.load(f)
+                model = pickle.load(f)
             self.model = model
 
             with open(pca_path, 'r') as f:
-                pca = cPickle.load(f)
+                pca = pickle.load(f)
             self.pca = pca
         except IOError:
             warnings.warn(('''Could not load...\n\tModel from %s\nand\n\tPCA
