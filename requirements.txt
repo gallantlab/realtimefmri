@@ -1,5 +1,4 @@
 Cython
-cPickle
 Pillow
 PyYAML
 evdev
