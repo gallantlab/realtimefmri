@@ -10,14 +10,14 @@ elif six.PY3:
     import pickle
 import logging
 import logging.handlers
-import SocketServer
+import socketserver
 import struct
 
 from realtimefmri.utils import get_logger
 from realtimefmri.config import RECORDING_DIR, LOG_LEVEL
 
 
-class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
+class LogRecordStreamHandler(socketserver.StreamRequestHandler):
     """Handler for a streaming logging request.
 
     This basically logs the record using whatever logging policy is
@@ -60,7 +60,7 @@ class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
         logger.handle(record)
 
 
-class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
+class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
     """
     Simple TCP socket-based logging receiver suitable for testing.
     """
@@ -70,7 +70,7 @@ class LogRecordSocketReceiver(SocketServer.ThreadingTCPServer):
     def __init__(self, host='localhost',
                  port=logging.handlers.DEFAULT_TCP_LOGGING_PORT,
                  handler=LogRecordStreamHandler):
-        SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
+        socketserver.ThreadingTCPServer.__init__(self, (host, port), handler)
         self.abort = 0
         self.timeout = 1
         self.logname = None
