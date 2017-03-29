@@ -67,7 +67,7 @@ class Stimulator(object):
         zmq_context = zmq.Context()
         self.input_socket = zmq_context.socket(zmq.SUB)
         self.input_socket.connect('tcp://localhost:%d' % in_port)
-        self.input_socket.setsockopt(zmq.SUBSCRIBE, '')
+        self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
         self.active = False
 
         with open(os.path.join(PIPELINE_DIR, stim_config+'.yaml'), 'r') as f:
