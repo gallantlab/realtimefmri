@@ -5,6 +5,7 @@ import os.path as op
 if six.PY2:
     import cPickle as pickle
     from itertools import izip as zip
+    range = xrange
 elif six.PY3:
     import pickle
 from glob import glob
@@ -757,7 +758,7 @@ class OnlineMoments(PreprocessingStep):
         self.n = 0.0
         self.order = order
         self.all_raw_moments = [0.0]*self.order
-        for odx in xrange(self.order):
+        for odx in range(self.order):
             self.__setattr__('rawmnt%i'%(odx+1), self.all_raw_moments[odx])
 
     def __repr__(self):
@@ -773,7 +774,7 @@ class OnlineMoments(PreprocessingStep):
         '''
         self.n += 1
 
-        for odx in xrange(self.order):
+        for odx in range(self.order):
             name = 'rawmnt%i'%(odx+1)
             self.all_raw_moments[odx] = self.all_raw_moments[odx] + x**(odx+1)
             self.__setattr__(name, self.all_raw_moments[odx])

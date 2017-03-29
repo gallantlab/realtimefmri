@@ -1,3 +1,6 @@
+import six
+if six.PY2:
+    range = xrange
 import os
 import subprocess
 import shlex
@@ -44,8 +47,8 @@ class BrainJukebox(SoundStimulus):
         super(BrainJukebox, self).__init__(**kwargs)
         self.nsounds = len(sound_paths)
         print(sound_paths)
-        volumes = [pyo.SigTo(0, time=2) for i in xrange(self.nsounds)]
-        speeds = [pyo.SigTo(1, time=2) for i in xrange(self.nsounds)]
+        volumes = [pyo.SigTo(0, time=2) for i in range(self.nsounds)]
+        speeds = [pyo.SigTo(1, time=2) for i in range(self.nsounds)]
         players = [pyo.SfPlayer(so, mul=v, speed=sp) for so, v, sp in zip(sound_paths, volumes, speeds)]
 
         self.volumes = volumes
@@ -73,7 +76,7 @@ class BrainJukebox(SoundStimulus):
     @current_speed.setter
     def current_speed(self, speed):
         print('setting speed to %.2f' % speed)
-        for i in xrange(self.nsounds):
+        for i in range(self.nsounds):
             self.speeds[i].value = speed
 
 

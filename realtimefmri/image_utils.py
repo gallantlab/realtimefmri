@@ -1,3 +1,6 @@
+import six
+if six.PY2:
+    range = xrange
 import os
 import os.path as op
 from subprocess import call, STDOUT
@@ -57,7 +60,7 @@ def transform(inp, base, output_transform=False):
 
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
     volume = np.empty((100, 100, nrows*ncols))
-    for i in xrange(nrows):
+    for i in range(nrows):
         vol = mosaic[i*100:(i+1)*100, :].reshape(100, 100, ncols, order='F')
         volume[:, :, i*ncols:(i+1)*ncols] = vol
     return volume
@@ -69,7 +72,7 @@ def plot_volume(volume):
     nrows = ncols = np.ceil(nslices**0.5).astype(int)
 
     _, ax = plt.subplots(nrows, ncols)
-    for i in xrange(volume.shape[2]):
+    for i in range(volume.shape[2]):
         _ = ax[divmod(i, ncols)].pcolormesh(volume[:, :, i], cmap='gray')
 
 
