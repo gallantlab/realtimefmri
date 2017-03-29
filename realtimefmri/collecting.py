@@ -110,7 +110,7 @@ class Collector(object):
                          len(raw_image_binary))
 
         self.out_socket.send_multipart([b'image',
-                                        b'{:08}'.format(self.image_number),
+                                        '{:08}'.format(self.image_number).encode(),
                                         raw_image_binary])
 
     def detect_parent(self):
