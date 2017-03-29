@@ -55,7 +55,7 @@ def run_realtimefmri(parser):
     processes = []
 
     # Synchronize everything
-    proc = Popen(['python3', op.join(SCRIPTS_DIR, 'sync.py')])
+    proc = Popen(['python', op.join(SCRIPTS_DIR, 'sync.py')])
     processes.append(proc)
 
     # Logging
