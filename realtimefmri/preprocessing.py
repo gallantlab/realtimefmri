@@ -205,7 +205,7 @@ class Pipeline(object):
 
     def _from_path(self, preproc_config):
         # load the pipeline from pipelines.conf
-        with open(op.join(PIPELINE_DIR, preproc_config+'.yaml'), 'r') as f:
+        with open(op.join(PIPELINE_DIR, preproc_config+'.yaml'), 'rb') as f:
             self._from_file(f)
 
     def _from_file(self, f):
@@ -238,7 +238,9 @@ class Pipeline(object):
                 elif isinstance(d[topic], (np.ndarray)):
                     msg = d[topic].astype(np.float32).tostring()
                 
-                self.output_socket.send_multipart([topic, raw_image_id, msg])
+                self.output_socket.send_multipart([topic.encode(),
+                                                   raw_image_id,
+                                                   msg])
 
         return data_dict
 
