@@ -17,6 +17,10 @@ VOLUME_PORT = 5557
 PREPROC_PORT = 5558
 STIM_PORT = 5559
 
+# TTL
+KEYBOARD_FN = '/dev/input/event2'
+TTL_PORT = '/dev/ttyUSB0'
+
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
 LOG_LEVEL = logging.INFO
