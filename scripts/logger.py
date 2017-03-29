@@ -3,7 +3,10 @@
 import sys
 from os import makedirs
 import os.path as op
-import cPickle
+if six.PY2:
+    import cPickle as pickle
+elif six.PY3:
+    import pickle
 import logging
 import logging.handlers
 import SocketServer
@@ -39,7 +42,7 @@ class LogRecordStreamHandler(SocketServer.StreamRequestHandler):
             self.handleLogRecord(record)
 
     def unpickle(self, data):
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
     def handleLogRecord(self, record):
         # if a name is specified, we use the named logger rather than the one
