@@ -43,7 +43,7 @@ class BrainJukebox(SoundStimulus):
     def __init__(self, sound_paths, thresh=-1., **kwargs):
         super(BrainJukebox, self).__init__(**kwargs)
         self.nsounds = len(sound_paths)
-        print sound_paths
+        print(sound_paths)
         volumes = [pyo.SigTo(0, time=2) for i in xrange(self.nsounds)]
         speeds = [pyo.SigTo(1, time=2) for i in xrange(self.nsounds)]
         players = [pyo.SfPlayer(so, mul=v, speed=sp) for so, v, sp in zip(sound_paths, volumes, speeds)]
@@ -72,7 +72,7 @@ class BrainJukebox(SoundStimulus):
         return self._current_speed
     @current_speed.setter
     def current_speed(self, speed):
-        print 'setting speed to %.2f' % speed
+        print('setting speed to %.2f' % speed)
         for i in xrange(self.nsounds):
             self.speeds[i].value = speed
 
@@ -84,7 +84,7 @@ class BrainJukebox(SoundStimulus):
     def _parse_input(self, inp):
         return json.loads(inp)
     def run(self, inp):
-        print inp
+        print(inp)
         inp = self._parse_input(inp['mix'])
         track_selector = inp['V1']
         speed = inp['M1H']
