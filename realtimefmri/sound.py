@@ -145,11 +145,11 @@ class WeirdSound(SoundStimulus):
         self.freq = pyo.midiToHz(val)
 
     def _parse_input(self, inp):
-        return {k:np.fromstring(v, dtype=np.float32) for (k,v) in inp.iteritems()}
+        return {k:np.fromstring(v, dtype=np.float32) for (k,v) in inp.items()}
     def _validate_input(self, inp):
         def is_valid_input(x):
             return not np.isnan(x)
-        return {k:v for (k,v) in inp.iteritems() if is_valid_input(v)}
+        return {k:v for (k,v) in inp.items() if is_valid_input(v)}
 
     def start(self):
         super(WeirdSound, self).start()

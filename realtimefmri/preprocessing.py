@@ -571,7 +571,7 @@ class RoiActivity(PreprocessingStep):
         roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
 
         self.masks = dict()
-        for name, mask_value in roi_dict.iteritems():
+        for name, mask_value in roi_dict.items():
             roi_mask = roi_masks == mask_value
             self.masks[name] = secondary_mask(pre_mask, roi_mask)
 
@@ -579,7 +579,7 @@ class RoiActivity(PreprocessingStep):
         if activity.ndim > 1:
             activity = activity.reshape(-1, 1)
         roi_activities = dict()
-        for name, mask in self.masks.iteritems():
+        for name, mask in self.masks.items():
             roi_activities[name] = float(activity[mask].mean())
         return roi_activities
 

@@ -89,7 +89,7 @@ class Stimulator(object):
         for init in self.initialization:
             self.logger.debug('initializing %s' % init['name'])
             params = init.get('kwargs', {})
-            for k, v in self.global_defaults.iteritems():
+            for k, v in self.global_defaults.items():
                 params.setdefault(k, v)
             init['instance'].__init__(**params)
 
@@ -97,7 +97,7 @@ class Stimulator(object):
         for step in self.pipeline:
             self.logger.debug('initializing %s' % step['name'])
             params = step.get('kwargs', {})
-            for k, v in self.global_defaults.iteritems():
+            for k, v in self.global_defaults.items():
                 params.setdefault(k, v)
             step['instance'].__init__(**params)
 
