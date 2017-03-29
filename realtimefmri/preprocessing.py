@@ -4,10 +4,10 @@ import os
 import os.path as op
 if six.PY2:
     import cPickle as pickle
+    from itertools import izip as zip
 elif six.PY3:
     import pickle
 from glob import glob
-from itertools import izip
 import time
 import json
 import warnings
@@ -711,7 +711,7 @@ def convert_parallel2moments(node_raw_moments, nsamples):
         The kurtosis of the full distribution
     '''
     mean_moments = []
-    for raw_moment in izip(*node_raw_moments):
+    for raw_moment in zip(*node_raw_moments):
         moment = np.sum(raw_moment, 0)/nsamples
         mean_moments.append(moment)
 
