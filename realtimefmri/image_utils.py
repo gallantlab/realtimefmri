@@ -15,13 +15,13 @@ TEMPDIR = gettempdir()
 
 
 def transform(inp, base, output_transform=False):
-    if isinstance(base, basestring):
+    if isinstance(base, six.string_types):
         base_path = base
     else:
         base_path = op.join(TEMPDIR, str(uuid4())+'.nii')
         nbsave(base, base_path)
 
-    if isinstance(inp, basestring):
+    if isinstance(inp, six.string_types):
         inp_path = inp
     else:
         inp_path = op.join(TEMPDIR, str(uuid4())+'.nii')
