@@ -16,15 +16,6 @@ from realtimefmri.config import (SYNC_PORT, VOLUME_PORT,
 
 def main():
 
-    context = zmq.asyncio.Context()
-    loop = zmq.asyncio.ZMQEventLoop()
-    asyncio.set_event_loop(loop)
-
-    sync_queue = asyncio.Queue(loop=loop)
-    volume_queue = asyncio.Queue(loop=loop)
-    sync_times = dict()
-
-
     @asyncio.coroutine
     def consume_syncs(sync_queue):
         socket = context.socket(zmq.PULL)
@@ -64,6 +55,14 @@ def main():
                                                   struct.pack('d', sync_time),
                                                   msg])
 
+
+    context = zmq.asyncio.Context()
+    loop = zmq.asyncio.ZMQEventLoop()
+    asyncio.set_event_loop(loop)
+
+    sync_queue = asyncio.Queue(loop=loop)
+    volume_queue = asyncio.Queue(loop=loop)
+    sync_times = dict()
 
     tasks = asyncio.gather(consume_syncs(sync_queue),
                            consume_volumes(sync_queue, volume_queue),

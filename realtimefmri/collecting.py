@@ -1,5 +1,8 @@
 '''Data collection code
 '''
+import six
+if six.PY2:
+    input = raw_input
 import os
 import os.path as op
 import shutil
@@ -50,7 +53,7 @@ class Simulator(object):
         while self.active:
             image_fpath = next(image_fpaths)
             if self.interval == 'return':
-                raw_input('>> Press return for next image')
+                input('>> Press return for next image')
             else:
                 time.sleep(self.interval)
             _, image_fname = op.split(image_fpath)

@@ -114,8 +114,8 @@ def run_realtimefmri(parser):
     proc = Popen(['python', op.join(SCRIPTS_DIR, 'stimulate.py')] +
                  opts)
     processes.append(proc)
-    while True:
-        time.sleep(0.1)
+
+    input('Running...')
 
 
 def main():
