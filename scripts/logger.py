@@ -3,6 +3,7 @@
 import sys
 from os import makedirs
 import os.path as op
+import six
 if six.PY2:
     import cPickle as pickle
 elif six.PY3:
