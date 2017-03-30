@@ -308,8 +308,8 @@ class RawToNifti(PreprocessingStep):
         returns a nifti1 image of the same data in xyz
         '''
         # siements mosaic format is strange
-        mosaic = np.fromstring(inp, dtype='uint16').reshape(600, 600,
-                                                            order='C')
+        mosaic = np.fromstring(inp, dtype='uint16')
+        mosaic = mosaic.reshape(600, 600, order='C')
         # axes 0 and 1 must be swapped because mosaic is PLS and we need LPS
         # voxel data (affine values are -/-/+ for dimensions 1-3, yielding RAS)
         # we want the voxel data orientation to match that of the functional

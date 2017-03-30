@@ -120,7 +120,7 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
     processes.append(proc)
 
     try:
-        input('running...')
+        input('')
     except KeyboardInterrupt:
         print('shutting down realtimefmri')
 

@@ -109,6 +109,7 @@ class Collector(object):
 
     @asyncio.coroutine
     def detect_child(self, directory):
+        """Return the first new folder that is created in the given folder"""
         monitor = MonitorDirectory(directory, extension='/')
         while True:
             new_directories = monitor.get_new_paths()
@@ -120,11 +121,15 @@ class Collector(object):
 
     @asyncio.coroutine
     def consume_volumes(self):
+        """Consume the volume queue, load binary volume data, and publish data
+        to subscribers
+        """
         socket = self.context.socket(zmq.PUB)
         socket.bind('tcp://127.0.0.1:%d' % self.port)
 
         while True:
             image_fpath = yield from self.volume_queue.get()
+            yield from asyncio.sleep(0.1)  # give time for file to close
             with open(image_fpath, 'rb') as f:
                 raw_image_binary = f.read()
 
@@ -137,7 +142,8 @@ class Collector(object):
 
     @asyncio.coroutine
     def produce_volumes(self):
-        """Run continuously
+        """Continuously glob the monitor directory and add new files to the
+        volume queue
         """
         if self.parent_directory:
             self.logger.debug('detecting next subfolder in %s',
