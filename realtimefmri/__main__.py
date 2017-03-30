@@ -125,8 +125,8 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
         print('shutting down realtimefmri')
 
 
-def main(args):
-
+def main():
+    args = parse_arguments()
     if args.subcommand == 'console':
         console(args.recording_id, directory=args.directory,
                 parent_directory=args.parent_directory, simulate=args.simulate,
@@ -137,4 +137,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(parse_arguments())
+    main()
