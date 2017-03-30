@@ -1,131 +1,82 @@
-#!/usr/bin/env python
-"""Main entry point"""
-import sys
+from os import makedirs
 import os.path as op
-import shutil
-import time
-from subprocess import Popen
 import argparse
-import signal
-from realtimefmri.config import SCRIPTS_DIR, get_example_data_directory
-from realtimefmri.utils import get_temporary_file_name
+import asyncio
+import zmq
+import zmq.asyncio
 
+from realtimefmri.synchronize import Synchronizer
+from realtimefmri.collect import Collector
+from realtimefmri.scan import Scanner
+from realtimefmri.utils import get_logger
+from realtimefmri.config import RECORDING_DIR
 
-def get_parser():
-    """Get parser"""
-    parser = argparse.ArgumentParser(description='Real-time FMRI')
-    
-    parser.add_argument('recording_id', action='store',
-                        help='Unique recording identifier for this run')
-    
-    parser.add_argument('preproc_config', action='store',
-                        help='Name of preprocessing configuration file')
-    
-    parser.add_argument('stim_config', action='store',
-                        help='Name of stimulus configuration file')
-    
-    parser.add_argument('-d', '--dicom_directory', action='store',
-                        dest='dicom_directory', default=None,
-                        help=("""Directory containing dicom files (or """
-                              """simulation files)"""))
-
-    parser.add_argument('-p', '--parent_directory', action='store_true',
-                        dest='parent_directory', default=False,
-                        help=("""The provided directory is a parent directory.
-                                 Volumes will appear in a sub-directory that
-                                 will be generated after initialization of the
-                                 collection script."""))
-    
-    parser.add_argument('-s', '--simulate_dataset', action='store',
-                        dest='simulate_dataset', default=None,
-                        help=("""Simulate an experiment"""))
-    
+def parse_arguments():
+    """Run the data collection
+    """
+    parser = argparse.ArgumentParser(description='Collect data')
+    parser.add_argument('recording_id', action='store', default=None,
+                       help='''An identifier for this recording''')
+    parser.add_argument('-d', '--directory', action='store',
+                        dest='directory', default=None,
+                        help=('''Directory to watch. If simulate is True,
+                                 simulate from this directory'''))
+    parser.add_argument('-p', '--parent_directory', action='store',
+                        dest='parent_directory', default=None,
+                        help=('''Parent directory to watch. If provided,
+                                 monitor the directory for the first new folder,
+                                 then monitor that folder for new files'''))
+    parser.add_argument('-s', '--simulate', action='store_true',
+                        dest='simulate', default=False,
+                        help=('''Simulate a run'''))
     parser.add_argument('-v', '--verbose', action='store_true',
-                        dest='verbose', default=False)
-    return parser
+                        default=False, dest='verbose',
+                        help=('''Print log messages to console if true'''))
 
-
-def run_realtimefmri(parser):
-    """Run realtime"""
     args = parser.parse_args()
+    
+    return {'recording_id': args.recording_id,
+            'directory': args.directory,
+            'parent_directory': args.parent_directory,
+            'simulate': args.simulate,
+            'verbose': args.verbose}
 
-    if args.simulate_dataset:
-        simulate_directory = get_example_data_directory(args.simulate_dataset)
+def main(recording_id=None, directory=None, parent_directory=None,
+         simulate=False, verbose=False):
 
-    processes = []
+    log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
+    if not op.exists(op.dirname(log_path)):
+        makedirs(op.dirname(log_path))
+        print('making recording directory {}'.format(op.dirname(log_path)))
+    print('saving log file to {}'.format(log_path))
 
-    # Synchronize everything
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'sync.py')])
-    processes.append(proc)
+    logger = get_logger('root', to_file=log_path, to_console=verbose)
 
-    # Logging
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'logger.py'),
-                  args.recording_id])
-    processes.append(proc)
+    loop = zmq.asyncio.ZMQEventLoop()
+    
+    tasks = []
+    
+    logger.info('starting synchronizer')
+    sync = Synchronizer(verbose=True, loop=loop)
+    tasks.append(sync.run())
 
-    # Scanner pulse
-    opts = []
-    if args.simulate_dataset:
-        opts.append('--simulate')
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'scanner.py')] +
-                 opts)
-    processes.append(proc)
+    logger.info('starting scanner')
+    scan = Scanner(simulate=simulate, verbose=True, loop=loop)
+    tasks.append(scan.run())
+    
+    logger.info('starting collector')
+    coll = Collector(directory=directory, parent_directory=parent_directory,
+                     verbose=True, loop=loop)
+    tasks.append(coll.run())
 
-    # Collection
-    if args.simulate_dataset:
-        temp_directory = get_temporary_file_name()
-        print('using temporary directory at {}'.format(temp_directory))
-        opts = ['--directory', temp_directory]
-    else:
-        opts = ['--directory', args.dicom_directory]
-    if args.parent_directory:
-        opts.append('--parent_directory')
-    if args.verbose:
-        opts.append('--verbose')
-    cmd = ['python', op.join(SCRIPTS_DIR, 'collect.py')] + opts
-    print('starting collection:\n{}'.format(' '.join(cmd)))
-    proc = Popen(cmd)
-    processes.append(proc)
-
-    time.sleep(1)
-
-    # Simulate data appearing in the collection folder
-    if args.simulate_dataset:
-        opts = ['--simulate_directory', simulate_directory,
-                '--destination_directory', temp_directory]
-        if args.parent_directory:
-            opts.append('--parent_directory')
-        if args.verbose:
-            opts.append('--verbose')
-        cmd = ['python', op.join(SCRIPTS_DIR, 'simulate.py')] + opts
-        print('starting simulation:\n{}'.format(' '.join(cmd)))
-        proc = Popen(cmd)
-        processes.append(proc)
-
-
-    # Preprocessing
-    opts = [args.preproc_config, args.recording_id]
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'preprocess.py')] +
-                 opts)
-    processes.append(proc)
-
-    # Stimulation
-    opts = [args.stim_config, args.recording_id]
-    proc = Popen(['python', op.join(SCRIPTS_DIR, 'stimulate.py')] +
-                 opts)
-    processes.append(proc)
-
-    input('Running...')
-
-
-def main():
-    """Main function"""
     try:
-        run_realtimefmri(get_parser())
+        logger.info('starting tasks')
+        loop.run_until_complete(asyncio.gather(*tasks))
     except KeyboardInterrupt:
-        print('shutting down realtimefmri')
+        logger.info('shutting down')
+        [task.cancel() for task in tasks]
+        loop.close()
 
-    return 0
 
 if __name__ == '__main__':
-    sys.exit(main())
+    main(**parse_arguments())
