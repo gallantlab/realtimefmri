@@ -4,5 +4,5 @@ global_defaults:
 
 pipeline:
   - name: debug
-    instance: !!python/object:realtimefmri.stimulating.Debug {}
+    instance: !!python/object:realtimefmri.stimulate.Debug {}
     topic: { gm_activity_zscore: data }

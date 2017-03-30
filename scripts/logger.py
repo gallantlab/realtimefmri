@@ -87,16 +87,13 @@ class LogRecordSocketReceiver(socketserver.ThreadingTCPServer):
             abort = self.abort
 
 
-def main(recording_id):
-    if recording_id is not None:
-        log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
-        if not op.exists(op.dirname(log_path)):
-            makedirs(op.dirname(log_path))
-            print('making recording directory {}'.format(op.dirname(log_path)))
-        print('saving log file to {}'.format(log_path))
-    else:
-        log_path = False
-    
+def logger(recording_id):
+    log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
+    if not op.exists(op.dirname(log_path)):
+        makedirs(op.dirname(log_path))
+        print('making recording directory {}'.format(op.dirname(log_path)))
+    print('saving log file to {}'.format(log_path))
+
     _ = get_logger('root', to_console=True, to_file=log_path,
                    level=LOG_LEVEL)
 
@@ -108,12 +105,3 @@ def main(recording_id):
     except KeyboardInterrupt:
         print('shutting down logging')
         sys.exit(0)
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        recording_id = sys.argv[1]
-    else:
-        recording_id = None
-    
-    main(recording_id)

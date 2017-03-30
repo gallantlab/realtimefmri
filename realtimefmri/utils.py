@@ -1,6 +1,9 @@
 '''
 Utility functions and configuration
 '''
+import six
+if six.PY2:
+    input = raw_input
 import os.path as op
 import logging
 import logging.handlers
@@ -31,7 +34,7 @@ def confirm(prompt, choices=('y', 'n')):
     '''
     choice = None
     while choice not in choices:
-        choice = raw_input(prompt+'> ')
+        choice = input(prompt+'> ')
     return choice
 
 

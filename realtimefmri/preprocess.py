@@ -13,6 +13,7 @@ import time
 import json
 import warnings
 from uuid import uuid4
+import argparse
 
 import yaml
 import numpy as np
@@ -20,6 +21,7 @@ import zmq
 
 from nibabel import save as nbsave, load as nbload
 from nibabel.nifti1 import Nifti1Image
+
 import cortex
 
 from realtimefmri.image_utils import transform, mosaic_to_volume
@@ -127,6 +129,9 @@ class Preprocessor(object):
             data_dict = {'raw_image_id': raw_image_id,
                          'raw_image_binary': raw_image_binary}
             _ = self.pipeline.process(data_dict)
+
+    def stop(self):
+        pass
 
 
 class Pipeline(object):
@@ -886,3 +891,25 @@ class VoxelZScore(PreprocessingStep):
             else:
                 z = self.zscore(inp)
         return z
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Preprocess data')
+    parser.add_argument('config',
+                        action='store',
+                        help='Name of configuration file')
+    parser.add_argument('recording_id', action='store',
+                        help='Recording name')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        default=False, dest='verbose')
+
+    args = parser.parse_args()
+
+    preproc = Preprocessor(args.config, recording_id=args.recording_id,
+                           verbose=args.verbose)
+    try:
+        preproc.run()
+    except KeyboardInterrupt:
+        print('shutting down preprocessing')
+        preproc.active = False
+        preproc.stop()

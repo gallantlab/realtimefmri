@@ -1,8 +1,5 @@
 '''Data collection code
 '''
-import six
-if six.PY2:
-    input = raw_input
 import os
 import os.path as op
 import shutil
@@ -10,7 +7,9 @@ import time
 from glob import glob
 from itertools import cycle
 from uuid import uuid4
+import asyncio
 import zmq
+import zmq.asyncio
 
 from realtimefmri.utils import get_logger, get_temporary_file_name
 from realtimefmri.config import get_example_data_directory
@@ -76,12 +75,11 @@ class Simulator(object):
 class Collector(object):
     '''Class to manage monitoring and loading from a directory
     '''
-    def __init__(self, out_port=VOLUME_PORT, directory=None,
-                 parent_directory=False, extension='.PixelData',
-                 verbose=False):
+    def __init__(self, port=VOLUME_PORT, directory=None, parent_directory=None,
+                 extension='.PixelData', loop=None, verbose=False):
         '''Monitor a directory
         Args:
-            out_port: port to publish images to
+            port: port to publish images to
             directory: path that will be monitored for new files
             parent_directory: if True, indicates that `directory` should be
                               monitored for the first new directory and then
@@ -90,66 +88,85 @@ class Collector(object):
             verbose: if True, log to console
         '''
 
-        logger = get_logger('collecting', to_console=verbose, to_network=True)
+        logger = get_logger('collector', to_console=verbose, to_network=True)
         logger.info('data collector initialized')
 
-        context = zmq.Context()
-        self.out_socket = context.socket(zmq.PUB)
-        self.out_socket.bind('tcp://127.0.0.1:%d' % out_port)
-        self.parent_directory = parent_directory
+        context = zmq.asyncio.Context()
+        if loop is None:
+            loop = zmq.asyncio.ZMQEventLoop
+        asyncio.set_event_loop(loop)
+        volume_queue = asyncio.Queue(loop=loop)
+
+        self.port = port
         self.directory = directory
+        self.parent_directory = parent_directory
         self.extension = extension
         self.active = False
         self.logger = logger
         self.image_number = 0
+        self.context = context
+        self.volume_queue = volume_queue
 
-    def send_image(self, image_fpath):
-        '''Load image from path and publish to subscribers
-        '''
-        with open(image_fpath, 'rb') as f:
-            raw_image_binary = f.read()
-
-        self.logger.info('%s %u', op.basename(image_fpath),
-                         len(raw_image_binary))
-
-        self.out_socket.send_multipart([b'image',
-                                        '{:08}'.format(self.image_number).encode(),
-                                        raw_image_binary])
-
-    def detect_parent(self):
-        monitor = MonitorDirectory(self.directory, image_extension='/')
+    @asyncio.coroutine
+    def detect_child(self, directory):
+        monitor = MonitorDirectory(directory, extension='/')
         while True:
-            new_image_paths = monitor.get_new_image_paths()
-            if len(new_image_paths) > 0:
-                self.directory = op.join(self.directory,
-                                              new_image_paths.pop())
-                self.logger.debug('detected new folder %s monitoring',
-                                 self.directory)
-                break
-            time.sleep(0.1)
+            new_directories = monitor.get_new_paths()
+            if len(new_directories) > 0:
+                print('detected new folder {}'.format(new_directories[0]))
+                return op.join(directory, new_directories.pop())
 
+            yield from asyncio.sleep(0.1)
 
-    def run(self):
-        '''Run continuously
-        '''
+    @asyncio.coroutine
+    def consume_volumes(self):
+        socket = self.context.socket(zmq.PUB)
+        socket.bind('tcp://127.0.0.1:%d' % self.port)
+
+        while True:
+            image_fpath = yield from self.volume_queue.get()
+            with open(image_fpath, 'rb') as f:
+                raw_image_binary = f.read()
+
+            self.logger.info('%s %u', op.basename(image_fpath),
+                             len(raw_image_binary))
+
+            image_number = '{:08}'.format(self.image_number).encode()
+            yield from socket.send_multipart([b'image', image_number,
+                                              raw_image_binary])
+
+    @asyncio.coroutine
+    def produce_volumes(self):
+        """Run continuously
+        """
         if self.parent_directory:
-            self.logger.debug('detecting next subfolder in %s', self.directory)
-            self.detect_parent()
+            self.logger.debug('detecting next subfolder in %s',
+                              self.parent_directory)
+            child_dir = yield from self.detect_child(self.parent_directory)
+            self.directory = child_dir
 
         monitor = MonitorDirectory(self.directory,
-                                   image_extension=self.extension)
+                                   extension=self.extension)
 
         self.active = True
         while self.active:
-            new_image_paths = monitor.get_new_image_paths()
+            new_image_paths = monitor.get_new_paths()
             monitor.update(new_image_paths)
-            time.sleep(0.1)
             while len(new_image_paths) > 0:
                 new_image_path = new_image_paths.pop()
                 if (self.image_number % 2) == 1: # only use odd/magnitude images
                     self.logger.debug('new image at %s', new_image_path)
-                    self.send_image(op.join(self.directory, new_image_path))
+                    yield from self.volume_queue.put(op.join(self.directory,
+                                                             new_image_path))
+
                 self.image_number += 1
+
+            yield from asyncio.sleep(0.1)
+
+    def run(self):
+        return asyncio.gather(self.produce_volumes(),
+                              self.consume_volumes())
+
 
 class MonitorDirectory(object):
     '''
@@ -157,33 +174,33 @@ class MonitorDirectory(object):
     Example usage:
         m = MonitorDirectory(dir_path)
         # add a file to that directory
-        new_image_paths = m.get_new_image_paths()
+        new_image_paths = m.get_new_paths()
         # use the new images
         # update image paths list to contain newly acquired images
         m.update(new_image_paths)
         # no images added
-        new_image_paths = m.get_new_image_paths()
+        new_image_paths = m.get_new_paths()
         len(new_image_paths)==0 # True
     '''
-    def __init__(self, directory, image_extension='.PixelData'):
-        if image_extension == '/':
+    def __init__(self, directory, extension='.PixelData'):
+        if extension == '/':
             self._is_valid = self._is_valid_directories
         else:
             self._is_valid = self._is_valid_files
 
         self.directory = directory
-        self.image_extension = image_extension
+        self.extension = extension
         self.image_paths = self.get_directory_contents()
 
     def _is_valid_directories(self, val):
         return op.isdir(op.join(self.directory, val))
 
     def _is_valid_files(self, val):
-        return val.endswith(self.image_extension)
+        return val.endswith(self.extension)
 
     def get_directory_contents(self):
         '''
-        returns entire contents of directory with image_extension
+        returns entire contents of directory with extension
         '''
         try:
             new_paths = set([i for i in os.listdir(self.directory)
@@ -193,7 +210,7 @@ class MonitorDirectory(object):
         
         return new_paths
 
-    def get_new_image_paths(self):
+    def get_new_paths(self):
         '''Gets entire contents of directory and returns paths that were not
            present since last update
         '''

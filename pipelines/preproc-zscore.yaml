@@ -5,34 +5,34 @@ global_defaults:
 
 pipeline:
   - name: raw_to_nifti
-    instance: !!python/object:realtimefmri.preprocessing.RawToNifti {}
+    instance: !!python/object:realtimefmri.preprocess.RawToNifti {}
     input: [ raw_image_binary ]
     output: [ image_nifti ]
 
   - name: motion_correct
-    instance: !!python/object:realtimefmri.preprocessing.MotionCorrect {}
+    instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
     input: [ image_nifti ]
     output: [ image_nifti_mc ]
   
   - name: save_nifti
-    instance: !!python/object:realtimefmri.preprocessing.SaveNifti {}
+    instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
     input: [ image_nifti_mc ]
 
   - name: extract_gm_mask
-    instance: !!python/object:realtimefmri.preprocessing.ApplyMask {}
+    instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
     kwargs: { mask_type: thick }
     input: [ image_nifti_mc ]
     output: [ gm_activity ]
 
   - name: running_mean_std
-    instance: !!python/object:realtimefmri.preprocessing.OnlineMoments {}
+    instance: !!python/object:realtimefmri.preprocess.OnlineMoments {}
     input: [ gm_activity ]
     output:
       - gm_activity_mean
       - gm_activity_std
 
   - name: gm_activity_zscore
-    instance: !!python/object:realtimefmri.preprocessing.VoxelZScore {}
+    instance: !!python/object:realtimefmri.preprocess.VoxelZScore {}
     input:
       - gm_activity
       - gm_activity_mean

@@ -1,15 +1,17 @@
 import os.path as op
 import logging
+import realtimefmri
 
 # PATHS
-PACKAGE_DIR = '/home/glab/code/realtimefmri'
-# PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
+# PACKAGE_DIR = '/home/glab/code/realtimefmri'
+PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
 
 DATABASE_DIR = op.join(PACKAGE_DIR, 'database')
 TEST_DATA_DIR = op.join(PACKAGE_DIR, 'tests/data')
 RECORDING_DIR = op.join(PACKAGE_DIR, 'recordings')
 PIPELINE_DIR = op.join(PACKAGE_DIR, 'pipelines')
 SCRIPTS_DIR = op.join(PACKAGE_DIR, 'scripts')
+MODULE_DIR = realtimefmri.__path__[0]
 
 # PORTS
 SYNC_PORT = 5556
