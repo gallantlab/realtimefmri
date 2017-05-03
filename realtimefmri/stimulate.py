@@ -11,9 +11,7 @@ import zmq
 import cortex
 
 from realtimefmri.utils import get_logger
-from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR
-
-STIM_PORT = 5559
+from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_PORT
 
 
 class Stimulator(object):

@@ -33,7 +33,7 @@ class Collector(object):
 
         context = zmq.asyncio.Context()
         if loop is None:
-            loop = zmq.asyncio.ZMQEventLoop
+            loop = zmq.asyncio.ZMQEventLoop()
         asyncio.set_event_loop(loop)
         volume_queue = asyncio.Queue(loop=loop)
 
