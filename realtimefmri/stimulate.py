@@ -71,7 +71,7 @@ class Stimulator(object):
         self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
         self.active = False
 
-        with open(os.path.join(PIPELINE_DIR, stim_config+'.yaml'), 'r') as f:
+        with open(os.path.join(PIPELINE_DIR, stim_config+'.yaml'), 'rb') as f:
             config = yaml.load(f)
             self.initialization = config.get('initialization', dict())
             self.pipeline = config['pipeline']
@@ -82,7 +82,7 @@ class Stimulator(object):
                                       time.strftime('%Y%m%d_%H%M'))
         self.global_defaults['recording_id'] = recording_id
 
-        self.logger = get_logger('stimulating', to_console=verbose,
+        self.logger = get_logger('stimulate', to_console=verbose,
                                  to_network=log)
 
         # initialization
@@ -120,15 +120,17 @@ class Stimulator(object):
         while self.active:
             self.logger.debug('waiting for message')
             topic, sync_time, data = self.input_socket.recv_multipart()
-            sync_time = struct.unpack('d', sync_time)
+            topic = topic.decode('utf8')
+            sync_time = struct.unpack('d', sync_time)[0]
             self.logger.debug('received message')
             for stim in self.pipeline:
                 if topic in stim['topic'].keys():
-                    self.logger.info('running %s at (%s) recvd at (%s)',
-                                     stim['name'], sync_time[0], time.time())
+                    print(topic)
+                    self.logger.info('running %s at %s (acq at %s)',
+                                     stim['name'], time.time(), sync_time)
                     # call run function with kwargs
                     ret = stim['instance'].run({stim['topic'][topic]: data})
-                    self.logger.debug('finished %s %s',
+                    self.logger.info('finished %s %s',
                                       stim['name'], ret)
 
 

@@ -26,7 +26,7 @@ The basic format of a preprocessing pipeline configuration file is:
     - name: name_of_step
       # yaml tag specifying a python object (one that subclasses
       # PreprocessingStep)
-      instance: !!python/object:realtimefmri.preprocessing.StepClass {}
+      instance: !!python/object:realtimefmri.preprocess.StepClass {}
 
       # keyword arguments used to initialize the step
       kwargs:
@@ -61,7 +61,7 @@ Stimulation pipeline is configured similarly to preprocessing pipeline, except i
   # soon as the pipeline commences
   initialization:
     - name: a_name 
-      instance: !!python/object:realtimefmri.stimulating.SomeClass {}
+      instance: !!python/object:realtimefmri.stimulate.SomeClass {}
       kwargs:
         keyword_argument_1: hi_there
         keyword_argument_2: 123
@@ -69,7 +69,7 @@ Stimulation pipeline is configured similarly to preprocessing pipeline, except i
   # these components receive inputs sent over from the preprocessing pipeline
   pipeline:
     - name: responsive_stimulus
-      instance: !!python/object:realtimefmri.stimulating.AnotherClass {}
+      instance: !!python/object:realtimefmri.stimulate.AnotherClass {}
       # key: topic that the preprocessing script published to
       # value: the name the data gets inside of the stimulation .run() class
       topic: { publish_to_topic: variable_name }
@@ -97,34 +97,34 @@ Here is the preprocessing configuration. The first step in the pipeline should b
 
   pipeline:
     - name: raw_to_nifti
-      instance: !!python/object:realtimefmri.preprocessing.RawToNifti {}
+      instance: !!python/object:realtimefmri.preprocess.RawToNifti {}
       input: [ raw_image_binary ]
       output: [ image_nifti ]
 
     - name: motion_correct
-      instance: !!python/object:realtimefmri.preprocessing.MotionCorrect {}
+      instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
       input: [ image_nifti ]
       output: [ image_nifti_mc ]
     
     - name: save_nifti
-      instance: !!python/object:realtimefmri.preprocessing.SaveNifti {}
+      instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
       input: [ image_nifti_mc ]
 
     - name: extract_gm_mask
-      instance: !!python/object:realtimefmri.preprocessing.ApplyMask {}
+      instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
       kwargs: { mask_type: thick }
       input: [ image_nifti_mc ]
       output: [ gm_activity ]
 
     - name: running_mean_std
-      instance: !!python/object:realtimefmri.preprocessing.OnlineMoments {}
+      instance: !!python/object:realtimefmri.preprocess.OnlineMoments {}
       input: [ gm_activity ]
       output:
         - gm_activity_mean
         - gm_activity_std
 
     - name: gm_activity_zscore
-      instance: !!python/object:realtimefmri.preprocessing.VoxelZScore {}
+      instance: !!python/object:realtimefmri.preprocess.VoxelZScore {}
       input:
         - gm_activity
         - gm_activity_mean
@@ -142,14 +142,14 @@ topics that the preprocessing pipeline publishes, i.e., ``gm_activity_zscore``.
 
   initialization:
     - name: record_microphone_input 
-      instance: !!python/object:realtimefmri.stimulating.AudioRecorder {}
+      instance: !!python/object:realtimefmri.stimulate.AudioRecorder {}
       kwargs:
         jack_port: "system:capture_1"
         file_name: microphone
 
   pipeline:
     - name: pycortex_viewer
-      instance: !!python/object:realtimefmri.stimulating.PyCortexViewer {}
+      instance: !!python/object:realtimefmri.stimulate.PyCortexViewer {}
       topic: { gm_activity_zscore: data }
       kwargs:
         subject: *SUBJECT
@@ -159,5 +159,5 @@ topics that the preprocessing pipeline publishes, i.e., ``gm_activity_zscore``.
         vmax: 0.01
 
     - name: debug
-      instance: !!python/object:realtimefmri.stimulating.Debug {}
+      instance: !!python/object:realtimefmri.stimulate.Debug {}
       topic: { gm_activity_zscore: data }

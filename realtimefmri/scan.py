@@ -6,7 +6,7 @@ import zmq
 import zmq.asyncio
 import evdev
 from realtimefmri.utils import get_logger
-from realtimefmri.config import SYNC_PORT, KEYBOARD_FN, TTL_PORT
+from realtimefmri.config import SYNC_PORT, KEYBOARD_FN, TTL_SERIAL_PORT
 
 
 class Scanner(object):
@@ -19,7 +19,7 @@ class Scanner(object):
         if simulate:
             collect_function = self._simulate
         else:
-            if is_available_port(TTL_PORT):
+            if is_available_port(TTL_SERIAL_PORT):
                 collect_function = self._serial
             else:
                 collect_function = self._keyboard
@@ -63,24 +63,27 @@ class Scanner(object):
                 if (isinstance(event, evdev.KeyEvent) and
                     (event.keycode == 'KEY_5') and  # 5 key
                     (event.keystate == event.key_down)):
-                    self.logger.info('TR')
-                    yield from self.sync_queue.put(time.time())
+                    recv_time = time.time()
+                    self.logger.info('TR %s', recv_time)
+                    yield from self.sync_queue.put(recv_time)
 
     @asyncio.coroutine
     def _serial(self):
         img_msg = 'TR'
-        ser = serial.Serial(TTL_PORT)
+        ser = serial.Serial(TTL_SERIAL_PORT)
         while self.active:
             msg = ser.read()
             print(msg)
             if msg==img_msg:
-                self.logger.info('TR')
+                recv_time = time.time()
+                self.logger.info('TR %s', recv_time)
                 yield from self.sync_queue.put(time.time())
 
     @asyncio.coroutine
     def _simulate(self):
         while self.active:
-            self.logger.info('TR')
+            recv_time = time.time()
+            self.logger.info('TR %s' % recv_time)
             yield from self.sync_queue.put(time.time())
             yield from asyncio.sleep(2)
 

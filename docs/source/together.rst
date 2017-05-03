@@ -10,21 +10,29 @@ Step-by-step
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
-3. Use the ``realtimefmri`` command to run everything from one place. This command wraps  ``logging.py``, ``collect.py``, ``preprocess.py``, ``stimulate.py``, and ``sync.py`` for your convenience. Choose a unique <recording_id> for this run and enter the following command:
+3. Launch the ``realtimefmri console`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
 
 
 .. code-block:: bash
 
-  realtimefmri <recording_id> \
-    <preprocessing_pipeline_name> \
-    <stimulus_pipeline_name> \
-    -d <parent_directory_of_dicom_directory> \
-    -p
-
+  realtimefmri console <recording_id> \
+    -p <parent_directory_of_dicom_directory> \
+    -v  # if you want verbose output
 
 
 (The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.)
 
-4. Log files containing the timing of all of the different aspects of the experiment are stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
+4. In another terminal, launch the ``realtime preprocess`` command to run preprocessing and stimulation pipelines.
 
-5. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.
+
+.. code-block:: bash
+
+  realtimefmri console <recording_id> \
+    <preprocessing_pipeline_name> \
+    <stimulus_pipeline_name> \
+    -v  # if you want verbose output
+
+
+5. A log files containing event times is stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
+
+6. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.

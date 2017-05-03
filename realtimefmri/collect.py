@@ -2,75 +2,15 @@
 '''
 import os
 import os.path as op
-import shutil
-import time
-from glob import glob
-from itertools import cycle
-from uuid import uuid4
+import struct
 import asyncio
 import zmq
 import zmq.asyncio
 
-from realtimefmri.utils import get_logger, get_temporary_file_name
-from realtimefmri.config import get_example_data_directory
+from realtimefmri.utils import get_logger
 
 VOLUME_PORT = 5557
 
-
-class Simulator(object):
-    '''Class to simulate from sample directory
-    '''
-    def __init__(self, simulate_directory=None, destination_directory=None,
-                 parent_directory=False, interval=1, verbose=False):
-
-        if not op.exists(destination_directory):
-            os.makedirs(destination_directory)
-
-        self.interval = interval
-        self.simulate_directory = simulate_directory
-        self.destination_directory = destination_directory
-        self.parent_directory = parent_directory
-        self.logger = get_logger('simulator', to_console=verbose,
-                                 to_network=True)
-
-    def run(self):
-        '''run
-        '''
-        self.active = True
-        if self.parent_directory:
-            dirname = get_temporary_file_name(self.destination_directory)
-            self.destination_directory = dirname
-            self.logger.debug('making simulation directory %s', dirname)
-            os.makedirs(dirname)
-
-        image_fpaths = glob(op.join(self.simulate_directory, '*.PixelData'))
-        image_fpaths.sort()
-        self.logger.debug('simulating %u files from %s',
-                         len(image_fpaths), self.simulate_directory)
-        image_fpaths = cycle(image_fpaths)
-
-        while self.active:
-            image_fpath = next(image_fpaths)
-            if self.interval == 'return':
-                input('>> Press return for next image')
-            else:
-                time.sleep(self.interval)
-            _, image_fname = op.split(image_fpath)
-            new_image_fpath = op.join(self.destination_directory,
-                                      str(uuid4())+'.PixelData')
-            self.logger.info('copying %s to %s', image_fpath,
-                             self.destination_directory)
-            shutil.copy(image_fpath, new_image_fpath)
-            time.sleep(0.2)  # simulate image scan and reconstruction time
-
-    def stop(self):
-        if self.parent_directory:
-            root_directory, _ = op.split(self.destination_directory)
-        else:
-            root_directory = self.destination_directory
-
-        self.logger.debug('removing %s', root_directory)
-        shutil.rmtree(root_directory)
 
 class Collector(object):
     '''Class to manage monitoring and loading from a directory
@@ -114,13 +54,13 @@ class Collector(object):
         while True:
             new_directories = monitor.get_new_paths()
             if len(new_directories) > 0:
-                print('detected new folder {}'.format(new_directories[0]))
+                self.logger.debug('detected new folder %s', new_directories[0])
                 return op.join(directory, new_directories.pop())
 
             yield from asyncio.sleep(0.1)
 
     @asyncio.coroutine
-    def consume_volumes(self):
+    def publish_volumes(self):
         """Consume the volume queue, load binary volume data, and publish data
         to subscribers
         """
@@ -129,19 +69,21 @@ class Collector(object):
 
         while True:
             image_fpath = yield from self.volume_queue.get()
-            yield from asyncio.sleep(0.1)  # give time for file to close
+            yield from asyncio.sleep(0.25)  # give time for file to close
             with open(image_fpath, 'rb') as f:
                 raw_image_binary = f.read()
 
-            self.logger.info('%s %u', op.basename(image_fpath),
+            self.logger.debug('%s %u', op.basename(image_fpath),
                              len(raw_image_binary))
 
-            image_number = '{:08}'.format(self.image_number).encode()
+            image_number = struct.pack('i', self.image_number)
             yield from socket.send_multipart([b'image', image_number,
                                               raw_image_binary])
+            self.image_number += 1
+
 
     @asyncio.coroutine
-    def produce_volumes(self):
+    def collect_volumes(self):
         """Continuously glob the monitor directory and add new files to the
         volume queue
         """
@@ -154,24 +96,26 @@ class Collector(object):
         monitor = MonitorDirectory(self.directory,
                                    extension=self.extension)
 
+        next_mag = False
         self.active = True
         while self.active:
             new_image_paths = monitor.get_new_paths()
             monitor.update(new_image_paths)
             while len(new_image_paths) > 0:
                 new_image_path = new_image_paths.pop()
-                if (self.image_number % 2) == 1: # only use odd/magnitude images
-                    self.logger.debug('new image at %s', new_image_path)
+                if next_mag:  # only use odd/magnitude images
+                    self.logger.info('volume %s', new_image_path)
                     yield from self.volume_queue.put(op.join(self.directory,
                                                              new_image_path))
-
-                self.image_number += 1
+                    next_mag = False
+                else:
+                    next_mag = True
 
             yield from asyncio.sleep(0.1)
 
     def run(self):
-        return asyncio.gather(self.produce_volumes(),
-                              self.consume_volumes())
+        return asyncio.gather(self.collect_volumes(),
+                              self.publish_volumes())
 
 
 class MonitorDirectory(object):

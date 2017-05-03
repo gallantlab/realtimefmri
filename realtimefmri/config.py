@@ -21,7 +21,7 @@ STIM_PORT = 5559
 
 # TTL
 KEYBOARD_FN = '/dev/input/event2'
-TTL_PORT = '/dev/ttyUSB0'
+TTL_SERIAL_PORT = '/dev/ttyUSB0'
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'

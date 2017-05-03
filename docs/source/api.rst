@@ -4,7 +4,7 @@ API
 preprocessing
 -------------
 
-.. automodule:: realtimefmri.preprocessing
+.. automodule:: realtimefmri.preprocess
     :members:
     :inherited-members:
     :show-inheritance:
@@ -12,7 +12,7 @@ preprocessing
 stimulating
 -----------
 
-.. automodule:: realtimefmri.stimulating
+.. automodule:: realtimefmri.stimulate
     :members:
     :inherited-members:
     :show-inheritance:

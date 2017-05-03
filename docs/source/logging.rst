@@ -1,72 +1,37 @@
 Logging
 =======
 
-The python ``logging`` module  is used to generate log entries that provide a record of what occurred during the real-time experiment. Collection, preprocessing, stimulation, and scanner scripts log to the same file stored in ``recordings/<recording_id>``. Here is an example log file:
+The python ``logging`` module  is used to generate log entries that provide a record of what occurred during the real-time experiment. The log is stored in ``recordings/<recording_id>/recording.log``. Here is an example log file:
 
 ::
 
-    2017-03-13 14:26:54,909 scanner              INFO     TR
-    2017-03-13 14:26:54,935 collecting           INFO     simulating 114 files from /auto/k1/robertg/code/realtimefmri/datasets/bbc_test
-    2017-03-13 14:26:55,670 preprocessing        INFO     running
-    2017-03-13 14:26:56,912 scanner              INFO     TR
-    2017-03-13 14:26:56,942 collecting           INFO     0024202140892738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:26:56,944 preprocessing        INFO     received image   0
-    2017-03-13 14:26:57,856 stimulating          INFO     running debug
-    2017-03-13 14:26:58,914 scanner              INFO     TR
-    2017-03-13 14:26:59,148 collecting           INFO     0056112687594538141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:26:59,150 preprocessing        INFO     received image   1
-    2017-03-13 14:27:00,071 stimulating          INFO     running debug
-    2017-03-13 14:27:00,917 scanner              INFO     TR
-    2017-03-13 14:27:01,354 collecting           INFO     0188166034691638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:01,356 preprocessing        INFO     received image   2
-    2017-03-13 14:27:02,271 stimulating          INFO     running debug
-    2017-03-13 14:27:02,919 scanner              INFO     TR
-    2017-03-13 14:27:03,560 collecting           INFO     0343261167791738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:03,562 preprocessing        INFO     received image   3
-    2017-03-13 14:27:04,451 stimulating          INFO     running debug
-    2017-03-13 14:27:04,921 scanner              INFO     TR
-    2017-03-13 14:27:05,767 collecting           INFO     0408161903690638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:05,768 preprocessing        INFO     received image   4
-    2017-03-13 14:27:06,614 stimulating          INFO     running debug
-    2017-03-13 14:27:06,923 scanner              INFO     TR
-    2017-03-13 14:27:07,972 collecting           INFO     0530291580793638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:07,974 preprocessing        INFO     received image   5
-    2017-03-13 14:27:08,874 stimulating          INFO     running debug
-    2017-03-13 14:27:08,926 scanner              INFO     TR
-    2017-03-13 14:27:10,178 collecting           INFO     0662205626790738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:10,180 preprocessing        INFO     received image   6
-    2017-03-13 14:27:10,927 scanner              INFO     TR
-    2017-03-13 14:27:11,043 stimulating          INFO     running debug
-    2017-03-13 14:27:12,384 collecting           INFO     0664286931853738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:12,386 preprocessing        INFO     received image   7
-    2017-03-13 14:27:12,929 scanner              INFO     TR
-    2017-03-13 14:27:13,318 stimulating          INFO     running debug
-    2017-03-13 14:27:14,590 collecting           INFO     0727187349595538141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:14,592 preprocessing        INFO     received image   8
-    2017-03-13 14:27:14,931 scanner              INFO     TR
-    2017-03-13 14:27:15,487 stimulating          INFO     running debug
-    2017-03-13 14:27:16,796 collecting           INFO     0794224572893738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:16,798 preprocessing        INFO     received image   9
-    2017-03-13 14:27:16,933 scanner              INFO     TR
-    2017-03-13 14:27:17,706 stimulating          INFO     running debug
-    2017-03-13 14:27:18,935 scanner              INFO     TR
-    2017-03-13 14:27:19,002 collecting           INFO     0859171526692638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:19,004 preprocessing        INFO     received image  10
-    2017-03-13 14:27:19,896 stimulating          INFO     running debug
-    2017-03-13 14:27:20,938 scanner              INFO     TR
-    2017-03-13 14:27:21,208 collecting           INFO     0981294426795638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:21,210 preprocessing        INFO     received image  11
-    2017-03-13 14:27:22,131 stimulating          INFO     running debug
-    2017-03-13 14:27:22,940 scanner              INFO     TR
-    2017-03-13 14:27:23,415 collecting           INFO     1024210260892738141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:23,416 preprocessing        INFO     received image  12
-    2017-03-13 14:27:24,284 stimulating          INFO     running debug
-    2017-03-13 14:27:24,942 scanner              INFO     TR
-    2017-03-13 14:27:25,623 collecting           INFO     1056192138594538141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:25,625 preprocessing        INFO     received image  13
-    2017-03-13 14:27:26,488 stimulating          INFO     running debug
-    2017-03-13 14:27:26,944 scanner              INFO     TR
-    2017-03-13 14:27:27,829 collecting           INFO     1188115344691638141216102.82353.23.2.5.7011.2.21.3.1.PixelData 720000
-    2017-03-13 14:27:27,831 preprocessing        INFO     received image  14
-    2017-03-13 14:27:28,727 stimulating          INFO     running debug
-    2017-03-13 14:27:28,947 scanner              INFO     TR
+    2017-03-30 14:12:15,733 root                 INFO     starting synchronizer
+    2017-03-30 14:12:15,734 root                 INFO     starting scanner
+    2017-03-30 14:12:15,734 root                 INFO     starting collector
+    2017-03-30 14:12:15,734 collector            INFO     data collector initialized
+    2017-03-30 14:12:15,736 root                 INFO     starting tasks
+    2017-03-30 14:12:23,605 scanner              INFO     TR 1490908343.6054802
+    2017-03-30 14:12:26,388 collector            INFO     volume 80d717bc-c6d1-4ff5-b6df-1ecd70f48f8c.PixelData
+    2017-03-30 14:12:34,533 scanner              INFO     TR 1490908354.5333643
+    2017-03-30 14:12:37,215 collector            INFO     volume f07c8b9c-466d-4d53-994a-c3417f75a385.PixelData
+    2017-03-30 14:12:41,101 scanner              INFO     TR 1490908361.1013849
+    2017-03-30 14:12:42,328 collector            INFO     volume e0a979a3-2003-4c95-92d5-d2fbe4ba38e7.PixelData
+    2017-03-30 14:12:44,845 scanner              INFO     TR 1490908364.8452926
+    2017-03-30 14:12:46,339 collector            INFO     volume 8b929de3-ecdc-401d-8c1f-343fdafca125.PixelData
+    2017-03-30 14:12:49,493 scanner              INFO     TR 1490908369.4933078
+    2017-03-30 14:12:50,951 collector            INFO     volume faf86960-5c46-4b05-acf9-202e56db3eb9.PixelData
+    2017-03-30 14:12:53,813 scanner              INFO     TR 1490908373.81325
+    2017-03-30 14:12:55,263 collector            INFO     volume 392a502f-ba92-4498-8e43-24e14480902e.PixelData
+    2017-03-30 14:12:57,501 scanner              INFO     TR 1490908377.5011406
+    2017-03-30 14:12:58,170 collector            INFO     volume 7fbdf386-4619-4910-985f-6d09e6240d10.PixelData
+    2017-03-30 14:12:59,069 scanner              INFO     TR 1490908379.0690863
+    2017-03-30 14:12:59,975 collector            INFO     volume 9335247b-a0af-4b8a-902f-a4b55802b3b5.PixelData
+    2017-03-30 14:13:01,053 scanner              INFO     TR 1490908381.0530667
+    2017-03-30 14:13:01,779 collector            INFO     volume a98b0f65-6a1c-4fd7-a511-5eab883da94f.PixelData
+    2017-03-30 14:13:02,989 scanner              INFO     TR 1490908382.9890192
+    2017-03-30 14:13:03,684 collector            INFO     volume 8ea49210-4c3f-4fe5-92ba-241dfd3f97ea.PixelData
+    2017-03-30 14:13:04,925 scanner              INFO     TR 1490908384.9250386
+    2017-03-30 14:13:05,689 collector            INFO     volume 5e16647e-669f-4823-9cab-6a6fd75ee68a.PixelData
+    2017-03-30 14:13:07,525 scanner              INFO     TR 1490908387.5251012
+    2017-03-30 14:13:08,196 collector            INFO     volume 8475b0f2-f3af-4ec5-8187-ee6082aee07f.PixelData
+    2017-03-30 14:13:16,512 root                 INFO     shutting down

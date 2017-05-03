@@ -9,7 +9,7 @@ import logging
 import logging.handlers
 import tempfile
 
-from realtimefmri.config import LOG_FORMAT
+from realtimefmri.config import LOG_LEVEL, LOG_FORMAT
 
 
 def get_temporary_file_name(root=tempfile.gettempdir()):
@@ -39,7 +39,7 @@ def confirm(prompt, choices=('y', 'n')):
 
 
 def get_logger(name, to_console=False, to_file=False, to_network=False,
-               level=logging.INFO, formatting=LOG_FORMAT):
+               level=LOG_LEVEL, formatting=LOG_FORMAT):
     '''
     Returns a logger to some desired destinations. Checks to see if the logger
     or any of its parents already have the requested destinations to avoid

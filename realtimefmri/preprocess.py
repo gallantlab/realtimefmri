@@ -2,6 +2,7 @@
 import six
 import os
 import os.path as op
+import struct
 if six.PY2:
     import cPickle as pickle
     from itertools import izip as zip
@@ -108,25 +109,26 @@ class Preprocessor(object):
                                  output_socket=self.output_socket,
                                  log=log, verbose=verbose)
 
-        self.logger = get_logger('preprocessing', to_console=verbose,
+        self.logger = get_logger('preprocess', to_console=verbose,
                                  to_network=log)
 
         self.nskip = self.pipeline.global_defaults.get('nskip', 0)
 
     def receive_image(self):
         (_,
-         raw_image_id,
+         image_id,
          raw_image_binary) = self.input_socket.recv_multipart()
-        return raw_image_id, raw_image_binary
+        return image_id, raw_image_binary
 
     def run(self):
         self.active = True
         self.logger.info('running')
         while self.active:
             self.logger.debug('waiting for image')
-            raw_image_id, raw_image_binary = self.receive_image()
-            self.logger.info('received image %s', raw_image_id)
-            data_dict = {'raw_image_id': raw_image_id,
+            image_id, raw_image_binary = self.receive_image()
+            image_id = struct.unpack('i', image_id)[0]
+            self.logger.info('received image %d', image_id)
+            data_dict = {'image_id': image_id,
                          'raw_image_binary': raw_image_binary}
             _ = self.pipeline.process(data_dict)
 
@@ -220,7 +222,7 @@ class Pipeline(object):
         self.global_defaults = config.get('global_defaults', dict())
 
     def process(self, data_dict):
-        raw_image_id = data_dict['raw_image_id']
+        image_id = struct.pack('i', data_dict['image_id'])
         
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
@@ -244,7 +246,7 @@ class Pipeline(object):
                     msg = d[topic].astype(np.float32).tostring()
                 
                 self.output_socket.send_multipart([topic.encode(),
-                                                   raw_image_id,
+                                                   image_id,
                                                    msg])
 
         return data_dict
