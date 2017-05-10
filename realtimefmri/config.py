@@ -20,7 +20,7 @@ PREPROC_PORT = 5558
 STIM_PORT = 5559
 
 # TTL
-KEYBOARD_FN = '/dev/input/event2'
+KEYBOARD_FN = '/dev/input/event3'
 TTL_SERIAL_PORT = '/dev/ttyUSB0'
 
 # LOGGING

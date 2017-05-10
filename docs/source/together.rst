@@ -20,14 +20,14 @@ Step-by-step
     -v  # if you want verbose output
 
 
-(The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.)
+The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.
 
 4. In another terminal, launch the ``realtime preprocess`` command to run preprocessing and stimulation pipelines.
 
 
 .. code-block:: bash
 
-  realtimefmri console <recording_id> \
+  realtimefmri preprocess <recording_id> \
     <preprocessing_pipeline_name> \
     <stimulus_pipeline_name> \
     -v  # if you want verbose output
@@ -36,3 +36,18 @@ Step-by-step
 5. A log files containing event times is stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
 
 6. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.
+
+
+Simulating a real-time experiment outside of the scanner
+--------------------------------------------------------
+
+To test all of the moving parts without booking scanner time, we've provided a script that will simulate TTL pulses and volume acquisition.
+
+
+.. code-block:: bash
+
+    python scripts/manual_simulate.py <test_dataset>
+
+Where ``test_dataset`` specifies a directory ``<MODULE_PATH>/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
+
+Start by pressing ``5`` to simulate the TTL pulse that occurs at the start of each volume acquisition. Then press enter twice to simulate the magnitude and phase volumes (only magnitude volumes are used).

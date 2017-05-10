@@ -16,6 +16,7 @@ if __name__ == '__main__':
     paths = glob(op.join(ex_directory, '*.PixelData'))
 
     dest_directory = op.join('/tmp/rtfmri', str(uuid4()))
+    print('Simulated volumes appearing in {}'.format(dest_directory))
 
     os.makedirs(dest_directory)
 

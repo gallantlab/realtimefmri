@@ -9,19 +9,19 @@ pipeline:
     input: [ raw_image_binary ]
     output: [ image_nifti ]
 
-  - name: motion_correct
-    instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
-    input: [ image_nifti ]
-    output: [ image_nifti_mc ]
+#  - name: motion_correct
+#    instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
+#    input: [ image_nifti ]
+#    output: [ image_nifti_mc ]
   
-  - name: save_nifti
-    instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
-    input: [ image_nifti_mc ]
+#  - name: save_nifti
+#    instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
+#    input: [ image_nifti_mc ]
 
   - name: extract_gm_mask
     instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
     kwargs: { mask_type: thick }
-    input: [ image_nifti_mc ]
+    input: [ image_nifti ]
     output: [ gm_activity ]
 
   - name: running_mean_std

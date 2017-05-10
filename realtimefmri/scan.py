@@ -18,11 +18,15 @@ class Scanner(object):
 
         if simulate:
             collect_function = self._simulate
+            logger.info('simulating TTL')
         else:
             if is_available_port(TTL_SERIAL_PORT):
                 collect_function = self._serial
+                logger.info('receiving TTL over serial')
+
             else:
                 collect_function = self._keyboard
+                logger.info('receiving TTL from keyboard')
 
         context = zmq.asyncio.Context()
 
@@ -50,7 +54,7 @@ class Scanner(object):
             yield from socket.send(struct.pack('d', recv_time))
 
     @asyncio.coroutine
-    def _keyboard(self, ):
+    def _keyboard(self):
         devices = [evdev.InputDevice(dev) for dev in evdev.list_devices()]
         for dev in devices:
             print(dev.fn, dev.name)
