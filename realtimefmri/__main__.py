@@ -1,7 +1,10 @@
 from os import makedirs
 import os.path as op
+from glob import glob
 from subprocess import Popen
+import shutil
 import argparse
+from uuid import uuid4
 import asyncio
 import zmq
 import zmq.asyncio
@@ -10,7 +13,8 @@ from realtimefmri.synchronize import Synchronizer
 from realtimefmri.collect import Collector
 from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
-from realtimefmri.config import RECORDING_DIR, MODULE_DIR
+from realtimefmri.config import (RECORDING_DIR, MODULE_DIR,
+                                 get_example_data_directory)
 
 
 def parse_arguments():
@@ -18,27 +22,28 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description='Collect data')
     subcommand = parser.add_subparsers(title='subcommand', dest='subcommand')
-    console = subcommand.add_parser('console',
-                                    help="""Collect and synchronize""")
 
-    console.set_defaults(command_name='console')
-    console.add_argument('recording_id', action='store', default=None,
-                         help='''An identifier for this recording''')
-    console.add_argument('-d', '--directory', action='store',
-                         dest='directory', default=None,
-                         help=('''Directory to watch. If simulate is True,
-                                  simulate from this directory'''))
-    console.add_argument('-p', '--parent_directory', action='store',
-                         dest='parent_directory', default=None,
-                         help=('''Parent directory to watch. If provided,
-                                  monitor the directory for the first new folder,
-                                  then monitor that folder for new files'''))
-    console.add_argument('-s', '--simulate', action='store_true',
-                         dest='simulate', default=False,
-                         help=('''Simulate a run'''))
-    console.add_argument('-v', '--verbose', action='store_true',
-                         default=False, dest='verbose',
-                         help=('''Print log messages to console if true'''))
+
+    coll = subcommand.add_parser('collect',
+                                 help="""Collect and synchronize""")
+    coll.set_defaults(command_name='collect')
+    coll.add_argument('recording_id', action='store', default=None,
+                      help='''An identifier for this recording''')
+    coll.add_argument('-d', '--directory', action='store',
+                      dest='directory', default=None,
+                      help=('''Directory to watch. If simulate is True,
+                              simulate from this directory'''))
+    coll.add_argument('-p', '--parent_directory', action='store',
+                      dest='parent_directory', default=None,
+                      help=('''Parent directory to watch. If provided,
+                               monitor the directory for the first new folder,
+                               then monitor that folder for new files'''))
+    coll.add_argument('-s', '--simulate', action='store_true',
+                      dest='simulate', default=False,
+                      help=('''Simulate a run'''))
+    coll.add_argument('-v', '--verbose', action='store_true',
+                      default=False, dest='verbose',
+                      help=('''Print log messages to console if true'''))
 
 
     preproc = subcommand.add_parser('preprocess',
@@ -56,12 +61,20 @@ def parse_arguments():
     preproc.add_argument('-v', '--verbose', action='store_true',
                          dest='verbose', default=False)
 
+
+    simul = subcommand.add_parser('simulate',
+                                  help="""Preprocess and stimulate""")
+    simul.set_defaults(command_name='simulate')
+    simul.add_argument('simulate_dataset', action='store')
+
     args = parser.parse_args()
     
     return args
 
-def console(recording_id, directory=None, parent_directory=None, simulate=False,
+def collect(recording_id, directory=None, parent_directory=None, simulate=False,
             verbose=False):
+    """Collect volumes and synchronize with the scanner
+    """
 
     log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
     if not op.exists(op.dirname(log_path)):
@@ -99,7 +112,8 @@ def console(recording_id, directory=None, parent_directory=None, simulate=False,
 
 def preprocess(recording_id, preproc_config=None, stim_config=None,
          verbose=None):
-    """Run realtime"""
+    """Run realtime
+    """
 
     processes = []
 
@@ -125,15 +139,40 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
         print('shutting down realtimefmri')
 
 
+def simulate(simulate_dataset):
+    """Simulate sync pulses and image acquisition
+    """
+
+    ex_directory = get_example_data_directory(simulate_dataset)
+    paths = glob(op.join(ex_directory, '*.PixelData'))
+
+    dest_directory = op.join('/tmp/rtfmri', str(uuid4()))
+    makedirs(dest_directory)
+    print('Simulated {} volumes appearing in {}'.format(len(paths),
+                                                        dest_directory))
+
+    try:
+        for path in paths:
+            input('>>> press 5 for TTL, then enter for new image')
+            new_path = op.join(dest_directory, str(uuid4())+'.PixelData')
+            shutil.copy(path, new_path)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        shutil.rmtree(dest_directory)
+
+
 def main():
     args = parse_arguments()
-    if args.subcommand == 'console':
-        console(args.recording_id, directory=args.directory,
+    if args.subcommand == 'collect':
+        collect(args.recording_id, directory=args.directory,
                 parent_directory=args.parent_directory, simulate=args.simulate,
                 verbose=args.verbose)
     elif args.subcommand == 'preprocess':
         preprocess(args.recording_id, preproc_config=args.preproc_config,
                    stim_config=args.stim_config, verbose=args.verbose)
+    elif args.subcommand == 'simulate':
+        simulate(args.simulate_dataset)
 
 
 if __name__ == '__main__':

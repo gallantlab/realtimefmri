@@ -1,27 +1,29 @@
 import os.path as op
 import logging
+from configparser import ConfigParser
 import realtimefmri
 
-# PATHS
-# PACKAGE_DIR = '/home/glab/code/realtimefmri'
-PACKAGE_DIR = '/auto/k1/robertg/code/realtimefmri'
 
-DATABASE_DIR = op.join(PACKAGE_DIR, 'database')
-TEST_DATA_DIR = op.join(PACKAGE_DIR, 'tests/data')
-RECORDING_DIR = op.join(PACKAGE_DIR, 'recordings')
-PIPELINE_DIR = op.join(PACKAGE_DIR, 'pipelines')
-SCRIPTS_DIR = op.join(PACKAGE_DIR, 'scripts')
+CONFIG_DIR = op.expanduser('~/.config/realtimefmri')
+
+config = ConfigParser()
+config.read(op.join(CONFIG_DIR, 'config.cfg'))
+
+DATABASE_DIR = op.expanduser(config.get('directories', 'database'))
+RECORDING_DIR = op.expanduser(config.get('directories', 'recordings'))
+PIPELINE_DIR = op.expanduser(config.get('directories', 'pipelines'))
+DATASET_DIR = op.expanduser(config.get('directories', 'datasets'))
 MODULE_DIR = realtimefmri.__path__[0]
 
 # PORTS
-SYNC_PORT = 5556
-VOLUME_PORT = 5557
-PREPROC_PORT = 5558
-STIM_PORT = 5559
+SYNC_PORT = int(config.get('ports', 'sync'))
+VOLUME_PORT = int(config.get('ports', 'volume'))
+PREPROC_PORT = int(config.get('ports', 'preproc'))
+STIM_PORT = int(config.get('ports', 'stim'))
 
 # TTL
-KEYBOARD_FN = '/dev/input/event3'
-TTL_SERIAL_PORT = '/dev/ttyUSB0'
+KEYBOARD_FN = config.get('sync', 'keyboard')
+TTL_SERIAL_PORT = config.get('sync', 'serial')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
@@ -35,4 +37,4 @@ def get_subject_directory(subject):
 
 def get_example_data_directory(dataset):
     '''Example data directory'''
-    return op.join(PACKAGE_DIR, 'datasets', dataset)
+    return op.join(CONFIG_DIR, 'datasets', dataset)

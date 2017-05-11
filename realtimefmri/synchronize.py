@@ -5,7 +5,6 @@ and coroutine waits for images, pulls pulse from pulse queue
 join them in order
 
 """
-import sys
 import struct
 import asyncio
 import zmq

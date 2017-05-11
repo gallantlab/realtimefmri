@@ -1,5 +1,9 @@
 """Setup file for realtimefmri"""
+import os.path as op
 from setuptools import setup, find_packages
+
+CONFIG_DIR = op.expanduser('~/.config/realtimefmri')
+PIPELINE_DIR = op.join(CONFIG_DIR, 'pipelines')
 
 
 def main():
@@ -10,6 +14,12 @@ def main():
           author='robertg',
           author_email='robertg@berkeley.edu',
           packages=find_packages(),
+
+          data_files=[(CONFIG_DIR, ['config.cfg']),
+                      (PIPELINE_DIR, ['pipelines/preproc-zscore.yaml',
+                                      'pipelines/stim-debug.yaml',
+                                      'pipelines/stim-viewer.yaml'])],
+
           entry_points={'console_scripts':
                         ['realtimefmri = realtimefmri.__main__:main']})
 
