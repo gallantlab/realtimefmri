@@ -7,6 +7,7 @@ if six.PY2:
 
 import os.path as op
 from glob import glob
+import struct
 
 import logging
 import logging.handlers
@@ -16,6 +17,13 @@ import numpy as np
 from nibabel import Nifti1Image, load as nibload
 
 from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
+
+
+def parse_message(message):
+    topic, sync_time, data = message
+    topic = topic.decode('utf8')
+    sync_time = struct.unpack('d', sync_time)[0]
+    return topic, sync_time, data
 
 
 def load_run(recording_id):

@@ -2,7 +2,6 @@ import os
 import time
 import shlex
 import subprocess
-import struct
 import argparse
 
 import yaml
@@ -10,7 +9,7 @@ import numpy as np
 import zmq
 import cortex
 
-from realtimefmri.utils import get_logger
+from realtimefmri.utils import get_logger, parse_message
 from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_PORT
 
 
@@ -117,9 +116,8 @@ class Stimulator(object):
 
         while self.active:
             self.logger.debug('waiting for message')
-            topic, sync_time, data = self.input_socket.recv_multipart()
-            topic = topic.decode('utf8')
-            sync_time = struct.unpack('d', sync_time)[0]
+            message = self.input_socket.recv_multipart()
+            topic, sync_time, data = parse_message(message)
             self.logger.debug('received message')
             for stim in self.pipeline:
                 if topic in stim['topic'].keys():
