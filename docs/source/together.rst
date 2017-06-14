@@ -15,7 +15,7 @@ Step-by-step
 
 .. code-block:: bash
 
-  realtimefmri console <recording_id> \
+  realtimefmri collect <recording_id> \
     -p <parent_directory_of_dicom_directory> \
     -v  # if you want verbose output
 
