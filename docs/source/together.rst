@@ -6,7 +6,7 @@ Real-time experiments have a lot of moving parts, so here's a step-by-step list 
 Step-by-step
 ------------
 
-1. Configure your :ref:`preprocessing and stimulation pipelines <pipelines>`. Names the files ``<preprocessing_pipeline_name>.yaml`` and ``<stimulus_pipeline_name>.yaml`` and add them to ``realtimefmri/pipelines``.
+1. Configure your :ref:`preprocessing and stimulation pipelines <pipelines>`. Names the files ``<preprocessing_pipeline_name>.yaml`` and ``<stimulus_pipeline_name>.yaml`` and add them to ``.config/realtime/pipelines``.
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
@@ -46,8 +46,8 @@ To test all of the moving parts without booking scanner time, we've provided a s
 
 .. code-block:: bash
 
-    python scripts/manual_simulate.py <test_dataset>
+    realtimefmri simulate.py <test_dataset>
 
-Where ``test_dataset`` specifies a directory ``<MODULE_PATH>/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
+Where ``test_dataset`` specifies a directory ``.config/realtimefmri/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
 
 Start by pressing ``5`` to simulate the TTL pulse that occurs at the start of each volume acquisition. Then press enter twice to simulate the magnitude and phase volumes (only magnitude volumes are used).
