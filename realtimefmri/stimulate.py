@@ -199,10 +199,15 @@ class PyCortexViewer(Stimulus):
                 mos, _ = cortex.mosaic(vol.volume[0], show=False)
                 self.update_volume(mos)
                 self.advance_frame()
+    
+                return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
 
-            except IndexError:
+            except IndexError as e:
                 self.active = False
-            return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
+                return e
+            
+            except Exception as e:
+                return e
 
     def stop(self):
         self.view.playpause('pause')

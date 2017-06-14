@@ -4,12 +4,40 @@ Utility functions and configuration
 import six
 if six.PY2:
     input = raw_input
+
 import os.path as op
+from glob import glob
+
 import logging
 import logging.handlers
 import tempfile
 
-from realtimefmri.config import LOG_LEVEL, LOG_FORMAT
+import numpy as np
+from nibabel import Nifti1Image, load as nibload
+
+from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
+
+
+def load_run(recording_id):
+    """Load data from a real-time run into a nifti volumes
+    """
+    file_paths = glob(op.join(RECORDING_DIR, recording_id, '*.nii'))
+    file_paths = sorted(file_paths)
+    volume = None
+    for i, file_path in enumerate(file_paths):
+        nii = nibload(file_path)
+
+        if volume is None:
+            x, y, z = nii.shape
+            shape = (len(file_paths), x, y, z)
+            volume = np.zeros(shape)
+            affine = nii.affine
+
+        assert nii.affine == affine
+
+        volume[i, ...] = nii.get_data()
+
+    return Nifti1Image(volume, affine)
 
 
 def get_temporary_file_name(root=tempfile.gettempdir()):

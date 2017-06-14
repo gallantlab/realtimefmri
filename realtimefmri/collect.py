@@ -8,8 +8,7 @@ import zmq
 import zmq.asyncio
 
 from realtimefmri.utils import get_logger
-
-VOLUME_PORT = 5557
+from realtimefmri.config import VOLUME_PORT
 
 
 class Collector(object):

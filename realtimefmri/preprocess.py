@@ -20,7 +20,7 @@ import yaml
 import numpy as np
 import zmq
 
-from nibabel import save as nbsave, load as nbload
+from nibabel import save as nbsave, load as nibload
 from nibabel.nifti1 import Nifti1Image
 
 import cortex
@@ -28,10 +28,8 @@ import cortex
 from realtimefmri.image_utils import transform, mosaic_to_volume
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (get_subject_directory,
-                                 RECORDING_DIR, PIPELINE_DIR)
-
-VOLUME_PORT = 5557
-PREPROC_PORT = 5558
+                                 RECORDING_DIR, PIPELINE_DIR,
+                                 VOLUME_PORT, PREPROC_PORT)
 
 
 class Preprocessor(object):
@@ -264,14 +262,14 @@ def load_mask(subject, xfm_name, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
                             'mask_'+mask_type+'.nii.gz')
-        return nbload(mask_path)
+        return nibload(mask_path)
 
 
 def load_reference(subject, xfm_name):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
-        return nbload(ref_path)
+        return nibload(ref_path)
 
 
 class RawToNifti(PreprocessingStep):
@@ -303,12 +301,10 @@ class RawToNifti(PreprocessingStep):
         self.affine = load_reference(subject, xfm_name).affine
 
     def run(self, inp):
-        '''
-        pixel_image is a binary string loaded directly from the .PixelData file
-        saved on the scanner console
+        """Takes a binary string loaded directly from the .PixelData file saved
+        on the scanner console and returns a Nifti image of the same data in xyz
+        """
 
-        returns a nifti1 image of the same data in xyz
-        '''
         # siements mosaic format is strange
         mosaic = np.fromstring(inp, dtype='uint16')
         mosaic = mosaic.reshape(600, 600, order='C')
@@ -359,8 +355,8 @@ class SaveNifti(PreprocessingStep):
             os.makedirs(self.recording_dir)
         except OSError:
             self._i = self._infer_i()
-            warnings.warn('''Save directory already exists. Beginning file
-                             numbering with %d''' % self._i)
+            warnings.warn("""Save directory already exists. Beginning file
+                             numbering with %d""" % self._i)
 
     def _infer_i(self):
         from re import compile as re_compile
@@ -414,7 +410,7 @@ class MotionCorrect(PreprocessingStep):
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
 
-        nii = nbload(ref_path)
+        nii = nibload(ref_path)
         self.reference_affine = nii.affine
         self.reference_path = ref_path
 
@@ -424,7 +420,7 @@ class MotionCorrect(PreprocessingStep):
 
 
 class ApplyMask(PreprocessingStep):
-    '''Apply a voxel mask to the volume.
+    """Apply a voxel mask to the volume.
 
     Loads a mask from the realtimefmri database. Mask should be in xyz format
     to match data. Mask is applied after transposing mask and data to zyx to
@@ -450,7 +446,7 @@ class ApplyMask(PreprocessingStep):
     -------
     run(volume)
         Apply the mask to the input volume
-    '''
+    """
     def __init__(self, subject, xfm_name, mask_type=None, **kwargs):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
@@ -458,7 +454,7 @@ class ApplyMask(PreprocessingStep):
         self.load_mask(mask_path)
 
     def load_mask(self, mask_path):
-        mask_nifti1 = nbload(mask_path)
+        mask_nifti1 = nibload(mask_path)
         self.mask_affine = mask_nifti1.affine
         self.mask = mask_nifti1.get_data().astype(bool)
 
@@ -468,12 +464,12 @@ class ApplyMask(PreprocessingStep):
 
 
 def secondary_mask(mask1, mask2, order='C'):
-    '''
+    """
     Given an array, X and two 3d masks, mask1 and mask2
     X[mask1] = x
     X[mask1 & mask2] = y
     x[new_mask] = y
-    '''
+    """
     assert mask1.shape == mask2.shape
     mask1_flat = mask1.ravel(order=order)
     mask2_flat = mask2.ravel(order=order)
@@ -574,7 +570,7 @@ class RoiActivity(PreprocessingStep):
         pre_mask_path = op.join(subj_dir, pre_mask_name+'.nii')
 
         # mask in zyx
-        pre_mask = nbload(pre_mask_path).get_data().T.astype(bool)
+        pre_mask = nibload(pre_mask_path).get_data().T.astype(bool)
 
         # returns masks in zyx
         roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
@@ -597,13 +593,7 @@ class WMDetrend(PreprocessingStep):
     """Detrend a volume using white matter detrending
 
     Uses a pre-trained white matter detrender to remove the trend from a
-    volume. This should set up the class instance to be ready to take an image
-    input and output the detrended gray matter activation. To do this, it needs
-    ``wm_mask_funcref``, the white matter masks in functional reference space,
-    ``gm_mask_funcref``, the grey matter masks in functional reference space,
-    ``funcref_nifti1``, the functional reference image, ``input_affine``,
-    affine transform for the input images. Since we'll be dealing withraw pixel
-    data, we need to have a predetermined image orientation.
+    volume.
 
     Parameters
     ----------
@@ -616,16 +606,8 @@ class WMDetrend(PreprocessingStep):
     ----------
     subject : str
         Subject identifier
-    subj_dir : str
-        Path to the subject's filestore
-    funcref_nifti1 : nibabel.NiftiImage1
-        Functional space reference image
-    model : sklearn.linear_regression.LinearRegression
-        Linear regression that predicts grey matter trend from white matter
-        activity
-    pca : sklearn.decomposition.PCA
-        Principal component analysis that decomposes white matter activity into
-        principal components
+    model_name : str
+        Name of white matter detrending model in subject's directory
 
     Methods
     -------
@@ -634,29 +616,22 @@ class WMDetrend(PreprocessingStep):
         activity
     """
     def __init__(self, subject, model_name=None, **kwargs):
-        '''
-        '''
+        """
+        """
         super(WMDetrend, self).__init__()
-        self.subj_dir = get_subject_directory(subject)
-        self.subject = subject
+        subj_dir = get_subject_directory(subject)
 
-        self.funcref_nifti1 = nbload(op.join(self.subj_dir, 'funcref.nii'))
+        model_path = op.join(subj_dir, 'model-%s.pkl' % model_name)
+        pca_path = op.join(subj_dir, 'pca-%s.pkl' % model_name)
 
-        try:
-            model_path = op.join(self.subj_dir, 'model-%s.pkl' % model_name)
-            pca_path = op.join(self.subj_dir, 'pca-%s.pkl' % model_name)
+        with open(model_path, 'r') as f:
+            model = pickle.load(f)
 
-            with open(model_path, 'r') as f:
-                model = pickle.load(f)
-            self.model = model
+        with open(pca_path, 'r') as f:
+            pca = pickle.load(f)
 
-            with open(pca_path, 'r') as f:
-                pca = pickle.load(f)
-            self.pca = pca
-        except IOError:
-            warnings.warn(('''Could not load...\n\tModel from %s\nand\n\tPCA
-                              from %s. Load them manually before running.'''
-                              % (model_path, pca_path)))
+        self.model = model
+        self.pca = pca
 
     def run(self, wm_activity, gm_activity):
         wm_activity_pcs = self.pca.transform(wm_activity.reshape(1, -1)).reshape(1, -1)
@@ -665,16 +640,16 @@ class WMDetrend(PreprocessingStep):
 
 
 def compute_raw2var(raw1, raw2, *args):
-    '''Use the raw moments to compute the 2nd central moment
+    """Use the raw moments to compute the 2nd central moment
     VAR(X) = E[X^2] - E[X]^2
-    '''
+    """
     return raw2 - raw1**2
 
 
 def compute_raw2skew(raw1, raw2, raw3, *args):
-    '''Use the raw moments to compute the 3rd standardized moment
+    """Use the raw moments to compute the 3rd standardized moment
     Skew(X) = (E[X^3] - 3*E[X]*E[X^2] + 2*E[X]^3)/VAR(X)^(3/2)
-    '''
+    """
     # get central moments
     cm2 = raw2 - raw1**2
     cm3 = raw3 - 3*raw1*raw2 + 2*raw1**3
@@ -683,9 +658,9 @@ def compute_raw2skew(raw1, raw2, raw3, *args):
     return sm3
 
 def compute_raw2kurt(raw1, raw2, raw3, raw4, *args):
-    '''Use the raw moments to compute the 4th standardized moment
+    """Use the raw moments to compute the 4th standardized moment
     Kurtosis(X) = (E[X^4] - 4*E[X]*E[X^3] + 6*E[X]^2*E[X^2] - 3*E[X]^4)/VAR(X)^2 - 3.0
-    '''
+    """
     # get central moments
     cm2 = raw2 - raw1**2
     cm4 = raw4 - 4*raw1*raw3 + 6*(raw1**2)*raw2 - 3*raw1**4
@@ -694,7 +669,7 @@ def compute_raw2kurt(raw1, raw2, raw3, raw4, *args):
     return sm4
 
 def convert_parallel2moments(node_raw_moments, nsamples):
-    '''Combine the online parallel computations of
+    """Combine the online parallel computations of
     `online_moments` objects to compute moments.
 
     Parameters
@@ -719,7 +694,7 @@ def convert_parallel2moments(node_raw_moments, nsamples):
         The skewness of the full distribution
     kurtosis: array-like
         The kurtosis of the full distribution
-    '''
+    """
     mean_moments = []
     for raw_moment in zip(*node_raw_moments):
         moment = np.sum(raw_moment, 0)/nsamples
@@ -771,16 +746,16 @@ class OnlineMoments(PreprocessingStep):
             self.__setattr__('rawmnt%i'%(odx+1), self.all_raw_moments[odx])
 
     def __repr__(self):
-        return '%s.online_moments <%i samples>' % (__name__, int(self.n))
+        return '%s.online_moments' % (__name__)
 
     def update(self, x):
-        '''Update the raw moments
+        """Update the raw moments
 
         Parameters
         ----------
         x : np.ndarray, or scalar-like
             The new observation. This can be any dimension.
-        '''
+        """
         self.n += 1
 
         for odx in range(self.order):
@@ -789,7 +764,7 @@ class OnlineMoments(PreprocessingStep):
             self.__setattr__(name, self.all_raw_moments[odx])
 
     def get_statistics(self):
-        '''Return the 1,2,3,4-moment estimates'''
+        """Return the 1,2,3,4-moment estimates"""
         # mean,var,skew,kurt
         return convert_parallel2moments([self.get_raw_moments()[:4]],
                                         self.n)
