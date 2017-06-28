@@ -1,12 +1,15 @@
 '''
 Utility functions and configuration
 '''
+from __future__ import print_function
 import six
 if six.PY2:
     input = raw_input
 
 import os.path as op
 from glob import glob
+import subprocess
+import shlex
 import struct
 
 import logging
@@ -18,6 +21,14 @@ from nibabel import Nifti1Image, load as nibload
 
 from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
 
+
+def shell(cmd, verbose=True, check_output=True):
+    if verbose:
+        print(cmd)
+    if check_output:
+        return subprocess.check_output(shlex.split(cmd))
+    else:
+        return subprocess.call(shlex.split(cmd))
 
 def parse_message(message):
     topic, sync_time, data = message
