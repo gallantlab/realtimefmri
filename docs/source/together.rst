@@ -10,7 +10,7 @@ Step-by-step
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
-3. Launch the ``realtimefmri console`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
+3. Launch the ``realtimefmri collect`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
 
 
 .. code-block:: bash
@@ -46,7 +46,7 @@ To test all of the moving parts without booking scanner time, we've provided a s
 
 .. code-block:: bash
 
-    realtimefmri simulate.py <test_dataset>
+    realtimefmri simulate <test_dataset>
 
 Where ``test_dataset`` specifies a directory ``.config/realtimefmri/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
 
