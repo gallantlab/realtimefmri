@@ -15,11 +15,14 @@ import json
 import warnings
 from uuid import uuid4
 import argparse
+from io import BytesIO
 
 import yaml
 import numpy as np
 import zmq
 
+import dicom
+import dcmstack
 from nibabel import save as nbsave, load as nibload
 from nibabel.nifti1 import Nifti1Image
 
@@ -271,6 +274,22 @@ def load_reference(subject, xfm_name):
                            'reference.nii.gz')
         return nibload(ref_path)
 
+class DicomToNifti(PreprocessingStep):
+    """Loads a Dicom image and outputs a nifti image
+
+    Methods
+    -------
+    run(inp)
+        Returns a nifti image
+    """
+    def __init__(*args, **kwargs):
+        pass
+    def run(self, inp):
+        dicoms = dcmstack.DicomStack()
+        dcm = dicom.read_file(BytesIO(inp))
+        dicoms.add_dcm(dcm)
+
+        return dicoms.to_nifti()
 
 class RawToNifti(PreprocessingStep):
     """Converts a mosaic image to a nifti image.
@@ -415,7 +434,7 @@ class MotionCorrect(PreprocessingStep):
         self.reference_path = ref_path
 
     def run(self, input_volume):
-        assert np.allclose(input_volume.affine, self.reference_affine)
+        # assert np.allclose(input_volume.affine, self.reference_affine), (input_volume.affine, self.reference_affine)
         return transform(input_volume, self.reference_path)
 
 

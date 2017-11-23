@@ -63,7 +63,7 @@ def parse_arguments():
 
 
     simul = subcommand.add_parser('simulate',
-                                  help="""Preprocess and stimulate""")
+                                  help="""Simulate a real-time experiment""")
     simul.set_defaults(command_name='simulate')
     simul.add_argument('simulate_dataset', action='store')
 
@@ -144,7 +144,7 @@ def simulate(simulate_dataset):
     """
 
     ex_directory = get_example_data_directory(simulate_dataset)
-    paths = glob(op.join(ex_directory, '*.PixelData'))
+    paths = glob(op.join(ex_directory, '*.dcm'))
 
     dest_directory = op.join('/tmp/rtfmri', str(uuid4()))
     makedirs(dest_directory)
@@ -154,7 +154,7 @@ def simulate(simulate_dataset):
     try:
         for path in paths:
             input('>>> press 5 for TTL, then enter for new image')
-            new_path = op.join(dest_directory, str(uuid4())+'.PixelData')
+            new_path = op.join(dest_directory, str(uuid4())+'.dcm')
             shutil.copy(path, new_path)
     except KeyboardInterrupt:
         pass
