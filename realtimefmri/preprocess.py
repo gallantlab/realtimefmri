@@ -23,12 +23,11 @@ import zmq
 
 import dicom
 import dcmstack
-from nibabel import save as nbsave, load as nibload
-from nibabel.nifti1 import Nifti1Image
+import nibabel as nib
 
 import cortex
 
-from realtimefmri.image_utils import transform, mosaic_to_volume
+from realtimefmri.image_utils import register, mosaic_to_volume, set_orientation
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
@@ -265,14 +264,14 @@ def load_mask(subject, xfm_name, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
                             'mask_'+mask_type+'.nii.gz')
-        return nibload(mask_path)
+        return nib.load(mask_path)
 
 
 def load_reference(subject, xfm_name):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
-        return nibload(ref_path)
+        return nib.load(ref_path)
 
 class DicomToNifti(PreprocessingStep):
     """Loads a Dicom image and outputs a nifti image
@@ -282,14 +281,21 @@ class DicomToNifti(PreprocessingStep):
     run(inp)
         Returns a nifti image
     """
-    def __init__(*args, **kwargs):
-        pass
+    def __init__(self, orientation=None, *args, **kwargs):
+        if orientation is None:
+            orientation = 'L', 'P', 'S'
+        
+        self.orientation = orientation
+
     def run(self, inp):
         dicoms = dcmstack.DicomStack()
         dcm = dicom.read_file(BytesIO(inp))
         dicoms.add_dcm(dcm)
+        nii = dicoms.to_nifti()
 
-        return dicoms.to_nifti()
+        nii = set_orientation(nii, self.orientation)
+
+        return nii
 
 class RawToNifti(PreprocessingStep):
     """Converts a mosaic image to a nifti image.
@@ -332,7 +338,7 @@ class RawToNifti(PreprocessingStep):
         # we want the voxel data orientation to match that of the functional
         # reference, gm, and wm masks
         volume = mosaic_to_volume(mosaic).swapaxes(0, 1)[..., :30]
-        return Nifti1Image(volume, self.affine)
+        return nib.Nifti1Image(volume, self.affine)
 
 
 class SaveNifti(PreprocessingStep):
@@ -394,7 +400,7 @@ class SaveNifti(PreprocessingStep):
 
     def run(self, inp):
         fpath = self.path_format % self._i
-        nbsave(inp, op.join(self.recording_dir, fpath))
+        nib.save(inp, op.join(self.recording_dir, fpath))
         self._i += 1
 
 
@@ -424,18 +430,21 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, subject, xfm_name, **kwargs):
+    def __init__(self, subject, xfm_name, twopass=False, **kwargs):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
 
-        nii = nibload(ref_path)
+        nii = nib.load(ref_path)
         self.reference_affine = nii.affine
         self.reference_path = ref_path
+        self.twopass = twopass
 
     def run(self, input_volume):
-        # assert np.allclose(input_volume.affine, self.reference_affine), (input_volume.affine, self.reference_affine)
-        return transform(input_volume, self.reference_path)
+        same_affine = np.allclose(input_volume.affine[:3, :3],
+                                  self.reference_affine[:3, :3])
+        assert same_affine, 'Input and reference volumes have different affines.'
+        return register(input_volume, self.reference_path, twopass=self.twopass)
 
 
 class ApplyMask(PreprocessingStep):
@@ -473,12 +482,13 @@ class ApplyMask(PreprocessingStep):
         self.load_mask(mask_path)
 
     def load_mask(self, mask_path):
-        mask_nifti1 = nibload(mask_path)
+        mask_nifti1 = nib.load(mask_path)
         self.mask_affine = mask_nifti1.affine
         self.mask = mask_nifti1.get_data().astype(bool)
 
     def run(self, volume):
-        assert np.allclose(volume.affine, self.mask_affine)
+        same_affine = np.allclose(volume.affine[:3, :3], self.mask_affine[:3, :3])
+        assert same_affine, 'Input and mask volumes have different affines.'
         return volume.get_data().T[self.mask.T]
 
 
@@ -589,7 +599,7 @@ class RoiActivity(PreprocessingStep):
         pre_mask_path = op.join(subj_dir, pre_mask_name+'.nii')
 
         # mask in zyx
-        pre_mask = nibload(pre_mask_path).get_data().T.astype(bool)
+        pre_mask = nib.load(pre_mask_path).get_data().T.astype(bool)
 
         # returns masks in zyx
         roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)

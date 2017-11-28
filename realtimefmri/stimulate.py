@@ -165,7 +165,7 @@ class PyCortexViewer(Stimulus):
 
         data = np.zeros((self.bufferlen, npts), 'float32')
         vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
-        view = cortex.webshow(vol)
+        view = cortex.webshow(vol, autoclose=False)
 
         self.subject = subject
         self.xfm_name = xfm_name

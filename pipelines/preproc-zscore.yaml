@@ -1,7 +1,7 @@
 global_defaults:
   subject: &SUBJECT TZfs2
   xfm_name: &XFMNAME controller_test_20161026TZ2
-  nskip: 0
+  nskip: 3
 
 pipeline:
   - name: raw_to_nifti
@@ -11,20 +11,17 @@ pipeline:
 
   - name: motion_correct
     instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
+    kwargs : { twopass: true }
     input: [ image_nifti ]
     output: [ image_nifti_mc ]
   
-  - name: save_nifti
-    instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
-    input: [ image_nifti ]
-
   - name: extract_gm_mask
     instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
     kwargs: { mask_type: thick }
     input: [ image_nifti ]
     output: [ gm_activity ]
 
-  - name: running_mean_std
+  - name: online_moments
     instance: !!python/object:realtimefmri.preprocess.OnlineMoments {}
     input: [ gm_activity ]
     output:

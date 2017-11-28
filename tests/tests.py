@@ -10,7 +10,7 @@ from nibabel import load as nbload, save as nbsave
 
 from realtimefmri.collecting import MonitorDirectory, get_example_data_directory
 from realtimefmri.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
-from realtimefmri.image_utils import transform, load_afni_xfm
+from realtimefmri.image_utils import register, load_afni_xfm, get_orientation_labels
 from realtimefmri.config import TEST_DATA_DIR, LOG_FORMAT
 
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
