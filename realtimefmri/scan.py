@@ -44,7 +44,6 @@ class Scanner(object):
         self.logger = logger
         self.collect_function = collect_function
         self.sync_queue = sync_queue
-        self.device = device
 
     @asyncio.coroutine
     def consume_sync_queue(self):
