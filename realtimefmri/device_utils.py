@@ -33,7 +33,7 @@ def keyboard(device_file):
 def run():
     loop = asyncio.get_event_loop()
     devices = [evdev.InputDevice(dev) for dev in evdev.list_devices()]
-    return asyncio.gather(*[keyboard(d.fn) for d in devices])
+    return loop.run_until_complete(asyncio.gather(*[keyboard(d.fn) for d in devices]))
 
 
 if __name__ == "__main__":
