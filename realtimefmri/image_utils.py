@@ -132,6 +132,11 @@ def dicom_to_nifti_fsl(dcm):
 
 def dicom_to_nifti_afni(dcm):
     
+    current_directory = os.getcwd()
+
+    temp_directory = mkdtemp()
+    os.chdir(temp_directory)
+
     in_path = get_temporary_path(directory='')
     out_path = get_temporary_path(directory='', extension='.nii')
 
@@ -150,5 +155,6 @@ def dicom_to_nifti_afni(dcm):
     finally:
         os.remove(out_path)
         os.remove(in_path+'_001.dcm')
+        os.chdir(current_directory)
 
     return nii
