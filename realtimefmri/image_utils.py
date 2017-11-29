@@ -148,6 +148,7 @@ def dicom_to_nifti_afni(dcm):
         _ = check_output(cmd)
 
         nii = nib.load(out_path)
+        _ = nii.get_data()
 
     except Exception as e:
         raise e
