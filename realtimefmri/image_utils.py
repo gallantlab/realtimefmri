@@ -4,7 +4,7 @@ if six.PY2:
 import os
 import os.path as op
 from shutil import rmtree
-from subprocess import call, check_output, STDOUT, CalledProcessError
+from subprocess import call, check_output, check_call, STDOUT, CalledProcessError
 import shlex
 from uuid import uuid4
 from tempfile import mkdtemp, mkstemp
@@ -145,7 +145,8 @@ def dicom_to_nifti_afni(dcm):
 
         cmd = ['to3d', '-prefix', out_path, in_path+'*']
 
-        _ = check_output(cmd)
+        with open(os.devnull, 'w') as null:
+            _ = check_call(cmd, stdout=null, stderr=null)
 
         nii = nib.load(out_path)
         _ = nii.get_data()

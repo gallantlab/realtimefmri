@@ -22,7 +22,9 @@ pipeline:
 
   - name: running_mean_std
     instance: !!python/object:realtimefmri.preprocess.RunningMeanStd {}
-    input: [ gm_activity ]
+    input:
+      - gm_activity
+      - image_id
     output:
       - gm_activity_mean
       - gm_activity_std

@@ -222,7 +222,6 @@ class Pipeline(object):
 
     def process(self, data_dict):
         image_id = struct.pack('i', data_dict['image_id'])
-        
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
             
@@ -236,7 +235,7 @@ class Pipeline(object):
             
             d = dict(zip(step.get('output', []), outp))
             data_dict.update(d)
-            
+
             for topic in step.get('send', []):
                 self.log.debug('sending %s' % topic)
                 if isinstance(d[topic], dict):
@@ -428,11 +427,15 @@ class MotionCorrect(PreprocessingStep):
         self.reference_affine = nii.affine
         self.reference_path = ref_path
         self.twopass = twopass
+        print(ref_path)
 
     def run(self, input_volume):
         same_affine = np.allclose(input_volume.affine[:3, :3],
                                   self.reference_affine[:3, :3])
-        assert same_affine, 'Input and reference volumes have different affines.'
+        if not same_affine:
+            print(input_volume.affine)
+            print(self.reference_affine)
+            raise Exception('Input and reference volumes have different affines.')
         return register(input_volume, self.reference_path, twopass=self.twopass)
 
 class ApplyMask(PreprocessingStep):
@@ -686,7 +689,10 @@ class RunningMeanStd(PreprocessingStep):
         self.mean = None
         self.samples = None
         self.skip = skip
-    def run(self, inp):
+    def run(self, inp, image_number=None):
+        if image_number < self.skip:
+            return np.zeros((self.n, inp.size)), np.ones((self.n, inp.size))
+
         if self.mean is None:
             self.samples = np.empty((self.n, inp.size))*np.nan
         else:
