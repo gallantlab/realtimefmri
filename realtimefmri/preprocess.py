@@ -27,7 +27,7 @@ import nibabel as nib
 import cortex
 
 from realtimefmri.image_utils import (register, mosaic_to_volume,
-                                      set_orientation, dicom_to_nifti)
+                                      dicom_to_nifti_afni)
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
@@ -285,7 +285,7 @@ class DicomToNifti(PreprocessingStep):
 
     def run(self, inp):
         dcm = dicom.read_file(BytesIO(inp))
-        return dicom_to_nifti(dcm)
+        return dicom_to_nifti_afni(dcm)
 
 class RawToNifti(PreprocessingStep):
     """Converts a mosaic image to a nifti image.
