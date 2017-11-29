@@ -22,12 +22,12 @@ import numpy as np
 import zmq
 
 import dicom
-import dcmstack
 import nibabel as nib
 
 import cortex
 
-from realtimefmri.image_utils import register, mosaic_to_volume, set_orientation
+from realtimefmri.image_utils import (register, mosaic_to_volume,
+                                      set_orientation, dicom_to_nifti)
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
@@ -134,7 +134,6 @@ class Preprocessor(object):
 
     def stop(self):
         pass
-
 
 class Pipeline(object):
     """Construct and run a preprocessing pipeline
@@ -251,7 +250,6 @@ class Pipeline(object):
 
         return data_dict
 
-
 class PreprocessingStep(object):
     def __init__(self):
         pass
@@ -259,13 +257,11 @@ class PreprocessingStep(object):
     def run(self):
         raise NotImplementedError
 
-
 def load_mask(subject, xfm_name, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
                             'mask_'+mask_type+'.nii.gz')
         return nib.load(mask_path)
-
 
 def load_reference(subject, xfm_name):
         ref_path = op.join(cortex.database.default_filestore,
@@ -288,14 +284,8 @@ class DicomToNifti(PreprocessingStep):
         self.orientation = orientation
 
     def run(self, inp):
-        dicoms = dcmstack.DicomStack()
         dcm = dicom.read_file(BytesIO(inp))
-        dicoms.add_dcm(dcm)
-        nii = dicoms.to_nifti()
-
-        nii = set_orientation(nii, self.orientation)
-
-        return nii
+        return dicom_to_nifti(dcm)
 
 class RawToNifti(PreprocessingStep):
     """Converts a mosaic image to a nifti image.
@@ -403,7 +393,6 @@ class SaveNifti(PreprocessingStep):
         nib.save(inp, op.join(self.recording_dir, fpath))
         self._i += 1
 
-
 class MotionCorrect(PreprocessingStep):
     """Motion corrects images to a reference image
 
@@ -445,7 +434,6 @@ class MotionCorrect(PreprocessingStep):
                                   self.reference_affine[:3, :3])
         assert same_affine, 'Input and reference volumes have different affines.'
         return register(input_volume, self.reference_path, twopass=self.twopass)
-
 
 class ApplyMask(PreprocessingStep):
     """Apply a voxel mask to the volume.
@@ -491,7 +479,6 @@ class ApplyMask(PreprocessingStep):
         assert same_affine, 'Input and mask volumes have different affines.'
         return volume.get_data().T[self.mask.T]
 
-
 def secondary_mask(mask1, mask2, order='C'):
     """
     Given an array, X and two 3d masks, mask1 and mask2
@@ -506,7 +493,6 @@ def secondary_mask(mask1, mask2, order='C'):
     masks = np.c_[mask1_flat, mask2_flat]
     masks = masks[mask1_flat, :]
     return masks[:, 1].astype(bool)
-
 
 class ApplyMask2(PreprocessingStep):
     """Apply a second mask to a vector produced by a first mask.
@@ -563,7 +549,6 @@ class ActivityRatio(PreprocessingStep):
 
         return x1/(x1+x2)
 
-
 class RoiActivity(PreprocessingStep):
     """Extract activity from an ROI.
 
@@ -617,7 +602,6 @@ class RoiActivity(PreprocessingStep):
             roi_activities[name] = float(activity[mask].mean())
         return roi_activities
 
-
 class WMDetrend(PreprocessingStep):
     """Detrend a volume using white matter detrending
 
@@ -667,7 +651,6 @@ class WMDetrend(PreprocessingStep):
         gm_trend = self.model.predict(wm_activity_pcs)
         return gm_activity - gm_trend
 
-
 class RunningMeanStd(PreprocessingStep):
     """Compute a running mean and standard deviation for a set of voxels
 
@@ -698,10 +681,11 @@ class RunningMeanStd(PreprocessingStep):
         Adds the input vector to the stored samples (discard the oldest sample)
         and compute and return the mean and standard deviation.
     """
-    def __init__(self, n=20, **kwargs):
+    def __init__(self, n=20, skip=5, **kwargs):
         self.n = n
         self.mean = None
         self.samples = None
+        self.skip = skip
     def run(self, inp):
         if self.mean is None:
             self.samples = np.empty((self.n, inp.size))*np.nan
@@ -711,7 +695,6 @@ class RunningMeanStd(PreprocessingStep):
         self.mean = np.nanmean(self.samples, 0)
         self.std = np.nanstd(self.samples, 0)
         return self.mean, self.std
-
 
 class VoxelZScore(PreprocessingStep):
     """Compute a z-score of a vector
