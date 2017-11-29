@@ -10,7 +10,9 @@ Step-by-step
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
-3. Launch the ``realtimefmri console`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
+3. Check that the ``/dev/input/event`` file corresponding to the TTL USB port is in the group ``plugdev``. Also make sure that the ``~/.config/realtimefmri/config.cfg`` file has the correct file listed under ``[sync] keyboard = /dev/input/event#``. You can list the device connections with ``ls -l /dev/event/by-id``.
+
+4. Launch the ``realtimefmri collect`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
 
 
 .. code-block:: bash
@@ -22,7 +24,7 @@ Step-by-step
 
 The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.
 
-4. In another terminal, launch the ``realtime preprocess`` command to run preprocessing and stimulation pipelines.
+5. In another terminal, launch the ``realtime preprocess`` command to run preprocessing and stimulation pipelines.
 
 
 .. code-block:: bash
@@ -33,9 +35,9 @@ The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_direct
     -v  # if you want verbose output
 
 
-5. A log files containing event times is stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
+6. A log files containing event times is stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
 
-6. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.
+7. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.
 
 
 Simulating a real-time experiment outside of the scanner
