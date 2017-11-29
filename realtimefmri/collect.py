@@ -163,7 +163,7 @@ class MonitorDirectory(object):
         else:
             new_image_paths = set()
 
-        self.image_paths = len(directory_contents)
+        self.image_paths = directory_contents
 
         return list(new_image_paths)
 
