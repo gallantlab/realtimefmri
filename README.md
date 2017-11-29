@@ -29,7 +29,7 @@ The data arriving from the data collection stage is formatted as a raw binary st
 Preprocessing steps are subclasses of the parent class, `PreprocessingStep`. The only requirement is that they implement a `.run()` method that performs some operation on input.
 
 ### Configuration file
-The overall preprocessing pipeline is specified in a `YAML` configuration file saved in the `/database`. The configuration file should contain at least one dictionary with the key `pipeline` and the value of a **list** of steps. An individual step has the following format:
+The overall preprocessing pipeline is specified in a `YAML` configuration file saved in the `~/.config/realtimefmri/pipelines`. The configuration file should contain at least one dictionary with the key `pipeline` and the value of a **list** of steps. An individual step has the following format:
 
 - *Required keys:*
   - `name` (string): a descriptive name for this step
