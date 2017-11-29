@@ -10,7 +10,7 @@ Step-by-step
 
 2. Connect the **real-time computer** to the :ref:`scanner network <network>`. You should be able to ``ls /mnt/scanner`` to view files on the **scanner console**. You'll need to a bit of detective work to find the ``<parent_directory>`` that contains the new runs.
 
-3. Check that the ``/dev/input/event`` file corresponding to the TTL USB port is in the group ``plugdev``. Also make sure that the ``~/.config/realtimefmri/config.cfg`` file has the correct file listed under ``[sync] keyboard = /dev/input/event#``. You can list the device connections with ``ls -l /dev/event/by-id``.
+3. Check that the software can detect the TTL pulse from the scanner. The TTL comes in over USB. First, find which device file the USB is connected to using ``ls -l /dev/event/by-id``. Make sure that the ``~/.config/realtimefmri/config.cfg`` file has the correct file listed under ``[sync] keyboard = /dev/input/event#``. Finally make sure that the ``glab`` user has permissions to access that device. ``glab`` is in the ``plugdev`` group, so sure ``plugdev`` group has read and write access to the ``/dev/input/event##`` device (``sudo chown glab:plugdev /dev/input/event##``; ``sudo chmod g+rw /dev/input/event##``).
 
 4. Launch the ``realtimefmri collect`` command to run everything from one place. This command wraps collection, synchronization, and logging for your convenience. Choose a unique <recording_id> for this run and enter the following command:
 
