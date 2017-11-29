@@ -13,7 +13,7 @@ from realtimefmri.synchronize import Synchronizer
 from realtimefmri.collect import Collector
 from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
-from realtimefmri.config import (RECORDING_DIR, MODULE_DIR,
+from realtimefmri.config import (SCANNER_DIR, RECORDING_DIR, MODULE_DIR,
                                  get_example_data_directory)
 
 
@@ -34,7 +34,7 @@ def parse_arguments():
                       help=('''Directory to watch. If simulate is True,
                               simulate from this directory'''))
     coll.add_argument('-p', '--parent_directory', action='store',
-                      dest='parent_directory', default=None,
+                      dest='parent_directory', default=SCANNER_DIR,
                       help=('''Parent directory to watch. If provided,
                                monitor the directory for the first new folder,
                                then monitor that folder for new files'''))
