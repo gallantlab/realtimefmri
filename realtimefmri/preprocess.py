@@ -358,39 +358,24 @@ class SaveNifti(PreprocessingStep):
         Saves the input image to a file and iterates the counter.
     """
 
-    def __init__(self, recording_id=None, path_format='volume_%4.4d.nii',
+    def __init__(self, recording_id=None, path_format='volume_{:04}.nii',
                  **kwargs):
         if recording_id is None:
             recording_id = str(uuid4())
-        self.recording_dir = op.join(RECORDING_DIR, recording_id, 'nifti')
-        self.path_format = path_format
-        self._i = 0
+        recording_dir = op.join(RECORDING_DIR, recording_id, 'nifti')
         try:
-            os.makedirs(self.recording_dir)
+            os.makedirs(recording_dir)
         except OSError:
-            self._i = self._infer_i()
-            warnings.warn("""Save directory already exists. Beginning file
-                             numbering with %d""" % self._i)
+            pass
 
-    def _infer_i(self):
-        from re import compile as re_compile
-        pattern = re_compile("\%[0-9]*\.?[0-9]*[uifd]")
-        match = pattern.split(self.path_format)
-        glob_pattern = '*'.join(match)
-        fpaths = glob(op.join(self.recording_dir, glob_pattern))
+        print(recording_dir)
+        self.recording_dir = recording_dir
+        self.path_format = path_format
 
-        i_pattern = re_compile('(?<={})[0-9]*(?={})'.format(*match))
-        try:
-            max_i = max([int(i_pattern.findall(i)[0]) for i in fpaths])
-            i = max_i + 1
-        except ValueError:
-            i = 0
-        return i
-
-    def run(self, inp):
-        fpath = self.path_format % self._i
-        nib.save(inp, op.join(self.recording_dir, fpath))
-        self._i += 1
+    def run(self, inp, image_number):
+        path = self.path_format.format(image_number)
+        nib.save(inp, op.join(self.recording_dir, path))
+        print('saving to {}'.format(op.join(self.recording_dir, path)))
 
 class MotionCorrect(PreprocessingStep):
     """Motion corrects images to a reference image
@@ -471,7 +456,7 @@ class ApplyMask(PreprocessingStep):
                             subject, 'transforms', xfm_name,
                             'mask_'+mask_type+'.nii.gz')
         self.load_mask(mask_path)
-
+        print(mask_path)
     def load_mask(self, mask_path):
         mask_nifti1 = nib.load(mask_path)
         self.mask_affine = mask_nifti1.affine
@@ -691,7 +676,7 @@ class RunningMeanStd(PreprocessingStep):
         self.skip = skip
     def run(self, inp, image_number=None):
         if image_number < self.skip:
-            return np.zeros((self.n, inp.size)), np.ones((self.n, inp.size))
+            return np.zeros(inp.size), np.ones(inp.size)
 
         if self.mean is None:
             self.samples = np.empty((self.n, inp.size))*np.nan

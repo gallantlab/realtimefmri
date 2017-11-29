@@ -16,8 +16,8 @@ pipeline:
       subject: *SUBJECT
       xfm_name: "driving_20170704TZ"
       mask_type: thick
-      vmin: -0.01
-      vmax: 0.01
+      vmin: -6.
+      vmax: 6.
   - name: debug
     instance: !!python/object:realtimefmri.stimulate.Debug {}
     topic: { gm_activity_zscore: data }
