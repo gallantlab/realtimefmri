@@ -4,6 +4,7 @@ import struct
 import asyncio
 import zmq
 import zmq.asyncio
+import evdev
 
 from realtimefmri.utils import get_logger
 from realtimefmri.config import SYNC_PORT, KEYBOARD_FN, TTL_SERIAL_PORT
