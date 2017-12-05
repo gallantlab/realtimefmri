@@ -12,10 +12,10 @@ Checkout the code from github and install using ``pip``.
 Dependencies
 ------------
 
-The safest way to use the module is within a python virtual environment. Create a new virtual environment and install the dependencies.
+The safest way to use the module is within a Python virtual environment. Create a new virtual environment and install the dependencies.
 
 
-``realtimefmri`` relies on ``asyncio`` to perform some asynchronous operations. This module is only available in ``python3``.
+``realtimefmri`` relies on ``asyncio`` to perform some asynchronous operations. This module is only available in Python 3.
 
 .. code-block:: bash
     
@@ -23,30 +23,18 @@ The safest way to use the module is within a python virtual environment. Create 
     source <environment_name>/bin/activate
     
     cd realtimefmri
-    pip install -r requirements.txt
+    pip install -r requirements.txt # installs the dependencies
+    pip install . # installs the realtimefmri module from setup.py
 
     # do real-time things
 
     # to exit the virtual environment
     deactive 
 
-Samba file-sharing
-^^^^^^^^^^^^^^^^^^
-To receive files in real-time from the scanner, you need to set up SMB/CIFS on the real-time computer. General instructions can be found here `here <https://help.ubuntu.com/community/How%20to%20Create%20a%20Network%20Share%20Via%20Samba%20Via%20CLI%20%28Command-line%20interface/Linux%20Terminal%29%20-%20Uncomplicated%2C%20Simple%20and%20Brief%20Way%21>`_, and the we provide the specific instructions below. First, install ``samba`` package:
+Network
+-------
 
-.. code-block:: bash
-    
-    sudo apt-get update
-    sudo apt-get install samba
-
-
-Samba manages its own passwords (i.e., they are not the same as your Linux passwords), so you need to create a new samba password for your user with:
-
-.. code-block:: bash
-
-    sudo smbpasswd -a glab
-
-Specifics for how to set-up file sharing for ``realtimefmri`` can be found :ref:`here <network>`
+To receive files in real-time from the scanner, you need to set up Samba on the real-time computer. The real-time computer will host a shared folder, and the scanner console will write to that folder over SMB/CIFS. General instructions for setting up Samba share can be found `here <https://help.ubuntu.com/community/How%20to%20Create%20a%20Network%20Share%20Via%20Samba%20Via%20CLI%20%28Command-line%20interface/Linux%20Terminal%29%20-%20Uncomplicated%2C%20Simple%20and%20Brief%20Way%21>`_, and the we provide more specific instructions in the section :ref:`Connecting to the scanner network <network>`.
 
 
 Uninstall

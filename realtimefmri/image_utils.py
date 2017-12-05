@@ -155,8 +155,7 @@ def dicom_to_nifti_afni(dcm):
         raise e
 
     finally:
-        os.remove(out_path)
-        os.remove(in_path+'_001.dcm')
         os.chdir(current_directory)
+        rmtree(temp_directory)
 
     return nii

@@ -9,21 +9,21 @@ This software consists of three main bodies of code:
 ## 1. Data collection
 Launch the data collection script using:
 
-`$ python collect.py`
+`$ realtimefmri collect <scan_id>`
 
 The fMRI system consists of several computers operating on a local network: the *scanner computer* controlling the scanner itself, the *reconstruction computer*, and the *scanner console*. Of these, the operator only interacts directly with the *scanner console*. To engage in real-time experiments, we need to first connect the *real-time computer* to this network. This is done by connecting it via ethernet to the router switch on top of the scanner computer. This allows the *real-time computer* to access the image files as they appear in a shared directory on the *scanner console*.
 
 Visit the [wiki](http://www/wiki/Real-time_fMRI) for instructions on how to access images from the shared scanner network.
 
-`collect.py` sits on the shared folder and continuously checks for new images coming off of the scanner. When an image appears, it's data is sent over a zmq messaging socket to the preprocessing script.
+`collect.py` sits on the shared folder and continuously checks for new images coming off of the scanner. When an image appears, it's data is sent over to the preprocessing script.
 
 ## 2. Preprocessing
 
 Launch the preprocessing script using:
 
-`$ python preprocess.py config_file_name`
+`$ realtimefmri preprocessy <scan_id> <preprocessing_config_name> <stimulation_config_name>`
 
-The data arriving from the data collection stage is formatted as a raw binary string of `uint16` values in the shape of a Siemens "mosaic" image. A few stages of preprocessing are needed to make it usable. The overall structure of preprocessing is simple: the `Preprocess` object sits on the zmq port and waits for image data to arrive. When it does it is passed through a series of preprocessing steps specified in the *preprocessing configuration file*. A *dictionary of data*, conveniently known as `data_dict`, holds references to all of the data objects that need to be passed between steps or sent on to the stimulation code. Specified data will be published to a zmq `PUB` socket, to which other code can subscribe.
+This program waits for DICOM images to arrive. When they do they are passed through a series of preprocessing steps specified in the *preprocessing configuration file*. A *dictionary of data*, conveniently known as `data_dict`, holds references to all of the data objects that need to be passed between steps or sent on to the stimulation code. Specified data will be published to a zmq `PUB` socket, to which other code can subscribe.
 
 ### `PreprocessingStep` objects
 Preprocessing steps are subclasses of the parent class, `PreprocessingStep`. The only requirement is that they implement a `.run()` method that performs some operation on input.
@@ -62,7 +62,7 @@ As you can see, no `send` value is configured, meaning none of this data will be
 
 ## 3. Stimulation
 
-Making stimuli that rely on data gathered in real-time; this is where things get interesting. Basically, you can make anything you can imagine. All you need to do is build some software that manages a zmq `SUB` socket subscribed to one of the topics published by the preprocessing code. This can be implemented in any code that has has a zmq library, which is pretty much any code. Some generally useful stimuli are included in this library including a [pycortex](https://github.com/gallantlab/pycortex) viewer and a dumb simple data visualization.
+Things get interesting when we make stimuli that rely on data gathered in real-time. All you need to do is build some software that manages a zmq `SUB` socket subscribed to one of the topics published by the preprocessing code. This can be implemented in any language that has has a zmq library, which is pretty much any modern language. Some generally useful stimuli are included in this library including a [pycortex](https://github.com/gallantlab/pycortex) viewer.
 
 ## Timing
-The main processes (collection, preprocessing, stimulation) are able to run on separate machines, which could have different clocks. The scanner outputs a "5" keypress (via the FORP) to stimmy at the onset of each TR. After initializing the processes, each one idles until the first of these "5"s, the clock time of this message is stored and subsequent events are timestamped relative to it, providing some degree of synchronization.
+The main processes (collection, preprocessing, stimulation) are able to run on separate machines, which could have different clocks. The real-time computer receives a pulse whenever a volume is acquired. This time stamp is sent alongside each volume in the code.
