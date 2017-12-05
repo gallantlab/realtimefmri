@@ -36,7 +36,6 @@ def parse_message(message):
     sync_time = struct.unpack('d', sync_time)[0]
     return topic, sync_time, data
 
-
 def load_run(recording_id):
     """Load data from a real-time run into a nifti volumes
     """
@@ -58,22 +57,18 @@ def load_run(recording_id):
 
     return Nifti1Image(volume, affine)
 
+def get_temporary_path(directory=None, extension=None):
+    """Get a temporary file name without making the file
+    """
+    if directory is None:
+        directory = tempfile.gettempdir()
 
-def get_temporary_file_name(root=tempfile.gettempdir()):
-    from random import choice
-    from string import ascii_letters, digits
+    path = op.join(directory, next(tempfile._get_candidate_names()))
 
-    done = False
-    characters = ascii_letters + digits
-    while not done:
+    if extension:
+        path += extension
 
-        unique_part = ''.join([choice(characters) for i in range(10)])
-        temp_fname = op.join(root, tempfile.gettempprefix() + unique_part)
-        if not op.exists(temp_fname):
-            done = True
-
-    return temp_fname
-
+    return path
 
 def confirm(prompt, choices=('y', 'n')):
     '''
@@ -83,7 +78,6 @@ def confirm(prompt, choices=('y', 'n')):
     while choice not in choices:
         choice = input(prompt+'> ')
     return choice
-
 
 def get_logger(name, to_console=False, to_file=False, to_network=False,
                level=LOG_LEVEL, formatting=LOG_FORMAT):

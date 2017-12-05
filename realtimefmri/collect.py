@@ -15,7 +15,7 @@ class Collector(object):
     '''Class to manage monitoring and loading from a directory
     '''
     def __init__(self, port=VOLUME_PORT, directory=None, parent_directory=None,
-                 extension='.PixelData', loop=None, verbose=False):
+                 extension='.dcm', loop=None, verbose=False):
         '''Monitor a directory
         Args:
             port: port to publish images to
@@ -95,21 +95,15 @@ class Collector(object):
         monitor = MonitorDirectory(self.directory,
                                    extension=self.extension)
 
-        next_mag = False
         self.active = True
         while self.active:
             new_image_paths = monitor.get_new_paths()
             monitor.update(new_image_paths)
             while len(new_image_paths) > 0:
                 new_image_path = new_image_paths.pop()
-                if next_mag:  # only use odd/magnitude images
-                    self.logger.info('volume %s', new_image_path)
-                    yield from self.volume_queue.put(op.join(self.directory,
-                                                             new_image_path))
-                    next_mag = False
-                else:
-                    next_mag = True
-
+                self.logger.info('volume %s', new_image_path)
+                yield from self.volume_queue.put(op.join(self.directory,
+                                                         new_image_path))
             yield from asyncio.sleep(0.1)
 
     def run(self):
@@ -131,7 +125,7 @@ class MonitorDirectory(object):
         new_image_paths = m.get_new_paths()
         len(new_image_paths)==0 # True
     '''
-    def __init__(self, directory, extension='.PixelData'):
+    def __init__(self, directory, pattern=None, extension='.dcm'):
         if extension == '/':
             self._is_valid = self._is_valid_directories
         else:
@@ -168,6 +162,8 @@ class MonitorDirectory(object):
             new_image_paths = set(directory_contents) - self.image_paths
         else:
             new_image_paths = set()
+
+        self.image_paths = directory_contents
 
         return list(new_image_paths)
 

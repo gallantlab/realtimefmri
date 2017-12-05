@@ -1,5 +1,5 @@
 global_defaults:
-  subject: &SUBJECT TZfs2
+  subject: &SUBJECT TZfs
 
 # initialization:
 #   - name: record_microphone_input 
@@ -14,10 +14,10 @@ pipeline:
     topic: { gm_activity_zscore: data }
     kwargs:
       subject: *SUBJECT
-      xfm_name: "controller_test_20161026TZ2"
+      xfm_name: "driving_20170704TZ"
       mask_type: thick
-      vmin: -0.01
-      vmax: 0.01
+      vmin: -6.
+      vmax: 6.
   - name: debug
     instance: !!python/object:realtimefmri.stimulate.Debug {}
     topic: { gm_activity_zscore: data }

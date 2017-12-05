@@ -9,6 +9,8 @@ CONFIG_DIR = op.expanduser('~/.config/realtimefmri')
 config = ConfigParser()
 config.read(op.join(CONFIG_DIR, 'config.cfg'))
 
+DATA_DIR = op.expanduser(config.get('directories', 'data'))
+SCANNER_DIR = op.expanduser(config.get('directories', 'scanner'))
 DATABASE_DIR = op.expanduser(config.get('directories', 'database'))
 RECORDING_DIR = op.expanduser(config.get('directories', 'recordings'))
 PIPELINE_DIR = op.expanduser(config.get('directories', 'pipelines'))
@@ -30,11 +32,9 @@ LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
 LOG_LEVEL = logging.INFO
 
 
-def get_subject_directory(subject):
-    '''Subject directory'''
-    return op.join(DATABASE_DIR, subject)
-
-
 def get_example_data_directory(dataset):
     '''Example data directory'''
-    return op.join(CONFIG_DIR, 'datasets', dataset)
+    return op.join(DATA_DIR, 'datasets', dataset)
+
+def get_subject_directory(subject):
+    return op.join(DATABASE_DIR, subject)

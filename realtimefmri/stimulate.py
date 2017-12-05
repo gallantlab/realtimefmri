@@ -156,7 +156,7 @@ class Stimulus(object):
 
 
 class PyCortexViewer(Stimulus):
-    bufferlen = 3
+    bufferlen = 50
 
     def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1.,
                  **kwargs):
@@ -165,7 +165,7 @@ class PyCortexViewer(Stimulus):
 
         data = np.zeros((self.bufferlen, npts), 'float32')
         vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
-        view = cortex.webshow(vol)
+        view = cortex.webshow(vol, autoclose=False)
 
         self.subject = subject
         self.xfm_name = xfm_name
@@ -193,6 +193,7 @@ class PyCortexViewer(Stimulus):
         if self.active:
             try:
                 data = np.fromstring(inp['data'], dtype='float32')
+                print(self.subject, self.xfm_name, data.shape)
                 vol = cortex.Volume(data, self.subject, self.xfm_name)
                 mos, _ = cortex.mosaic(vol.volume[0], show=False)
                 self.update_volume(mos)

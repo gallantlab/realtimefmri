@@ -5,9 +5,10 @@ import asyncio
 import zmq
 import zmq.asyncio
 import evdev
+
 from realtimefmri.utils import get_logger
 from realtimefmri.config import SYNC_PORT, KEYBOARD_FN, TTL_SERIAL_PORT
-
+from realtimefmri.device_utils import list_devices
 
 class Scanner(object):
     '''Detect and record pulses from the scanner. Can record to a local log
@@ -55,18 +56,15 @@ class Scanner(object):
 
     @asyncio.coroutine
     def _keyboard(self):
-        devices = [evdev.InputDevice(dev) for dev in evdev.list_devices()]
-        for dev in devices:
-            print(dev.fn, dev.name)
-        devices = [evdev.InputDevice(dev) for dev in evdev.list_devices()]
+        list_devices()
         keyboard = evdev.InputDevice(KEYBOARD_FN)
         while self.active:
             events = yield from keyboard.async_read()
             for event in events:
                 event = evdev.categorize(event)
                 if (isinstance(event, evdev.KeyEvent) and
-                    (event.keycode == 'KEY_5') and  # 5 key
-                    (event.keystate == event.key_down)):
+                   (event.keycode == 'KEY_5') and  # 5 key
+                   (event.keystate == event.key_down)):
                     recv_time = time.time()
                     self.logger.info('TR %s', recv_time)
                     yield from self.sync_queue.put(recv_time)

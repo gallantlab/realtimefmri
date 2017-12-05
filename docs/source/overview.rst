@@ -35,12 +35,12 @@ _`Logging` (``logger.py``)
 
 The main processes (collection, preprocessing, stimulation) are able to run on separate machines, which could have different clocks. To record all of these events to a single clock, each process can output log events over the network to a central logging process that saves a record of the run.
 
-_`Scanner TTL pulses` (``scanner.py``)
+_`Scanner TTL pulses` (``scan.py``)
 --------------------------------------
 
-The scanner outputs a "5" keypress (via the FORP) to the **real-time computer** at the onset of each TR. This process captures those key presses and sends them off to the logger.
+The scanner outputs a "5" keypress (via the FORP) to the **real-time computer** at the onset of each TR. This process captures those key presses.
 
-_`Synchronization of volumes with scanner` (``sync.py``)
+_`Synchronization of volumes with scanner` (``synchronize.py``)
 --------------------------------------------------------
 
-Strict timing of data acquisition events comes from the TTL pulses that mark the onset of each TR. After image reconstruction, the image file appears on the scanner console and is passed through the preprocessing pipeline. This code attaches a timestamp to each element of preprocessed data by matching it to the time of its corresponding acquisition TTL pulse. This timestamped data is then passed along to stimulation code.
+Strict timing of data acquisition events comes from the TTL pulses that mark the onset of each TR. This code attaches a time stamp to each acquired volume and passes the time-stamped volume on to the preprocessing pipeline.
