@@ -48,7 +48,7 @@ To test all of the moving parts without booking scanner time, we've provided a s
 
 .. code-block:: bash
 
-    realtimefmri simulate.py <test_dataset>
+    realtimefmri simulate <test_dataset>
 
 Where ``test_dataset`` specifies a directory ``.config/realtimefmri/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
 
