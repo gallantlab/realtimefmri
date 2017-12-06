@@ -1,35 +1,21 @@
 # realtimefmri
 
-Real-time collection and preprocessing of functional magnetic resonance imaging data along with stimulus presentation.
+Real-time collection and preprocessing of functional magnetic resonance imaging data along with stimulus presentation. This software allows you to construct custom real-time data analysis pipelines without much fuss.
 
-# Usage
-
-This software consists of three main bodies of code:
+It consists of three parts: a **collection** system that interfaces with the Siemens MRI scanner to make brain volumes available as soon as they are acquired, a **preprocessing** system that can be configured to do common operations like motion correction and detrending, and a **stimulation** system that can present the data to the operator or subject in a variety of ways.
 
 ## 1. Data collection
-Launch the data collection script using:
-
-`$ realtimefmri collect <scan_id>`
-
-The fMRI system consists of several computers operating on a local network: the *scanner computer* controlling the scanner itself, the *reconstruction computer*, and the *scanner console*. Of these, the operator only interacts directly with the *scanner console*. To engage in real-time experiments, we need to first connect the *real-time computer* to this network. This is done by connecting it via ethernet to the router switch on top of the scanner computer. This allows the *real-time computer* to access the image files as they appear in a shared directory on the *scanner console*.
-
-Visit the [wiki](http://www/wiki/Real-time_fMRI) for instructions on how to access images from the shared scanner network.
-
-`collect.py` sits on the shared folder and continuously checks for new images coming off of the scanner. When an image appears, it's data is sent over to the preprocessing script.
 
 ## 2. Preprocessing
 
-Launch the preprocessing script using:
+Images are passed through a series of preprocessing steps specified in the *preprocessing configuration file*.
 
-`$ realtimefmri preprocessy <scan_id> <preprocessing_config_name> <stimulation_config_name>`
+### Configuring your own pipeline
 
-This program waits for DICOM images to arrive. When they do they are passed through a series of preprocessing steps specified in the *preprocessing configuration file*. A *dictionary of data*, conveniently known as `data_dict`, holds references to all of the data objects that need to be passed between steps or sent on to the stimulation code. Specified data will be published to a zmq `PUB` socket, to which other code can subscribe.
-
-### `PreprocessingStep` objects
 Preprocessing steps are subclasses of the parent class, `PreprocessingStep`. The only requirement is that they implement a `.run()` method that performs some operation on input.
 
 ### Configuration file
-The overall preprocessing pipeline is specified in a `YAML` configuration file saved in the `~/.config/realtimefmri/pipelines`. The configuration file should contain at least one dictionary with the key `pipeline` and the value of a **list** of steps. An individual step has the following format:
+The overall preprocessing pipeline is specified in a `YAML` configuration file saved in the `~/.config/realtimefmri/pipelines`. The configuration file should contain at least one dictionary that has `pipeline` and a **list** of steps. An individual step has the following format:
 
 - *Required keys:*
   - `name` (string): a descriptive name for this step
@@ -40,25 +26,22 @@ The overall preprocessing pipeline is specified in a `YAML` configuration file s
   - `output` (list of strings): keys that will be paired with returned values and added to the `data_dict` when this step is finished
   - `send` (list of strings): keys indicating values from `data_dict` that will be sent to the stimulation code when this step is finished
 
-Here is an example of a simple preprocessing step, the first step in fact, which converts the `raw_image_binary` to a more usable Nifti volume.
+Here is an example of a simple preprocessing step, the first step in fact, which converts input Dicom image into a more usable Nifti volume.
 
 ```
-- name: raw_to_nifti`
-  instance: !!python/object:realtimefmri.core.preprocessing.RawToNifti {}
-  kwargs:
-    subject: *SUBJECT
+- name: dicom_to_nifti
+  instance: !!python/object:realtimefmri.core.preprocessing.DicomToNifti {}
   input:
     - raw_image_binary
   output:
     - image_nifti
-```
-
-As you can see, no `send` value is configured, meaning none of this data will be send over to the stimulation code. However, if you wanted to (i.e. you build some stimulus that used the raw image volume) you would add the key:
-
-```
   send:
     - image_nifti
 ```
+
+
+The `send` field is optional. Here, it indicates that the Nifti volume should be sent along to the stimulation code.
+
 
 ## 3. Stimulation
 

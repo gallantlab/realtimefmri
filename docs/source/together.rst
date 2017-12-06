@@ -18,11 +18,8 @@ Step-by-step
 .. code-block:: bash
 
   realtimefmri collect <recording_id> \
-    -p <parent_directory_of_dicom_directory> \
     -v  # if you want verbose output
 
-
-The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_directory>`` as a *parent* directory. It will look in that directory for the first new folder that is created and then monitor *that* folder for DICOM images.
 
 5. In another terminal, launch the ``realtime preprocess`` command to run preprocessing and stimulation pipelines.
 
@@ -35,7 +32,7 @@ The ``-p`` is just a flag marks the provided ``<parent_directory_of_dicom_direct
     -v  # if you want verbose output
 
 
-6. A log files containing event times is stored to ``realtimefmri/recordings/<recording_id>/recording.log``.
+6. A log files containing event times is stored to ``~/.local/share/realtimefmri/recordings/<recording_id>/recording.log``.
 
 7. To exit the experiment, press ``Ctrl-C`` to send the interrupt signal.
 
@@ -50,6 +47,6 @@ To test all of the moving parts without booking scanner time, we've provided a s
 
     realtimefmri simulate <test_dataset>
 
-Where ``test_dataset`` specifies a directory ``.config/realtimefmri/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
+Where ``test_dataset`` specifies a directory ``.local/share/realtimefmri/datasets/<test_dataset>`` containing ``.PixelData`` files. Be sure to specify ``/tmp/rtfmri`` as  ``<parent_directory_of_dicom_directory>`` in your call to ``realtimefmri console``. When the script starts, it will create a temporary folder within ``/tmp/rtfmri``. The console process will detect that new folder and start monitoring it for incoming volumes.
 
 Start by pressing ``5`` to simulate the TTL pulse that occurs at the start of each volume acquisition. Then press enter twice to simulate the magnitude and phase volumes (only magnitude volumes are used).
