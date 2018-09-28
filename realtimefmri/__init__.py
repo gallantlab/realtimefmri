@@ -8,6 +8,7 @@ def makedirs_except(directory):
     except FileExistsError:
         pass
 
+
 def initialize():
     makedirs_except(config.SCANNER_DIR)
     makedirs_except(config.RECORDING_DIR)

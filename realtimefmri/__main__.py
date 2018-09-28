@@ -23,7 +23,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Collect data')
     subcommand = parser.add_subparsers(title='subcommand', dest='subcommand')
 
-
     coll = subcommand.add_parser('collect',
                                  help="""Collect and synchronize""")
     coll.set_defaults(command_name='collect')
@@ -45,22 +44,20 @@ def parse_arguments():
                       default=False, dest='verbose',
                       help=('''Print log messages to console if true'''))
 
-
     preproc = subcommand.add_parser('preprocess',
                                     help="""Preprocess and stimulate""")
     preproc.set_defaults(command_name='preprocess')
     preproc.add_argument('recording_id', action='store',
                          help='Unique recording identifier for this run')
-    
+
     preproc.add_argument('preproc_config', action='store',
                          help='Name of preprocessing configuration file')
-    
+
     preproc.add_argument('stim_config', action='store',
                          help='Name of stimulus configuration file')
-    
+
     preproc.add_argument('-v', '--verbose', action='store_true',
                          dest='verbose', default=False)
-
 
     simul = subcommand.add_parser('simulate',
                                   help="""Simulate a real-time experiment""")
@@ -68,8 +65,9 @@ def parse_arguments():
     simul.add_argument('simulate_dataset', action='store')
 
     args = parser.parse_args()
-    
+
     return args
+
 
 def collect(recording_id, directory=None, parent_directory=None, simulate=False,
             verbose=False):
@@ -85,9 +83,9 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
     logger = get_logger('root', to_file=log_path, to_console=verbose)
 
     loop = zmq.asyncio.ZMQEventLoop()
-    
+
     tasks = []
-    
+
     logger.info('starting synchronizer')
     sync = Synchronizer(verbose=True, loop=loop)
     tasks.append(sync.run())
@@ -95,7 +93,7 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
     logger.info('starting scanner')
     scan = Scanner(simulate=simulate, verbose=True, loop=loop)
     tasks.append(scan.run())
-    
+
     logger.info('starting collector')
     coll = Collector(directory=directory, parent_directory=parent_directory,
                      verbose=True, loop=loop)
@@ -111,7 +109,7 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
 
 
 def preprocess(recording_id, preproc_config=None, stim_config=None,
-         verbose=None):
+               verbose=None):
     """Run realtime
     """
 
@@ -154,7 +152,7 @@ def simulate(simulate_dataset):
     try:
         for path in paths:
             input('>>> press 5 for TTL, then enter for new image')
-            new_path = op.join(dest_directory, str(uuid4())+'.dcm')
+            new_path = op.join(dest_directory, str(uuid4()) + '.dcm')
             shutil.copy(path, new_path)
     except KeyboardInterrupt:
         pass

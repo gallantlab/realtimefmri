@@ -15,7 +15,6 @@ from realtimefmri.config import (SYNC_PORT, VOLUME_PORT,
 from realtimefmri.utils import get_logger
 
 
-
 class Synchronizer(object):
     def __init__(self, loop=None, verbose=False):
 
@@ -52,7 +51,6 @@ class Synchronizer(object):
             sync_time = struct.unpack('d', sync_time)[0]
             yield from self.sync_queue.put(sync_time)
 
-
     @asyncio.coroutine
     def timestamp_volumes(self):
         """Pair each image volume with its corresponding acquisition pulse
@@ -60,13 +58,12 @@ class Synchronizer(object):
         socket = self.context.socket(zmq.SUB)
         socket.connect('tcp://127.0.0.1:{}'.format(VOLUME_PORT))
         socket.setsockopt(zmq.SUBSCRIBE, b'')
-        
+
         while True:
             (_, image_id, _) = yield from socket.recv_multipart()
             image_id = struct.unpack('i', image_id)[0]
             sync_time = yield from self.sync_queue.get()
             self.sync_times[image_id] = sync_time
-
 
     @asyncio.coroutine
     def publish_preprocessed(self):
@@ -91,7 +88,6 @@ class Synchronizer(object):
         return asyncio.gather(self.collect_syncs(),
                               self.timestamp_volumes(),
                               self.publish_preprocessed())
-
 
 
 if __name__ == '__main__':

@@ -9,10 +9,9 @@ if six.PY2:
     range = xrange
 elif six.PY3:
     import pickle
-from glob import glob
+
 import time
 import json
-import warnings
 from uuid import uuid4
 import argparse
 from io import BytesIO
@@ -135,6 +134,7 @@ class Preprocessor(object):
     def stop(self):
         pass
 
+
 class Pipeline(object):
     """Construct and run a preprocessing pipeline
 
@@ -171,7 +171,7 @@ class Pipeline(object):
         The logger object
     output_socket : zmq.socket.Socket
         Socket (zmq.PUB) to which preprocessed outputs are sent
-    
+
     Methods
     -------
     process(data_dict)
@@ -224,15 +224,15 @@ class Pipeline(object):
         image_id = struct.pack('i', data_dict['image_id'])
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
-            
+
             self.log.debug('running %s' % step['name'])
             outp = step['instance'].run(*args)
-            
+
             self.log.debug('finished %s' % step['name'])
-            
+
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
-            
+
             d = dict(zip(step.get('output', []), outp))
             data_dict.update(d)
 
@@ -242,12 +242,13 @@ class Pipeline(object):
                     msg = json.dumps(d[topic])
                 elif isinstance(d[topic], (np.ndarray)):
                     msg = d[topic].astype(np.float32).tostring()
-                
+
                 self.output_socket.send_multipart([topic.encode(),
                                                    image_id,
                                                    msg])
 
         return data_dict
+
 
 class PreprocessingStep(object):
     def __init__(self):
@@ -256,17 +257,20 @@ class PreprocessingStep(object):
     def run(self):
         raise NotImplementedError
 
+
 def load_mask(subject, xfm_name, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
                             'mask_'+mask_type+'.nii.gz')
         return nib.load(mask_path)
 
+
 def load_reference(subject, xfm_name):
         ref_path = op.join(cortex.database.default_filestore,
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
         return nib.load(ref_path)
+
 
 class DicomToNifti(PreprocessingStep):
     """Loads a Dicom image and outputs a nifti image
@@ -279,12 +283,13 @@ class DicomToNifti(PreprocessingStep):
     def __init__(self, orientation=None, *args, **kwargs):
         if orientation is None:
             orientation = 'L', 'P', 'S'
-        
+
         self.orientation = orientation
 
     def run(self, inp):
         dcm = dicom.read_file(BytesIO(inp))
         return dicom_to_nifti_afni(dcm)
+
 
 class RawToNifti(PreprocessingStep):
     """Converts a mosaic image to a nifti image.
@@ -377,6 +382,7 @@ class SaveNifti(PreprocessingStep):
         nib.save(inp, op.join(self.recording_dir, path))
         print('saving to {}'.format(op.join(self.recording_dir, path)))
 
+
 class MotionCorrect(PreprocessingStep):
     """Motion corrects images to a reference image
 
@@ -423,6 +429,7 @@ class MotionCorrect(PreprocessingStep):
             raise Exception('Input and reference volumes have different affines.')
         return register(input_volume, self.reference_path, twopass=self.twopass)
 
+
 class ApplyMask(PreprocessingStep):
     """Apply a voxel mask to the volume.
 
@@ -454,9 +461,10 @@ class ApplyMask(PreprocessingStep):
     def __init__(self, subject, xfm_name, mask_type=None, **kwargs):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
-                            'mask_'+mask_type+'.nii.gz')
+                            'mask_' + mask_type + '.nii.gz')
         self.load_mask(mask_path)
         print(mask_path)
+
     def load_mask(self, mask_path):
         mask_nifti1 = nib.load(mask_path)
         self.mask_affine = mask_nifti1.affine
@@ -466,6 +474,7 @@ class ApplyMask(PreprocessingStep):
         same_affine = np.allclose(volume.affine[:3, :3], self.mask_affine[:3, :3])
         assert same_affine, 'Input and mask volumes have different affines.'
         return volume.get_data().T[self.mask.T]
+
 
 def secondary_mask(mask1, mask2, order='C'):
     """
@@ -481,6 +490,7 @@ def secondary_mask(mask1, mask2, order='C'):
     masks = np.c_[mask1_flat, mask2_flat]
     masks = masks[mask1_flat, :]
     return masks[:, 1].astype(bool)
+
 
 class ApplyMask2(PreprocessingStep):
     """Apply a second mask to a vector produced by a first mask.
@@ -537,6 +547,7 @@ class ActivityRatio(PreprocessingStep):
 
         return x1/(x1+x2)
 
+
 class RoiActivity(PreprocessingStep):
     """Extract activity from an ROI.
 
@@ -590,6 +601,7 @@ class RoiActivity(PreprocessingStep):
             roi_activities[name] = float(activity[mask].mean())
         return roi_activities
 
+
 class WMDetrend(PreprocessingStep):
     """Detrend a volume using white matter detrending
 
@@ -639,12 +651,13 @@ class WMDetrend(PreprocessingStep):
         gm_trend = self.model.predict(wm_activity_pcs)
         return gm_activity - gm_trend
 
+
 class RunningMeanStd(PreprocessingStep):
     """Compute a running mean and standard deviation for a set of voxels
 
     Compute a running mean and standard deviation, looking back a set number of
     samples.
-    
+
     Parameters
     ----------
     n : int
@@ -674,6 +687,7 @@ class RunningMeanStd(PreprocessingStep):
         self.mean = None
         self.samples = None
         self.skip = skip
+
     def run(self, inp, image_number=None):
         if image_number < self.skip:
             return np.zeros(inp.size), np.ones(inp.size)
@@ -686,6 +700,7 @@ class RunningMeanStd(PreprocessingStep):
         self.mean = np.nanmean(self.samples, 0)
         self.std = np.nanstd(self.samples, 0)
         return self.mean, self.std
+
 
 class VoxelZScore(PreprocessingStep):
     """Compute a z-score of a vector
@@ -712,7 +727,7 @@ class VoxelZScore(PreprocessingStep):
         self.std = None
 
     def zscore(self, data):
-        return (data-self.mean)/self.std
+        return (data - self.mean) / self.std
 
     def run(self, inp, mean=None, std=None):
         # update mean and std if provided

@@ -73,13 +73,12 @@ class Collector(object):
                 raw_image_binary = f.read()
 
             self.logger.debug('%s %u', op.basename(image_fpath),
-                             len(raw_image_binary))
+                              len(raw_image_binary))
 
             image_number = struct.pack('i', self.image_number)
             yield from socket.send_multipart([b'image', image_number,
                                               raw_image_binary])
             self.image_number += 1
-
 
     @asyncio.coroutine
     def collect_volumes(self):
@@ -150,7 +149,7 @@ class MonitorDirectory(object):
                              if self._is_valid(i)])
         except OSError:
             new_paths = set()
-        
+
         return new_paths
 
     def get_new_paths(self):

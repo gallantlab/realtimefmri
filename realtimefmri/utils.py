@@ -30,11 +30,13 @@ def shell(cmd, verbose=True, check_output=True):
     else:
         return subprocess.call(shlex.split(cmd))
 
+
 def parse_message(message):
     topic, sync_time, data = message
     topic = topic.decode('utf8')
     sync_time = struct.unpack('d', sync_time)[0]
     return topic, sync_time, data
+
 
 def load_run(recording_id):
     """Load data from a real-time run into a nifti volumes
@@ -57,6 +59,7 @@ def load_run(recording_id):
 
     return Nifti1Image(volume, affine)
 
+
 def get_temporary_path(directory=None, extension=None):
     """Get a temporary file name without making the file
     """
@@ -70,6 +73,7 @@ def get_temporary_path(directory=None, extension=None):
 
     return path
 
+
 def confirm(prompt, choices=('y', 'n')):
     '''
     Get user input from a list of possibilities
@@ -78,6 +82,7 @@ def confirm(prompt, choices=('y', 'n')):
     while choice not in choices:
         choice = input(prompt+'> ')
     return choice
+
 
 def get_logger(name, to_console=False, to_file=False, to_network=False,
                level=LOG_LEVEL, formatting=LOG_FORMAT):

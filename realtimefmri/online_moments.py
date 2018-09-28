@@ -59,8 +59,8 @@ class OnlineMoments(PreprocessingStep):
         self.n += 1
 
         for odx in range(self.order):
-            name = 'rawmnt%i'%(odx+1)
-            self.all_raw_moments[odx] = self.all_raw_moments[odx] + x**(odx+1)
+            name = 'rawmnt%i' % (odx + 1)
+            self.all_raw_moments[odx] = self.all_raw_moments[odx] + x**(odx + 1)
             self.__setattr__(name, self.all_raw_moments[odx])
 
     def get_statistics(self):
@@ -93,9 +93,9 @@ def compute_raw2skew(raw1, raw2, raw3, *args):
     """
     # get central moments
     cm2 = raw2 - raw1**2
-    cm3 = raw3 - 3*raw1*raw2 + 2*raw1**3
+    cm3 = raw3 - 3 * raw1 * raw2 + 2 * raw1**3
     # get standardized 3rd moment
-    sm3 = cm3/cm2**1.5
+    sm3 = cm3 / cm2**1.5
     return sm3
 
 
@@ -105,9 +105,9 @@ def compute_raw2kurt(raw1, raw2, raw3, raw4, *args):
     """
     # get central moments
     cm2 = raw2 - raw1**2
-    cm4 = raw4 - 4*raw1*raw3 + 6*(raw1**2)*raw2 - 3*raw1**4
+    cm4 = raw4 - 4 * raw1 * raw3 + 6 * (raw1**2) * raw2 - 3 * raw1**4
     # get standardized 4th moment
-    sm4 = cm4/cm2**2 - 3
+    sm4 = cm4 / cm2**2 - 3
     return sm4
 
 
@@ -140,7 +140,7 @@ def convert_parallel2moments(node_raw_moments, nsamples):
     """
     mean_moments = []
     for raw_moment in zip(*node_raw_moments):
-        moment = np.sum(raw_moment, 0)/nsamples
+        moment = np.sum(raw_moment, 0) / nsamples
         mean_moments.append(moment)
 
     emean = mean_moments[0]

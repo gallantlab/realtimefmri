@@ -36,5 +36,6 @@ def get_example_data_directory(dataset):
     '''Example data directory'''
     return op.join(DATA_DIR, 'datasets', dataset)
 
+
 def get_subject_directory(subject):
     return op.join(DATABASE_DIR, subject)

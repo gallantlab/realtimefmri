@@ -1,13 +1,14 @@
 import six
 if six.PY2:
     range = xrange
+
 import os
 import os.path as op
 from shutil import rmtree
-from subprocess import call, check_output, check_call, STDOUT, CalledProcessError
+from subprocess import call, check_output, check_call, STDOUT
 import shlex
 from uuid import uuid4
-from tempfile import mkdtemp, mkstemp
+from tempfile import mkdtemp
 import numpy as np
 
 import dicom
@@ -37,7 +38,7 @@ def register(inp, base, output_transform=False, twopass=False):
         cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(base_path,
                                                                 out_path))
         if output_transform:
-            transform_path = op.join(temp_directory, str(uuid4())+'.aff12.1D')
+            transform_path = op.join(temp_directory, str(uuid4()) + '.aff12.1D')
             cmd.extend(['-1Dmatrix_save', transform_path])
         if twopass:
             cmd.append('-twopass')
@@ -66,12 +67,14 @@ def register(inp, base, output_transform=False, twopass=False):
     else:
         return out_img
 
+
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
     volume = np.empty((100, 100, nrows*ncols))
     for i in range(nrows):
         vol = mosaic[i*100:(i+1)*100, :].reshape(100, 100, ncols, order='F')
         volume[:, :, i*ncols:(i+1)*ncols] = vol
     return volume
+
 
 def plot_volume(volume):
     from matplotlib import pyplot as plt
@@ -82,8 +85,10 @@ def plot_volume(volume):
     for i in range(volume.shape[2]):
         _ = ax[divmod(i, ncols)].pcolormesh(volume[:, :, i], cmap='gray')
 
+
 def load_afni_xfm(path):
     return np.r_[np.loadtxt(path).reshape(3, 4), np.array([[0, 0, 0, 1]])]
+
 
 def get_orientation_labels(target_codes):
     """Convert orientation in list-style to label-style
@@ -109,6 +114,7 @@ def get_orientation_labels(target_codes):
                     orientation_labels.append(code)
     return orientation_labels
 
+
 def dicom_to_nifti_fsl(dcm):
     temp_directory = mkdtemp()
 
@@ -130,8 +136,9 @@ def dicom_to_nifti_fsl(dcm):
 
     return nii
 
+
 def dicom_to_nifti_afni(dcm):
-    
+
     current_directory = os.getcwd()
 
     temp_directory = mkdtemp()
@@ -143,7 +150,7 @@ def dicom_to_nifti_afni(dcm):
     try:
         dicom.write_file(in_path+'_001.dcm', dcm)
 
-        cmd = ['to3d', '-prefix', out_path, in_path+'*']
+        cmd = ['to3d', '-prefix', out_path, in_path + '*']
 
         with open(os.devnull, 'w') as null:
             _ = check_call(cmd, stdout=null, stderr=null)

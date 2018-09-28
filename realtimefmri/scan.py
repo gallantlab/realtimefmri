@@ -10,6 +10,7 @@ from realtimefmri.utils import get_logger
 from realtimefmri.config import SYNC_PORT, KEYBOARD_FN, TTL_SERIAL_PORT
 from realtimefmri.device_utils import list_devices
 
+
 class Scanner(object):
     '''Detect and record pulses from the scanner. Can record to a local log
     file or transmit to a network destination.
@@ -76,7 +77,7 @@ class Scanner(object):
         while self.active:
             msg = ser.read()
             print(msg)
-            if msg==img_msg:
+            if msg == img_msg:
                 recv_time = time.time()
                 self.logger.info('TR %s', recv_time)
                 yield from self.sync_queue.put(time.time())

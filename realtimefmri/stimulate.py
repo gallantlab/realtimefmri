@@ -68,7 +68,7 @@ class Stimulator(object):
         self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
         self.active = False
 
-        with open(os.path.join(PIPELINE_DIR, stim_config+'.yaml'), 'rb') as f:
+        with open(os.path.join(PIPELINE_DIR, stim_config + '.yaml'), 'rb') as f:
             config = yaml.load(f)
             self.initialization = config.get('initialization', dict())
             self.pipeline = config['pipeline']
@@ -127,8 +127,7 @@ class Stimulator(object):
                     # call run function with kwargs
                     ret = stim['instance'].run({stim['topic'][topic]: data})
                     self.logger.info('finished %s %s',
-                                      stim['name'], ret)
-
+                                     stim['name'], ret)
 
     def stop(self):
         for init in self.initialization:
@@ -178,7 +177,7 @@ class PyCortexViewer(Stimulus):
     def update_volume(self, mos):
         i, = self.view.setFrame()
         i = round(i)
-        new_frame = (i+1) % self.bufferlen
+        new_frame = (i + 1) % self.bufferlen
         self.view.dataviews.data.data[0]._setData(new_frame, mos)
 
     def advance_frame(self):
@@ -187,7 +186,7 @@ class PyCortexViewer(Stimulus):
         self.view.playpause('play')
         time.sleep(1)
         self.view.playpause('pause')
-        self.view.setFrame(i+0.99)
+        self.view.setFrame(i + 0.99)
 
     def run(self, inp):
         if self.active:
@@ -198,13 +197,13 @@ class PyCortexViewer(Stimulus):
                 mos, _ = cortex.mosaic(vol.volume[0], show=False)
                 self.update_volume(mos)
                 self.advance_frame()
-    
+
                 return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
 
             except IndexError as e:
                 self.active = False
                 return e
-            
+
             except Exception as e:
                 return e
 
@@ -258,7 +257,7 @@ class AudioRecorder(object):
     '''
     def __init__(self, jack_port, file_name, recording_id, **kwargs):
         super(AudioRecorder, self).__init__()
-        rec_path = os.path.join(RECORDING_DIR, recording_id, file_name+'.wav')
+        rec_path = os.path.join(RECORDING_DIR, recording_id, file_name + '.wav')
         if not os.path.exists(os.path.dirname(rec_path)):
             os.makedirs(os.path.dirname(rec_path))
 

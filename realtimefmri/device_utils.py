@@ -5,19 +5,20 @@ import evdev
 
 def list_devices():
     devices = [evdev.InputDevice(dev) for dev in evdev.list_devices()]
-    device_pattern = re.compile('/dev/input/event(\d*)')
-    device_numbers = []
+    device_pattern = re.compile(r'/dev/input/event(\d*)')
+
     for device in devices:
         matches = device_pattern.match(device.fn)
         if matches:
             device.number = int(matches.groups()[0])
         else:
-            device.number = Non
+            device.number = None
 
     devices = sorted(devices, key=lambda x: x.number)
 
     for device in devices:
         print("{:>20}\t{}".format(device.fn, device.name))
+
 
 @asyncio.coroutine
 def keyboard(device_file):
@@ -29,6 +30,7 @@ def keyboard(device_file):
             if (isinstance(event, evdev.KeyEvent) and
                (event.keystate == event.key_down)):
                 print("{}\t{}".format(device.fn, device.name))
+
 
 def run():
     loop = asyncio.get_event_loop()

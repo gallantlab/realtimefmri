@@ -18,12 +18,11 @@ class WhiteMatterDetrending(object):
         self.pca = None
 
     def train(self, gm, wm, n_wm_pcs=10):
-        
         n_trials, _ = wm.shape
 
         pca = PCA(n_components=n_wm_pcs)
         wm_pcs = pca.fit_transform(wm)
-        
+
         model = LinearRegression()
         model.fit(wm_pcs, gm)
 
