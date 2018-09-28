@@ -21,5 +21,6 @@ RUN apt-get install -y gnome-terminal nautilus          \
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/libgsl.so.23 /usr/lib/x86_64-linux-gnu/libgsl.so.19
 
-ADD linux_ubuntu_16_64.tgz /data
+RUN mkdir /data
+COPY linux_ubuntu_16_64.tgz /data
 # RUN tcsh @update.afni.binaries -local_package linux_ubuntu_16_64.tgz -do_extras
