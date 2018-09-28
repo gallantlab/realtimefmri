@@ -21,6 +21,7 @@ def main():
                             "numexpr",
                             "h5py",
                             "matplotlib",
+                            "dicom",
                             "nibabel",
                             "Pillow",
                             "pyparsing",

@@ -1,6 +1,5 @@
 import os
 from glob import iglob
-import time
 import unittest
 import logging
 import numpy as np
@@ -8,9 +7,10 @@ import numpy as np
 from nibabel.nifti1 import Nifti1Image
 from nibabel import load as nbload, save as nbsave
 
-from realtimefmri.collecting import MonitorDirectory, get_example_data_directory
-from realtimefmri.preprocessing import MotionCorrect, RawToNifti, WMDetrend, VoxelZScore, RunningMeanStd, ApplyMask
-from realtimefmri.image_utils import register, load_afni_xfm, get_orientation_labels
+from realtimefmri.collecting import MonitorDirectory
+from realtimefmri.preprocessing import (MotionCorrect, RawToNifti, WMDetrend, VoxelZScore,
+                                        RunningMeanStd, ApplyMask)
+from realtimefmri.image_utils import load_afni_xfm
 from realtimefmri.config import TEST_DATA_DIR, LOG_FORMAT
 
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -75,10 +75,11 @@ class MonitorDirectoryTests(unittest.TestCase):
 
         new_image_paths = m.get_new_image_paths()
 
-        self.assertTrue(len(new_image_paths)==0)
+        self.assertTrue(len(new_image_paths) == 0)
 
         [os.remove(i) for i in iglob('tmp/*.tmp')]
         os.rmdir('tmp')
+
 
 @unittest.skip('')
 class PreprocessingTests(unittest.TestCase):
@@ -94,15 +95,15 @@ class PreprocessingTests(unittest.TestCase):
         mc.load_reference(reference_path)
         registered_img = mc.run(input_img)
         self.assertTrue(np.corrcoef(reference_img.get_data().flatten(), 
-            registered_img.get_data().flatten())[0,1]>0.99)
-        
+                        registered_img.get_data().flatten())[0,1]>0.99)
+
     def test_apply_mask(self):
         mask = np.zeros((3,4,5))
         ix = [[0,1],[1,2],[2,3]]
         mask[ix] = 1
         mask_path = os.path.join(TEST_DATA_DIR, 'mask.nii')
         nbsave(Nifti1Image(mask, np.eye(4)), mask_path)
-        
+
         apply_mask = ApplyMask()
         apply_mask.load_mask(mask_path)
         self.assertTrue(apply_mask.mask.shape==(3,4,5))
@@ -154,6 +155,7 @@ class PreprocessingTests(unittest.TestCase):
         self.assertTrue((running.mean==np.array([ 33.,34.,35.,36.,37.,38.,39.,40.,41.,42.])).all())
         self.assertTrue((running.std==running.samples.std(0)).all())
 
+
 class RoiActivityTests(unittest.TestCase):
     def test_secondary_mask_C(self):
         from realtimefmri.preprocessing import secondary_mask
@@ -181,6 +183,7 @@ class RoiActivityTests(unittest.TestCase):
         masked_data = np.random.random(mask1.sum())
         data.T[mask1.T] = masked_data
         self.assertTrue((data.T[np.logical_and(mask1.T, mask2.T)]==masked_data[mask3]).all())
+
 
 @unittest.skip('')
 class ImageUtilsTests(unittest.TestCase):
@@ -216,6 +219,7 @@ class ImageUtilsTests(unittest.TestCase):
 
         self.assertTrue(np.allclose(input_img.get_data(), output_img.get_data()))
 
+
 @unittest.skip('')
 class WMDetrendTests(unittest.TestCase):
     def test_get_activity_in_mask(self):
@@ -234,14 +238,14 @@ class WMDetrendTests(unittest.TestCase):
 
         wm.funcref_nifti1 = ref_img
         wm.masks = {'wm': wm_mask.get_data().astype(bool),
-                    'gm': gm_mask.get_data().astype(bool)
-                   }
+                    'gm': gm_mask.get_data().astype(bool)}
 
         d = raw_to_volume.run(raw_image_binary)
         mask_activity = wm.get_activity_in_masks(d['raw_image_volume'])
 
         ref_wm = ref_img.get_data().T[wm.masks['wm'].T]
         self.assertTrue(np.corrcoef(mask_activity['wm'], ref_wm)[0,1]>0.99)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -20,7 +20,7 @@ import yaml
 import numpy as np
 import zmq
 
-import dicom
+import pydicom
 import nibabel as nib
 
 import cortex
@@ -287,7 +287,7 @@ class DicomToNifti(PreprocessingStep):
         self.orientation = orientation
 
     def run(self, inp):
-        dcm = dicom.read_file(BytesIO(inp))
+        dcm = pydicom.read_file(BytesIO(inp))
         return dicom_to_nifti_afni(dcm)
 
 
@@ -316,8 +316,9 @@ class RawToNifti(PreprocessingStep):
         transform
 
     """
-    def __init__(self, subject, xfm_name, **kwargs):
+    def __init__(self, subject, xfm_name, volume_shape, **kwargs):
         self.affine = load_reference(subject, xfm_name).affine
+        self.volume_shape = volume_shape
 
     def run(self, inp):
         """Takes a binary string loaded directly from the .PixelData file saved

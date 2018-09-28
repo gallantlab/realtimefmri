@@ -11,7 +11,7 @@ from uuid import uuid4
 from tempfile import mkdtemp
 import numpy as np
 
-import dicom
+import pydicom
 import nibabel as nib
 
 from realtimefmri.utils import get_temporary_path
@@ -69,10 +69,10 @@ def register(inp, base, output_transform=False, twopass=False):
 
 
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
-    volume = np.empty((100, 100, nrows*ncols))
+    volume = np.empty((100, 100, nrows * ncols))
     for i in range(nrows):
-        vol = mosaic[i*100:(i+1)*100, :].reshape(100, 100, ncols, order='F')
-        volume[:, :, i*ncols:(i+1)*ncols] = vol
+        vol = mosaic[i * 100:(i + 1) * 100, :].reshape(100, 100, ncols, order='F')
+        volume[:, :, i * ncols:(i + 1) * ncols] = vol
     return volume
 
 
@@ -115,14 +115,24 @@ def get_orientation_labels(target_codes):
     return orientation_labels
 
 
-def dicom_to_nifti_fsl(dcm):
+def dicom_to_nifti_freesurfer(dcm):
+    """Convert dicom to nifti using freesurfer's `mri_convert`
+
+    Parameters
+    ----------
+    dcm : pydicom object
+
+    Returns
+    --------
+    A nibabel nifti file
+    """
     temp_directory = mkdtemp()
 
     try:
         in_path = get_temporary_path(directory=temp_directory, extension='.dcm')
         out_path = get_temporary_path(directory=temp_directory, extension='.nii')
 
-        dicom.write_file(in_path, dcm)
+        pydicom.write_file(in_path, dcm)
 
         _ = check_output(['mri_convert', '-ot', 'nii',
                           '-i', in_path, '-o', out_path])
@@ -138,6 +148,16 @@ def dicom_to_nifti_fsl(dcm):
 
 
 def dicom_to_nifti_afni(dcm):
+    """Convert dicom to nifti using AFNI's to3d
+
+    Parameters
+    ----------
+    dcm : pydicom object
+
+    Returns
+    --------
+    A nibabel nifti file
+    """
 
     current_directory = os.getcwd()
 
@@ -148,7 +168,7 @@ def dicom_to_nifti_afni(dcm):
     out_path = get_temporary_path(directory='', extension='.nii')
 
     try:
-        dicom.write_file(in_path+'_001.dcm', dcm)
+        pydicom.write_file(in_path + '_001.dcm', dcm)
 
         cmd = ['to3d', '-prefix', out_path, in_path + '*']
 

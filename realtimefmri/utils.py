@@ -80,7 +80,7 @@ def confirm(prompt, choices=('y', 'n')):
     '''
     choice = None
     while choice not in choices:
-        choice = input(prompt+'> ')
+        choice = input(prompt + '> ')
     return choice
 
 
