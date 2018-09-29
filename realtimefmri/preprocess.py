@@ -1,36 +1,34 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import six
 import os
 import os.path as op
 import struct
+
+import time
+import json
+from uuid import uuid4
+import argparse
+
+import yaml
+import numpy as np
+import zmq
+
+import nibabel as nib
+
+import cortex
+
+from realtimefmri.image_utils import register
+from realtimefmri.utils import get_logger
+from realtimefmri.config import (get_subject_directory,
+                                 RECORDING_DIR, PIPELINE_DIR,
+                                 VOLUME_PORT, PREPROC_PORT)
+
 if six.PY2:
     import cPickle as pickle
     from itertools import izip as zip
     range = xrange
 elif six.PY3:
     import pickle
-
-import time
-import json
-from uuid import uuid4
-import argparse
-from io import BytesIO
-
-import yaml
-import numpy as np
-import zmq
-
-import pydicom
-import nibabel as nib
-
-import cortex
-
-from realtimefmri.image_utils import (register, mosaic_to_volume,
-                                      dicom_to_nifti_afni)
-from realtimefmri.utils import get_logger
-from realtimefmri.config import (get_subject_directory,
-                                 RECORDING_DIR, PIPELINE_DIR,
-                                 VOLUME_PORT, PREPROC_PORT)
 
 
 class Preprocessor(object):
@@ -116,19 +114,19 @@ class Preprocessor(object):
     def receive_image(self):
         (_,
          image_id,
-         raw_image_binary) = self.input_socket.recv_multipart()
-        return image_id, raw_image_binary
+         raw_image_nii) = self.input_socket.recv_multipart()
+        return image_id, raw_image_nii
 
     def run(self):
         self.active = True
         self.logger.info('running')
         while self.active:
             self.logger.debug('waiting for image')
-            image_id, raw_image_binary = self.receive_image()
+            image_id, raw_image_nii = self.receive_image()
             image_id = struct.unpack('i', image_id)[0]
             self.logger.info('received image %d', image_id)
             data_dict = {'image_id': image_id,
-                         'raw_image_binary': raw_image_binary}
+                         'raw_image_nii': pickle.loads(raw_image_nii)}
             _ = self.pipeline.process(data_dict)
 
     def stop(self):
@@ -198,7 +196,7 @@ class Pipeline(object):
             kwargs = init.get('kwargs', {})
             self.log.debug('initializing %s' % init['name'])
             for k, v in self.global_defaults.items():
-                params.setdefault(k, v)
+                kwargs.setdefault(k, v)
             init['instance'].__init__(*args, **kwargs)
 
         for step in self.steps:
@@ -211,7 +209,7 @@ class Pipeline(object):
 
     def _from_path(self, preproc_config):
         # load the pipeline from pipelines.conf
-        with open(op.join(PIPELINE_DIR, preproc_config+'.yaml'), 'rb') as f:
+        with open(op.join(PIPELINE_DIR, preproc_config + '.yaml'), 'rb') as f:
             self._from_file(f)
 
     def _from_file(self, f):
@@ -261,7 +259,7 @@ class PreprocessingStep(object):
 def load_mask(subject, xfm_name, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
                             subject, 'transforms', xfm_name,
-                            'mask_'+mask_type+'.nii.gz')
+                            'mask_' + mask_type + '.nii.gz')
         return nib.load(mask_path)
 
 
@@ -270,70 +268,6 @@ def load_reference(subject, xfm_name):
                            subject, 'transforms', xfm_name,
                            'reference.nii.gz')
         return nib.load(ref_path)
-
-
-class DicomToNifti(PreprocessingStep):
-    """Loads a Dicom image and outputs a nifti image
-
-    Methods
-    -------
-    run(inp)
-        Returns a nifti image
-    """
-    def __init__(self, orientation=None, *args, **kwargs):
-        if orientation is None:
-            orientation = 'L', 'P', 'S'
-
-        self.orientation = orientation
-
-    def run(self, inp):
-        dcm = pydicom.read_file(BytesIO(inp))
-        return dicom_to_nifti_afni(dcm)
-
-
-class RawToNifti(PreprocessingStep):
-    """Converts a mosaic image to a nifti image.
-
-    Takes a 600 x 600 mosaic image of ``uint16`` and turns it into a volume.
-    Applies the affine provided from the given transform name.
-
-    Parameters
-    ----------
-    subject : str
-        Subject identifier
-    xfm_name : str
-        Pycortex transform name
-
-    Attributes
-    ----------
-    affine : numpy.ndarray
-        Affine transform
-
-    Methods
-    -------
-    run(inp)
-        Returns a nifti image of the raw data using the provided affine
-        transform
-
-    """
-    def __init__(self, subject, xfm_name, volume_shape, **kwargs):
-        self.affine = load_reference(subject, xfm_name).affine
-        self.volume_shape = volume_shape
-
-    def run(self, inp):
-        """Takes a binary string loaded directly from the .PixelData file saved
-        on the scanner console and returns a Nifti image of the same data in xyz
-        """
-
-        # siements mosaic format is strange
-        mosaic = np.fromstring(inp, dtype='uint16')
-        mosaic = mosaic.reshape(600, 600, order='C')
-        # axes 0 and 1 must be swapped because mosaic is PLS and we need LPS
-        # voxel data (affine values are -/-/+ for dimensions 1-3, yielding RAS)
-        # we want the voxel data orientation to match that of the functional
-        # reference, gm, and wm masks
-        volume = mosaic_to_volume(mosaic).swapaxes(0, 1)[..., :30]
-        return nib.Nifti1Image(volume, self.affine)
 
 
 class SaveNifti(PreprocessingStep):
@@ -546,7 +480,7 @@ class ActivityRatio(PreprocessingStep):
         if isinstance(x2, np.ndarray):
             x2 = np.nanmean(x2)
 
-        return x1/(x1+x2)
+        return x1 / (x1 + x2)
 
 
 class RoiActivity(PreprocessingStep):

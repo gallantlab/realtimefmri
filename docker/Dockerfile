@@ -22,5 +22,26 @@ RUN apt-get install -y gnome-terminal nautilus          \
 RUN ln -s /usr/lib/x86_64-linux-gnu/libgsl.so.23 /usr/lib/x86_64-linux-gnu/libgsl.so.19
 
 RUN mkdir /data
-COPY linux_ubuntu_16_64.tgz /data
-# RUN tcsh @update.afni.binaries -local_package linux_ubuntu_16_64.tgz -do_extras
+WORKDIR /data
+RUN curl -O https://afni.nimh.nih.gov/pub/dist/bin/linux_ubuntu_16_64/@update.afni.binaries
+RUN tcsh @update.afni.binaries -package linux_ubuntu_16_64  -do_extras
+
+# pycortex
+RUN pip3 install pycortex
+RUN python3 -c "import cortex"
+COPY pycortex-options.cfg /root/.config/pycortex/options.cfg
+RUN mkdir -p /data/pycortex_store/RGfs
+WORKDIR /data/pycortex_store/
+COPY pycortex_store .
+
+RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git -U
+RUN apt-get install -y tmux
+
+RUN python3 -c "import realtimefmri"
+COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
+
+# device
+RUN mkdir /dev/input
+
+
+WORKDIR ~

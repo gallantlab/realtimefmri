@@ -1,7 +1,4 @@
 import six
-if six.PY2:
-    range = xrange
-
 import os
 import os.path as op
 from shutil import rmtree
@@ -10,11 +7,12 @@ import shlex
 from uuid import uuid4
 from tempfile import mkdtemp
 import numpy as np
-
 import pydicom
 import nibabel as nib
-
 from realtimefmri.utils import get_temporary_path
+
+if six.PY2:
+    range = xrange
 
 
 def register(inp, base, output_transform=False, twopass=False):
@@ -88,101 +86,3 @@ def plot_volume(volume):
 
 def load_afni_xfm(path):
     return np.r_[np.loadtxt(path).reshape(3, 4), np.array([[0, 0, 0, 1]])]
-
-
-def get_orientation_labels(target_codes):
-    """Convert orientation in list-style to label-style
-
-    Arguments:
-    ----------
-    target_codes : str
-        String with three characters indicating the positive direction for each
-        dimension, e.g., 'LPS'
-
-    Returns:
-    --------
-    The orientation as a list of tuples, e.g. (('L', 'R'), ('P', 'A'), ('S', 'I'))
-    """
-    codes = (('L', 'R'), ('P', 'A'), ('S', 'I'))
-    orientation_labels = []
-    for code in codes:
-        for co in target_codes:
-            if co in code:
-                if co == code[0]:
-                    orientation_labels.append(code[::-1])
-                else:
-                    orientation_labels.append(code)
-    return orientation_labels
-
-
-def dicom_to_nifti_freesurfer(dcm):
-    """Convert dicom to nifti using freesurfer's `mri_convert`
-
-    Parameters
-    ----------
-    dcm : pydicom object
-
-    Returns
-    --------
-    A nibabel nifti file
-    """
-    temp_directory = mkdtemp()
-
-    try:
-        in_path = get_temporary_path(directory=temp_directory, extension='.dcm')
-        out_path = get_temporary_path(directory=temp_directory, extension='.nii')
-
-        pydicom.write_file(in_path, dcm)
-
-        _ = check_output(['mri_convert', '-ot', 'nii',
-                          '-i', in_path, '-o', out_path])
-        nii = nib.load(out_path)
-
-    except Exception as e:
-        raise e
-
-    finally:
-        rmtree(temp_directory)
-
-    return nii
-
-
-def dicom_to_nifti_afni(dcm):
-    """Convert dicom to nifti using AFNI's to3d
-
-    Parameters
-    ----------
-    dcm : pydicom object
-
-    Returns
-    --------
-    A nibabel nifti file
-    """
-
-    current_directory = os.getcwd()
-
-    temp_directory = mkdtemp()
-    os.chdir(temp_directory)
-
-    in_path = get_temporary_path(directory='')
-    out_path = get_temporary_path(directory='', extension='.nii')
-
-    try:
-        pydicom.write_file(in_path + '_001.dcm', dcm)
-
-        cmd = ['to3d', '-prefix', out_path, in_path + '*']
-
-        with open(os.devnull, 'w') as null:
-            _ = check_call(cmd, stdout=null, stderr=null)
-
-        nii = nib.load(out_path)
-        _ = nii.get_data()
-
-    except Exception as e:
-        raise e
-
-    finally:
-        os.chdir(current_directory)
-        rmtree(temp_directory)
-
-    return nii

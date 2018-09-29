@@ -1,11 +1,9 @@
+#!/usr/bin/env python3
 '''
 Utility functions and configuration
 '''
 from __future__ import print_function
 import six
-if six.PY2:
-    input = raw_input
-
 import os.path as op
 from glob import glob
 import subprocess
@@ -18,8 +16,10 @@ import tempfile
 
 import numpy as np
 from nibabel import Nifti1Image, load as nibload
-
 from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
+
+if six.PY2:
+    input = raw_input
 
 
 def shell(cmd, verbose=True, check_output=True):

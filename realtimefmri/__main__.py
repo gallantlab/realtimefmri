@@ -1,4 +1,6 @@
-from os import makedirs
+#!/usr/bin/env python3
+import sys
+import os
 import os.path as op
 from glob import glob
 from subprocess import Popen
@@ -9,7 +11,7 @@ import asyncio
 import zmq
 import zmq.asyncio
 
-from realtimefmri.synchronize import Synchronizer
+from realtimefmri import synchronize
 from realtimefmri.collect import Collector
 from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
@@ -76,7 +78,7 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
 
     log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
     if not op.exists(op.dirname(log_path)):
-        makedirs(op.dirname(log_path))
+        os.makedirs(op.dirname(log_path))
         print('making recording directory {}'.format(op.dirname(log_path)))
     print('saving log file to {}'.format(log_path))
 
@@ -86,8 +88,8 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
 
     tasks = []
 
-    logger.info('starting synchronizer')
-    sync = Synchronizer(verbose=True, loop=loop)
+    logger.info('starting synchronize.Synchronizer')
+    sync = synchronize.Synchronizer(verbose=True, loop=loop)
     tasks.append(sync.run())
 
     logger.info('starting scanner')
@@ -119,7 +121,7 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
     opts = [preproc_config, recording_id]
     if verbose:
         opts.append('-v')
-    proc = Popen(['python', op.join(MODULE_DIR, 'preprocess.py')] +
+    proc = Popen(['python3', op.join(MODULE_DIR, 'preprocess.py')] +
                  opts)
     processes.append(proc)
 
@@ -127,7 +129,7 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
     opts = [stim_config, recording_id]
     if verbose:
         opts.append('-v')
-    proc = Popen(['python', op.join(MODULE_DIR, 'stimulate.py')] +
+    proc = Popen(['python3', op.join(MODULE_DIR, 'stimulate.py')] +
                  opts)
     processes.append(proc)
 
@@ -144,8 +146,8 @@ def simulate(simulate_dataset):
     ex_directory = get_example_data_directory(simulate_dataset)
     paths = glob(op.join(ex_directory, '*.dcm'))
 
-    dest_directory = op.join('/tmp/rtfmri', str(uuid4()))
-    makedirs(dest_directory)
+    dest_directory = op.join(SCANNER_DIR, str(uuid4()))
+    os.makedirs(dest_directory)
     print('Simulated {} volumes appearing in {}'.format(len(paths),
                                                         dest_directory))
 
@@ -163,12 +165,14 @@ def simulate(simulate_dataset):
 def main():
     args = parse_arguments()
     if args.subcommand == 'collect':
+        print(args)
         collect(args.recording_id, directory=args.directory,
                 parent_directory=args.parent_directory, simulate=args.simulate,
                 verbose=args.verbose)
     elif args.subcommand == 'preprocess':
         preprocess(args.recording_id, preproc_config=args.preproc_config,
                    stim_config=args.stim_config, verbose=args.verbose)
+        print(sys.path)
     elif args.subcommand == 'simulate':
         simulate(args.simulate_dataset)
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os.path as op
 import logging
 from configparser import ConfigParser

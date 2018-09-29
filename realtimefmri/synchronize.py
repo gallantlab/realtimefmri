@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Collect files and align them to sync pulses from scanner
 
 or coroutine waits for pulses adds them to queue

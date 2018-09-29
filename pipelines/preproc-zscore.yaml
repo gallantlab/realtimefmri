@@ -1,17 +1,12 @@
 global_defaults:
-  subject: &SUBJECT TZfs
-  xfm_name: &XFMNAME driving_20170704TZ
+  subject: &SUBJECT RGfs
+  xfm_name: &XFMNAME 20170705RG_movies
   nskip: 0
 
 pipeline:
-  - name: dicom_to_nifti
-    instance: !!python/object:realtimefmri.preprocess.DicomToNifti {}
-    input: [ raw_image_binary ]
-    output: [ image_nifti ]
-
   - name: motion_correct
     instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
-    input: [ image_nifti ]
+    input: [ raw_image_nii ]
     output: [ image_nifti_mc ]
 
   - name: save_nifti

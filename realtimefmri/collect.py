@@ -1,12 +1,15 @@
+#!/usr/bin/env python3
 '''Data collection code
 '''
 import os
 import os.path as op
 import struct
+import pickle
 import asyncio
 import zmq
 import zmq.asyncio
-
+import pydicom
+from dicom2nifti import convert_siemens
 from realtimefmri.utils import get_logger
 from realtimefmri.config import VOLUME_PORT
 
@@ -67,17 +70,16 @@ class Collector(object):
         socket.bind('tcp://127.0.0.1:%d' % self.port)
 
         while True:
-            image_fpath = yield from self.volume_queue.get()
+            image_path = yield from self.volume_queue.get()
             yield from asyncio.sleep(0.25)  # give time for file to close
-            with open(image_fpath, 'rb') as f:
-                raw_image_binary = f.read()
+            dcm = [pydicom.read_file(image_path)]
+            nii = convert_siemens.dicom_to_nifti(dcm, None)['NII']
 
-            self.logger.debug('%s %u', op.basename(image_fpath),
-                              len(raw_image_binary))
+            self.logger.debug('%s %s', op.basename(image_path), str(nii.shape))
 
             image_number = struct.pack('i', self.image_number)
             yield from socket.send_multipart([b'image', image_number,
-                                              raw_image_binary])
+                                              pickle.dumps(nii)])
             self.image_number += 1
 
     @asyncio.coroutine
