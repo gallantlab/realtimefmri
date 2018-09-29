@@ -18,7 +18,7 @@ pipeline:
   - name: extract_gm_mask
     instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
     kwargs: { mask_type: thick }
-    input: [ image_nifti ]
+    input: [ image_nifti_mc ]
     output: [ gm_activity ]
 
   - name: running_mean_std
