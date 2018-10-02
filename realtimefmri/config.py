@@ -18,7 +18,7 @@ def initialize():
     if not op.exists(PIPELINE_DIR):
         os.makedirs(PIPELINE_DIR)
 
-        for path in glob(op.join(PIPELINE_DIR, '*.yaml')):
+        for path in glob(op.join(CONFIG_DIR, 'pipelines', '*.yaml')):
             shutil.copy(path, PIPELINE_DIR)
 
     if not op.exists(SCANNER_DIR):
