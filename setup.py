@@ -12,6 +12,7 @@ def main():
           author_email='robertg@berkeley.edu',
           packages=['realtimefmri'],
           install_requires=["numpy",
+                            "requests",
                             "matplotlib",
                             "pydicom",
                             "nibabel",
