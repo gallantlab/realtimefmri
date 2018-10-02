@@ -39,7 +39,7 @@ def initialize():
 
 def get_example_data_directory(dataset):
     """Return the directory of sample data"""
-    return op.join(DATASET_DIR, 'dataset')
+    return op.join(DATASET_DIR, dataset)
 
 
 def get_subject_directory(subject):
@@ -60,7 +60,6 @@ DATABASE_DIR = op.expanduser(config.get('directories', 'database'))
 RECORDING_DIR = op.expanduser(config.get('directories', 'recordings'))
 DATASET_DIR = op.expanduser(config.get('directories', 'datasets'))
 initialize()
-
 
 # PORTS
 SYNC_PORT = int(config.get('ports', 'sync'))

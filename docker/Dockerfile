@@ -1,39 +1,28 @@
-FROM ubuntu:18.04
-RUN apt-get update \
-    && apt-get install -y python3-pip git tmux
-    # && rm -rf /var/lib/apt/lists/*
+FROM bids/base_validator
 
-# AFNI
-RUN apt-get install -y tcsh xfonts-base python-qt4 \
-                       gsl-bin netpbm gnome-tweak-tool \
-                       libjpeg62 xvfb xterm vim curl \
-                       gedit evince \
-                       libglu1-mesa-dev libglw1-mesa \
-                       libxm4 build-essential \
-                       libcurl4-openssl-dev libxml2-dev \
-                       libssl-dev libgfortran3 \
-                       gnome-terminal nautilus \
-                       gnome-icon-theme-symbolic
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -sSL http://neuro.debian.net/lists/trusty.us-ca.full >> /etc/apt/sources.list.d/neurodebian.sources.list && \
+    apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9 && \
+    apt-get update && \
+    apt-get install -y afni && \
+    apt-get install -y python3.6 python3.6-dev python3-pip && \
+    apt-get install -y cython3 python3-numpy python3-scipy python3-numexpr \
+                       python3-matplotlib python3-shapely libxml2 git tmux && \
+    apt-get remove -y curl && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN ln -s /usr/lib/x86_64-linux-gnu/libgsl.so.23 /usr/lib/x86_64-linux-gnu/libgsl.so.19
-
-RUN mkdir /data
-WORKDIR /data
-RUN curl -O https://afni.nimh.nih.gov/pub/dist/bin/linux_ubuntu_16_64/@update.afni.binaries
-RUN tcsh @update.afni.binaries -package linux_ubuntu_16_64  -do_extras
+RUN python3.6 -m pip install --upgrade pip
 
 # pycortex
-RUN pip3 install numpy scipy Cython
 RUN pip3 install pycortex
-RUN python3 -c "import cortex"
+RUN python3.6 -c "import cortex"
 COPY pycortex-options.cfg /root/.config/pycortex/options.cfg
 COPY pycortex_store /data/pycortex_store
 
 # realtimefmri
 RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
-RUN python3 -c "import realtimefmri"
+RUN python3.6 -c "import realtimefmri"
 COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
 
-ENV PATH="/root/abin:${PATH}"
-
-WORKDIR /root
+ENV PATH="$HOME/abin:$PATH"
