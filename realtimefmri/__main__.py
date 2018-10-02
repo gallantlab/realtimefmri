@@ -15,7 +15,7 @@ from realtimefmri import synchronize
 from realtimefmri.collect import Collector
 from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
-from realtimefmri.config import (SCANNER_DIR, RECORDING_DIR, MODULE_DIR,
+from realtimefmri.config import (SCANNER_DIR, RECORDING_DIR, PACKAGE_DIR,
                                  get_example_data_directory)
 
 
@@ -121,7 +121,7 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
     opts = [preproc_config, recording_id]
     if verbose:
         opts.append('-v')
-    proc = Popen(['python3', op.join(MODULE_DIR, 'preprocess.py')] +
+    proc = Popen(['python3', op.join(PACKAGE_DIR, 'preprocess.py')] +
                  opts)
     processes.append(proc)
 
@@ -129,7 +129,7 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
     opts = [stim_config, recording_id]
     if verbose:
         opts.append('-v')
-    proc = Popen(['python3', op.join(MODULE_DIR, 'stimulate.py')] +
+    proc = Popen(['python3', op.join(PACKAGE_DIR, 'stimulate.py')] +
                  opts)
     processes.append(proc)
 
