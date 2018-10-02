@@ -8,6 +8,7 @@ import argparse
 import yaml
 import numpy as np
 import zmq
+import requests
 import cortex
 
 from realtimefmri.utils import get_logger, parse_message
@@ -216,6 +217,20 @@ class RoiBars(Stimulus):
     def __init__(self, **kwargs):
         super(RoiBars, self).__init__()
         raise NotImplementedError
+
+
+class SendToDashboard(Stimulus):
+    def __init__(self, host, port, **kwargs):
+        super(SendToDashboard, self).__init__()
+        self.host = host
+        self.port = port
+        self.i = 0
+
+    def run(self, inp):
+        requests.post(self.host, data={'language': 'fart{}'.format(self.i)})
+        self.i += 1
+        # data = np.fromstring(inp['data'], dtype='float32')
+        # return '{}'.format(len(data))
 
 
 class Debug(Stimulus):

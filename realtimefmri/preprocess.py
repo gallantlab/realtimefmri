@@ -270,6 +270,14 @@ def load_reference(subject, xfm_name):
         return nib.load(ref_path)
 
 
+class Debug(object):
+    def __init__(self, **kwargs):
+        pass
+
+    def run(self, inp):
+        return inp
+
+
 class SaveNifti(PreprocessingStep):
     """Saves nifti images to files
 
