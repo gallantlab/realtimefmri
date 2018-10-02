@@ -1,3 +1,5 @@
 include README.md
 include docs/source/*.rst
 include docs/Makefile
+include realtimefmri/config.cfg
+include realtimefmri/pipelines/*-debug.yaml

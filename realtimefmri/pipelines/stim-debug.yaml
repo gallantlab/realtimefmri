@@ -1,0 +1,11 @@
+global_defaults:
+  recording_id: &RECORDING_ID example
+
+pipeline:
+  - name: debug
+    instance: !!python/object:realtimefmri.stimulate.Debug {}
+    topic: { raw_image_nii: data }
+  - name: post_to_dashboardcd 
+    instance: !!python/object:realtimefmri.stimulate.PostToDashboard {}
+    topic: {raw_image_nii: data}
+    kwargs: {host: localhost, port: 5000}
