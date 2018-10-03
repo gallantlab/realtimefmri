@@ -3,7 +3,7 @@ import six
 import os
 import os.path as op
 import struct
-
+import warnings
 import time
 import json
 from uuid import uuid4
@@ -219,6 +219,22 @@ class Pipeline(object):
         self.global_defaults = config.get('global_defaults', dict())
 
     def process(self, data_dict):
+        """Run through the preprocessing steps
+
+        Iterate through all the preprocessing steps. For each step, extract the `input` keys from 
+        the `data_dict` ans pass them as ordered unnamed arguments to that step. The return value 
+        is saved to the `data_dict` using the  `output` key.
+
+        Parameters
+        ----------
+        data_dict : dict
+            A dictionary containing all the processing results
+
+
+        Returns
+        -------
+        A dictionary of all processing results
+        """
         image_id = struct.pack('i', data_dict['image_id'])
         for step in self.steps:
             args = [data_dict[i] for i in step['input']]
@@ -235,15 +251,20 @@ class Pipeline(object):
             data_dict.update(d)
 
             for topic in step.get('send', []):
+                message = d[topic]
                 self.log.debug('sending %s' % topic)
-                if isinstance(d[topic], dict):
-                    msg = json.dumps(d[topic])
-                elif isinstance(d[topic], (np.ndarray)):
-                    msg = d[topic].astype(np.float32).tostring()
-
+                if isinstance(message, dict):
+                    message = json.dumps(message)
+                elif isinstance(message, (np.ndarray)):
+                    message = message.astype(np.float32).tostring()
+                elif isinstance(message, str):
+                    message = message.encode()
+                else:
+                    print("Type {} not implemented (topic={})."
+                          .format(type(message), topic))
                 self.output_socket.send_multipart([topic.encode(),
                                                    image_id,
-                                                   msg])
+                                                   message])
 
         return data_dict
 
@@ -274,8 +295,9 @@ class Debug(object):
     def __init__(self, **kwargs):
         pass
 
-    def run(self, inp):
-        return inp
+    def run(self, volume):
+        print(volume.shape, 'a volume!')
+        return volume.get_data(), volume.shape, 'a volume!'
 
 
 class SaveNifti(PreprocessingStep):

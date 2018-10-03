@@ -123,7 +123,6 @@ class Stimulator(object):
             self.logger.debug('received message')
             for stim in self.pipeline:
                 if topic in stim['topic'].keys():
-                    print(topic)
                     self.logger.info('running %s at %s (acq at %s)',
                                      stim['name'], time.time(), sync_time)
                     # call run function with kwargs
@@ -227,7 +226,8 @@ class SendToDashboard(Stimulus):
         self.i = 0
 
     def run(self, inp):
-        requests.post(self.host, data={'language': 'fart{}'.format(self.i)})
+        requests.post('http://' + self.host,
+                      data={'language': '{}{}'.format(inp['name'], self.i)})
         self.i += 1
         # data = np.fromstring(inp['data'], dtype='float32')
         # return '{}'.format(len(data))

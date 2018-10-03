@@ -5,7 +5,7 @@ pipeline:
   - name: debug
     instance: !!python/object:realtimefmri.stimulate.Debug {}
     topic: { raw_image_nii: data }
-  - name: post_to_dashboardcd 
-    instance: !!python/object:realtimefmri.stimulate.PostToDashboard {}
-    topic: {raw_image_nii: data}
+  - name: send_to_dashboard 
+    instance: !!python/object:realtimefmri.stimulate.SendToDashboard {}
+    topic: {volume_name: name}
     kwargs: {host: localhost, port: 5000}

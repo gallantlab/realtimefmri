@@ -5,4 +5,5 @@ pipeline:
   - name: debug
     instance: !!python/object:realtimefmri.preprocess.Debug {}
     input: [ raw_image_nii ]
-    output: [ raw_image_nii ]
+    output: [ volume_data, volume_shape, volume_name ]
+    send: [ volume_name ]

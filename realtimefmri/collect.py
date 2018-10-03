@@ -76,7 +76,6 @@ class Collector(object):
             nii = convert_siemens.dicom_to_nifti(dcm, None)['NII']
 
             self.logger.debug('%s %s', op.basename(image_path), str(nii.shape))
-
             image_number = struct.pack('i', self.image_number)
             yield from socket.send_multipart([b'image', image_number,
                                               pickle.dumps(nii)])

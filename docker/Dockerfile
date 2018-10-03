@@ -8,8 +8,8 @@ RUN apt-get update && \
     apt-get install -y afni && \
     apt-get install -y python3-dev python3-pip && \
     apt-get install -y cython3 python3-numpy python3-scipy python3-numexpr \
-                       python3-matplotlib python3-shapely libxml2 git tmux && \
-    apt-get remove -y curl && \
+                       python3-matplotlib python3-shapely libxml2 git tmux nano && \
+    apt-get remove -y wget && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN python3 -m pip install --upgrade pip

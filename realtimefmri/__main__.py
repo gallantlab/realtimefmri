@@ -3,6 +3,7 @@ import sys
 import os
 import os.path as op
 from glob import glob
+import itertools
 from subprocess import Popen
 import shutil
 import argparse
@@ -152,7 +153,7 @@ def simulate(simulate_dataset):
                                                         dest_directory))
 
     try:
-        for path in paths:
+        for path in itertools.cycle(paths):
             input('>>> press 5 for TTL, then enter for new image')
             new_path = op.join(dest_directory, str(uuid4()) + '.dcm')
             shutil.copy(path, new_path)
