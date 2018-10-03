@@ -85,7 +85,7 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
 
     logger = get_logger('root', to_file=log_path, to_console=verbose)
 
-    loop = zmq.asyncio.ZMQEventLoop()
+    loop = asyncio.get_event_loop()
 
     tasks = []
 

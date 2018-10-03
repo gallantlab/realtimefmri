@@ -25,8 +25,7 @@ class Synchronizer(object):
 
         context = zmq.asyncio.Context()
         if loop is None:
-            loop = zmq.asyncio.ZMQEventLoop()
-        asyncio.set_event_loop(loop)
+            loop = asyncio.get_event_loop()
 
         sync_queue = asyncio.Queue(loop=loop)
         volume_queue = asyncio.Queue(loop=loop)
