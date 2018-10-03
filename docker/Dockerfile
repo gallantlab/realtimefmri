@@ -3,7 +3,7 @@ FROM ubuntu:18.04
 RUN apt-get update && \
     apt-get install -y wget gnupg && \
     wget -O- http://neuro.debian.net/lists/bionic.us-ca.full | tee /etc/apt/sources.list.d/neurodebian.sources.list && \
-    apt-key adv --recv-keys --keyserver hkp://pool.sks-keyservers.net:80 0xA5D32F012649A5A9 && \
+    apt-key adv --recv-keys --keyserver pool.sks-keyservers.net 0xA5D32F012649A5A9 && \
     apt-get update && \
     apt-get install -y afni && \
     apt-get install -y python3-dev python3-pip && \
