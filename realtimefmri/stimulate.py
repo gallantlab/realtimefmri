@@ -3,6 +3,7 @@ import os
 import os.path as op
 import importlib
 import time
+import pickle
 import shlex
 import subprocess
 import argparse
@@ -204,19 +205,33 @@ class Debug(Stimulus):
 
 
 class SendToDashboard(Stimulus):
-    def __init__(self, **kwargs):
+    """Send data to the dashboard
+
+    Parameters
+    ----------
+    name : str
+    plot_type : str
+        Type of plot
+
+    Attributes
+    ----------
+    redis : redis connection
+    key_name : str
+        Name of the key in the redis database
+    """
+    def __init__(self, name, plot_type='marker', **kwargs):
         super(SendToDashboard, self).__init__()
-        self.redis = redis.Redis()
+        print(name, plot_type)
+        r = redis.Redis()
+        key_name = 'rt_' + name
+        r.set(key_name + '_type', plot_type)
+
+        self.redis = r
+        self.key_name = key_name
 
     def run(self, inp):
-        print('send to dashboard')
-        inp['name'] = 'volume'
         data = inp['data']
-        # if isinstance(data, np.ndarray):
-        dtype = 'ndarray'
-
-        self.redis.set('rt_' + inp['name'] + '_data', data)
-        self.redis.set('rt_' + inp['name'] + '_dtype', dtype)
+        self.redis.set(self.key_name, pickle.dumps(data))
 
 
 class PyCortexViewer(Stimulus):

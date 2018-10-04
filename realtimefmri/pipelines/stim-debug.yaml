@@ -7,4 +7,5 @@ pipeline:
     topic: { raw_image_nii: data }
   - name: send_to_dashboard 
     step: realtimefmri.stimulate.SendToDashboard
+    kwargs: {name: volume, plot_type: mosaic}
     topic: {volume: data}

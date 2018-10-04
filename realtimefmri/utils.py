@@ -3,10 +3,10 @@
 Utility functions and configuration
 '''
 from __future__ import print_function
-import six
 import os.path as op
-import importlib
 from glob import glob
+import importlib
+import pickle
 import subprocess
 import shlex
 import struct
@@ -18,9 +18,6 @@ import tempfile
 import numpy as np
 from nibabel import Nifti1Image, load as nibload
 from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
-
-if six.PY2:
-    input = raw_input
 
 
 def shell(cmd, verbose=True, check_output=True):
@@ -54,6 +51,7 @@ def parse_message(message):
     topic, sync_time, data = message
     topic = topic.decode('utf8')
     sync_time = struct.unpack('d', sync_time)[0]
+    data = pickle.loads(data)
     return topic, sync_time, data
 
 

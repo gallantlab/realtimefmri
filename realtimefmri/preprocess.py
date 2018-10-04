@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-import six
 import os
 import os.path as op
 import struct
-import warnings
+import pickle
 import time
-import json
 from uuid import uuid4
 import argparse
 
@@ -22,13 +20,6 @@ from realtimefmri.utils import get_logger, load_class
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
                                  VOLUME_PORT, PREPROC_PORT)
-
-if six.PY2:
-    import cPickle as pickle
-    from itertools import izip as zip
-    range = xrange
-elif six.PY3:
-    import pickle
 
 
 class Preprocessor(object):
@@ -288,16 +279,7 @@ class Pipeline(object):
             for topic in step.get('send', []):
                 message = d[topic]
                 self.log.debug('sending %s' % topic)
-                if isinstance(message, dict):
-                    message = json.dumps(message)
-                elif isinstance(message, (np.ndarray)):
-                    message = message.astype(np.float32).tostring()
-                elif isinstance(message, str):
-                    message = message.encode()
-                else:
-                    print("Type {} not implemented (topic={})."
-                          .format(type(message), topic))
-                self.output_socket.send_multipart([topic.encode(), image_id, message])
+                self.output_socket.send_multipart([topic.encode(), image_id, pickle.dumps(message)])
 
         return data_dict
 
@@ -330,7 +312,7 @@ class Debug(object):
 
     def run(self, volume):
         print(volume.shape, 'a volume!')
-        return volume.get_data(), volume.shape, 'a volume!'
+        return volume.get_data()[..., 0], volume.shape, 'a volume!'
 
 
 class SaveNifti(PreprocessingStep):
