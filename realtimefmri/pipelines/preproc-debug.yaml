@@ -5,5 +5,5 @@ pipeline:
   - name: debug
     step: realtimefmri.preprocess.Debug
     input: [ raw_image_nii ]
-    output: [ volume_data, volume_shape, volume_name ]
-    send: [ volume_name ]
+    output: [ volume, volume_shape, volume_name ]
+    send: [ volume_name, volume ]

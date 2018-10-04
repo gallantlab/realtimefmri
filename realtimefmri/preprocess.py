@@ -297,9 +297,7 @@ class Pipeline(object):
                 else:
                     print("Type {} not implemented (topic={})."
                           .format(type(message), topic))
-                self.output_socket.send_multipart([topic.encode(),
-                                                   image_id,
-                                                   message])
+                self.output_socket.send_multipart([topic.encode(), image_id, message])
 
         return data_dict
 

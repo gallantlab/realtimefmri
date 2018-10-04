@@ -194,6 +194,31 @@ class Stimulus(object):
         raise NotImplementedError
 
 
+class Debug(Stimulus):
+    def __init__(self, **kwargs):
+        super(Debug, self).__init__()
+
+    def run(self, inp):
+        data = np.fromstring(inp['data'], dtype='float32')
+        return '{}'.format(len(data))
+
+
+class SendToDashboard(Stimulus):
+    def __init__(self, **kwargs):
+        super(SendToDashboard, self).__init__()
+        self.redis = redis.Redis()
+
+    def run(self, inp):
+        print('send to dashboard')
+        inp['name'] = 'volume'
+        data = inp['data']
+        # if isinstance(data, np.ndarray):
+        dtype = 'ndarray'
+
+        self.redis.set('rt_' + inp['name'] + '_data', data)
+        self.redis.set('rt_' + inp['name'] + '_dtype', dtype)
+
+
 class PyCortexViewer(Stimulus):
     bufferlen = 50
 
@@ -255,24 +280,6 @@ class RoiBars(Stimulus):
     def __init__(self, **kwargs):
         super(RoiBars, self).__init__()
         raise NotImplementedError
-
-
-class SendToDashboard(Stimulus):
-    def __init__(self, **kwargs):
-        super(SendToDashboard, self).__init__()
-        self.redis = redis.Redis()
-
-    def run(self, inp):
-        pass
-
-
-class Debug(Stimulus):
-    def __init__(self, **kwargs):
-        super(Debug, self).__init__()
-
-    def run(self, inp):
-        data = np.fromstring(inp['data'], dtype='float32')
-        return '{}'.format(len(data))
 
 
 class AudioRecorder(object):

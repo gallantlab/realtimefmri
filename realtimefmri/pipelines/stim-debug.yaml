@@ -7,4 +7,4 @@ pipeline:
     topic: { raw_image_nii: data }
   - name: send_to_dashboard 
     step: realtimefmri.stimulate.SendToDashboard
-    topic: {volume_name: name, volume_data: data}
+    topic: {volume: data}
