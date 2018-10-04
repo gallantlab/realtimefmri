@@ -1,11 +1,10 @@
-global_defaults:
+global_parameters:
   recording_id: &RECORDING_ID example
 
 pipeline:
   - name: debug
-    instance: !!python/object:realtimefmri.stimulate.Debug {}
+    step: realtimefmri.stimulate.Debug
     topic: { raw_image_nii: data }
   - name: send_to_dashboard 
-    instance: !!python/object:realtimefmri.stimulate.SendToDashboard {}
-    topic: {volume_name: name}
-    kwargs: {host: localhost, port: 5000}
+    step: realtimefmri.stimulate.SendToDashboard
+    topic: {volume_name: name, volume_data: data}

@@ -1,16 +1,16 @@
-global_defaults:
+global_parameters:
   subject: &SUBJECT TZfs
 
-# initialization:
+# static_pipeline:
 #   - name: record_microphone_input 
-#     instance: !!python/object:realtimefmri.stimulate.AudioRecorder {}
+#     step: realtimefmri.stimulate.AudioRecorder
 #     kwargs:
 #       jack_port: "system:capture_1"
 #       file_name: microphone
 
 pipeline:
   - name: pycortex_viewer
-    instance: !!python/object:realtimefmri.stimulate.PyCortexViewer {}
+   step: realtimefmri.stimulate.PyCortexViewer
     topic: { gm_activity_zscore: data }
     kwargs:
       subject: *SUBJECT
@@ -19,5 +19,5 @@ pipeline:
       vmin: -6.
       vmax: 6.
   - name: debug
-    instance: !!python/object:realtimefmri.stimulate.Debug {}
+    step: realtimefmri.stimulate.Debug
     topic: { gm_activity_zscore: data }

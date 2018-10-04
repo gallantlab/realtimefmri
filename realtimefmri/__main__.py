@@ -173,7 +173,6 @@ def main():
     elif args.subcommand == 'preprocess':
         preprocess(args.recording_id, preproc_config=args.preproc_config,
                    stim_config=args.stim_config, verbose=args.verbose)
-        print(sys.path)
     elif args.subcommand == 'simulate':
         simulate(args.simulate_dataset)
 

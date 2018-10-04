@@ -19,7 +19,7 @@ The overall preprocessing pipeline is specified in a `YAML` configuration file s
 
 - *Required keys:*
   - `name` (string): a descriptive name for this step
-  - `instance` (python object): `YAML` tag specifying a python object (one that subclasses `PreprocessingStep`), which executes the step
+  - `step` (string): `YAML` tag specifying a python object (one that subclasses `PreprocessingStep`), which executes the step
   - `input` (list of strings): string keys to the `data_dict` specifying which of the entries should be passed as inputs to the `.run()` method for this step
 - *Optional keys:*
   - `kwargs` (dictionary): values provided upon initialization of the step
@@ -30,7 +30,7 @@ Here is an example of a simple preprocessing step, the first step in fact, which
 
 ```
 - name: dicom_to_nifti
-  instance: !!python/object:realtimefmri.core.preprocessing.DicomToNifti {}
+  step: realtimefmri.core.preprocessing.DicomToNifti
   input:
     - raw_image_binary
   output:

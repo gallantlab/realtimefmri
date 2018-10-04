@@ -5,6 +5,7 @@ Utility functions and configuration
 from __future__ import print_function
 import six
 import os.path as op
+import importlib
 from glob import glob
 import subprocess
 import shlex
@@ -29,6 +30,24 @@ def shell(cmd, verbose=True, check_output=True):
         return subprocess.check_output(shlex.split(cmd))
     else:
         return subprocess.call(shlex.split(cmd))
+
+
+def load_class(absolute_class_name):
+    """Import a class from a string
+
+    Parameters
+    ----------
+    absolute : str
+        Absolute import name, i.e. realtimefmri.preprocess.Debug
+
+    Returns
+    -------
+    A class
+    """
+    module_name, class_name = absolute_class_name.rsplit('.', 1)
+
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
 
 
 def parse_message(message):

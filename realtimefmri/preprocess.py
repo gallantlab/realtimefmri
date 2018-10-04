@@ -18,7 +18,7 @@ import nibabel as nib
 import cortex
 
 from realtimefmri.image_utils import register
-from realtimefmri.utils import get_logger
+from realtimefmri.utils import get_logger, load_class
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
                                  VOLUME_PORT, PREPROC_PORT)
@@ -73,10 +73,10 @@ class Preprocessor(object):
     pipeline : dict
         Dictionary that specifies preprocessing steps that receive each
         incoming volume.
-    global_defaults : dict
+    global_parameters : dict
         Parameters that are sent to every stimulation step as keyword
         arguments.
-    nskip : int
+    n_skip : int
         Number of volumes to skip at start of run
 
     Methods
@@ -102,14 +102,13 @@ class Preprocessor(object):
 
         self.active = False
 
-        self.pipeline = Pipeline(preproc_config, recording_id,
-                                 output_socket=self.output_socket,
-                                 log=log, verbose=verbose)
+        self.pipeline = Pipeline.load_from_saved_pipelines(preproc_config,
+            recording_id=recording_id, output_socket=self.output_socket, log=log, verbose=verbose)
 
-        self.logger = get_logger('preprocess', to_console=verbose,
-                                 to_network=log)
+        self.log = get_logger('preprocess', to_console=verbose,
+                              to_network=log)
 
-        self.nskip = self.pipeline.global_defaults.get('nskip', 0)
+        self.n_skip = self.pipeline.global_parameters.get('n_skip', 0)
 
     def receive_image(self):
         (_,
@@ -119,12 +118,12 @@ class Preprocessor(object):
 
     def run(self):
         self.active = True
-        self.logger.info('running')
+        self.log.info('running')
         while self.active:
-            self.logger.debug('waiting for image')
+            self.log.debug('waiting for image')
             image_id, raw_image_nii = self.receive_image()
             image_id = struct.unpack('i', image_id)[0]
-            self.logger.info('received image %d', image_id)
+            self.log.info('received image %d', image_id)
             data_dict = {'image_id': image_id,
                          'raw_image_nii': pickle.loads(raw_image_nii)}
             _ = self.pipeline.process(data_dict)
@@ -141,8 +140,12 @@ class Pipeline(object):
 
     Parameters
     ----------
-    config : str
-        Path to the preprocessing configuration file
+    pipeline : list of dict
+        The parameters for pipeline steps
+    global_parameters : dict
+        Settings passed as keyword arguments to each pipeline step
+    static_pipeline : list of dict
+        Pipeline steps that start with initialization and do not receive input
     recording_id : str
         A unique identifier for the recording. If none is provided, one will be
         generated from the subject name and date
@@ -155,14 +158,14 @@ class Pipeline(object):
 
     Attributes
     ----------
-    global_defaults : dict
+    global_parameters : dict
         Dictionary of arguments that are sent as keyword arguments to every
         preprocessing step. Useful for values that are required in multiple
         steps like recording identifier, subject name, and transform name
-    initialization : list
+    static_pipeline : list
         List of dictionaries that configure initialization steps. These are run
         once at the outset of the program.
-    steps : list
+    pipeline : list
         List of dictionaries that configure steps in the pipeline. These are
         run for each image that arrives at the pipeline.
     log : logging.Logger
@@ -175,48 +178,80 @@ class Pipeline(object):
     process(data_dict)
         Run the data in ```data_dict``` through each of the preprocessing steps
     """
-    def __init__(self, config, recording_id=None, log=False,
-                 output_socket=None, verbose=False):
+    def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None,
+                 log=False, output_socket=None, verbose=False):
+        if recording_id is None:
+            recording_id = 'recording_{}'.format(time.strftime('%Y%m%d_%H%M'))
 
         log = get_logger('preprocess.pipeline',
                          to_console=verbose,
                          to_network=log)
 
-        self._from_path(config)
-        if recording_id is None:
-            recording_id = '%s_%s' % (self.global_defaults['subject'],
-                                      time.strftime('%Y%m%d_%H%M'))
-        self.global_defaults['recording_id'] = recording_id
-
+        self.recording_id = recording_id
         self.log = log
         self.output_socket = output_socket
 
-        for init in self.initialization:
-            args = init.get('args', ())
-            kwargs = init.get('kwargs', {})
-            self.log.debug('initializing %s' % init['name'])
-            for k, v in self.global_defaults.items():
-                kwargs.setdefault(k, v)
-            init['instance'].__init__(*args, **kwargs)
+        self.build(pipeline, static_pipeline, global_parameters)
 
-        for step in self.steps:
+    def build(self, pipeline, static_pipeline, global_parameters):
+        """Build the pipeline from the pipeline parameters. Directly sets the class instance 
+        attributes for `pipeline`, `static_pipeline`, and `global_parameters`
+
+        Parameters
+        ----------
+        pipeline : list of dicts
+        static_pipeline : list of dicts
+        global_parameters : dict
+        """
+        self.static_pipeline = []
+        for step in static_pipeline:
+            self.log.debug('initializing %s' % step['name'])
+            args = step.get('args', ())
+            kwargs = step.get('kwargs', {})
+            for k, v in global_parameters.items():
+                kwargs[k] = kwargs.get(k, v)
+
+            cls = load_class(step['step'])
+            step['instance'] = cls(*args, **kwargs)
+            self.static_pipeline.append(step)
+
+        self.pipeline = []
+        for step in pipeline:
             self.log.debug('initializing %s' % step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
-            for k, v in self.global_defaults.items():
-                kwargs.setdefault(k, v)
-            step['instance'].__init__(*args, **kwargs)
+            for k, v in global_parameters.items():
+                kwargs[k] = kwargs.get(k, v)
 
-    def _from_path(self, preproc_config):
-        # load the pipeline from pipelines.conf
-        with open(op.join(PIPELINE_DIR, preproc_config + '.yaml'), 'rb') as f:
-            self._from_file(f)
+            cls = load_class(step['step'])
+            step['instance'] = cls(*args, **kwargs)
+            self.pipeline.append(step)
 
-    def _from_file(self, f):
-        config = yaml.load(f)
-        self.initialization = config.get('initialization', [])
-        self.steps = config['pipeline']
-        self.global_defaults = config.get('global_defaults', dict())
+        self.global_parameters = global_parameters
+
+    @classmethod
+    def load_from_saved_pipelines(cls, pipeline_name, **kwargs):
+        """Load from the pipelines stored with the pacakge
+
+        Parameters
+        ----------
+        pipeline_name : str
+            The name of a pipeline stored in the pipeline directory
+
+        Returns
+        -------
+        A Pipeline class for the specified pipeline name
+        """
+        config_path = op.join(PIPELINE_DIR, pipeline_name + '.yaml')
+        return cls.load_from_config(config_path, **kwargs)
+
+    @classmethod
+    def load_from_config(cls, config_path, **kwargs):
+        with open(config_path, 'rb') as f:
+            config = yaml.load(f)
+
+        kwargs.update(config)
+        return cls(**kwargs)
 
     def process(self, data_dict):
         """Run through the preprocessing steps
@@ -236,8 +271,8 @@ class Pipeline(object):
         A dictionary of all processing results
         """
         image_id = struct.pack('i', data_dict['image_id'])
-        for step in self.steps:
-            args = [data_dict[i] for i in step['input']]
+        for step in self.pipeline:
+            args = [data_dict[k] for k in step['input']]
 
             self.log.debug('running %s' % step['name'])
             outp = step['instance'].run(*args)

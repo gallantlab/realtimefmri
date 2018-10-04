@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import os.path as op
+import importlib
 import time
 import shlex
 import subprocess
@@ -8,10 +10,10 @@ import argparse
 import yaml
 import numpy as np
 import zmq
-import requests
+import redis
 import cortex
 
-from realtimefmri.utils import get_logger, parse_message
+from realtimefmri.utils import get_logger, load_class, parse_message
 from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_PORT
 
 
@@ -32,7 +34,7 @@ class Stimulator(object):
     in_port : int
         Port number to which data are sent from preprocessing pipeline
     log : bool
-        Whether to send log messages to the network logger
+        Whether to send log messages to the network log
     verbose : bool
         Whether to log to the console
 
@@ -43,14 +45,14 @@ class Stimulator(object):
         preprocessing script
     active : bool
         Indicates whether the pipeline should be run when data are received
-    initialization : dict
+    static_pipeline : dict
         Dictionary that specifies stimulation steps that occurs once at the
         start of the experiment (i.e., it does not receive input with each
         incoming datum)
     pipeline : dict
         Dictionary that specifies stimulation steps that receive each incoming
         datum
-    global_defaults : dict
+    global_parameters : dict
         Parameters that are sent to every stimulation step as keyword arguments
 
     Methods
@@ -59,86 +61,123 @@ class Stimulator(object):
         Initialize and listen for incoming volumes, processing them as they
         arrive
     """
-    def __init__(self, stim_config, recording_id=None, in_port=STIM_PORT,
-                 log=True, verbose=False):
+    def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None,
+                 in_port=STIM_PORT, log=True, verbose=False):
         """
         """
         super(Stimulator, self).__init__()
         zmq_context = zmq.Context()
-        self.input_socket = zmq_context.socket(zmq.SUB)
-        self.input_socket.connect('tcp://localhost:%d' % in_port)
-        self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
-        self.active = False
-
-        with open(os.path.join(PIPELINE_DIR, stim_config + '.yaml'), 'rb') as f:
-            config = yaml.load(f)
-            self.initialization = config.get('initialization', dict())
-            self.pipeline = config['pipeline']
-            self.global_defaults = config.get('global_defaults', dict())
+        input_socket = zmq_context.socket(zmq.SUB)
+        input_socket.connect('tcp://localhost:%d' % in_port)
+        input_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         if recording_id is None:
-            recording_id = '%s_%s' % (self.global_defaults['subject'],
-                                      time.strftime('%Y%m%d_%H%M'))
-        self.global_defaults['recording_id'] = recording_id
+            recording_id = 'recording_{}'.format(time.strftime('%Y%m%d_%H%M'))
 
-        self.logger = get_logger('stimulate', to_console=verbose,
-                                 to_network=log)
+        self.log = get_logger('stimulate', to_console=verbose, to_network=log)
+        self.input_socket = input_socket
+        self.active = False
 
-        # initialization
-        # initialization pipeline
-        for init in self.initialization:
-            self.logger.debug('initializing %s' % init['name'])
-            params = init.get('kwargs', {})
-            for k, v in self.global_defaults.items():
-                params.setdefault(k, v)
-            init['instance'].__init__(**params)
+        self.build(pipeline, static_pipeline, global_parameters)
 
-        # main pipeline
-        for step in self.pipeline:
-            self.logger.debug('initializing %s' % step['name'])
-            params = step.get('kwargs', {})
-            for k, v in self.global_defaults.items():
-                params.setdefault(k, v)
-            step['instance'].__init__(**params)
+    def build(self, pipeline, static_pipeline, global_parameters):
+        """Build the pipeline from the pipeline parameters. Directly sets the class instance 
+        attributes for `pipeline`, `static_pipeline`, and `global_parameters`
+
+        Parameters
+        ----------
+        pipeline : list of dicts
+        static_pipeline : list of dicts
+        global_parameters : dict
+        """
+        self.static_pipeline = []
+        for step in static_pipeline:
+            self.log.debug('initializing %s' % step['name'])
+            args = step.get('args', ())
+            kwargs = step.get('kwargs', {})
+            for k, v in global_parameters.items():
+                kwargs[k] = kwargs.get(k, v)
+
+            module = importlib.import_module(step['step'])
+            step['instance'] = module(*args, **kwargs)
+            self.static_pipeline.append(step)
+
+        self.pipeline = []
+        for step in pipeline:
+            print(step)
+            self.log.debug('initializing %s' % step['name'])
+            args = step.get('args', ())
+            kwargs = step.get('kwargs', dict())
+            for k, v in global_parameters.items():
+                kwargs[k] = kwargs.get(k, v)
+
+            cls = load_class(step['step'])
+            step['instance'] = cls(*args, **kwargs)
+            self.pipeline.append(step)
+
+        self.global_parameters = global_parameters
+
+    @classmethod
+    def load_from_saved_pipelines(cls, pipeline_name, **kwargs):
+        """Load from the pipelines stored with the pacakge
+
+        Parameters
+        ----------
+        pipeline_name : str
+            The name of a pipeline stored in the pipeline directory
+
+        Returns
+        -------
+        A Pipeline class for the specified pipeline name
+        """
+        config_path = op.join(PIPELINE_DIR, pipeline_name + '.yaml')
+        return cls.load_from_config(config_path, **kwargs)
+
+    @classmethod
+    def load_from_config(cls, config_path, **kwargs):
+        with open(config_path, 'rb') as f:
+            config = yaml.load(f)
+
+        kwargs.update(config)
+        return cls(**kwargs)
 
     def run(self):
         self.active = True
-        self.logger.debug('running')
+        self.log.debug('running')
 
         # run
-        for init in self.initialization:
-            self.logger.debug('starting %s' % init['name'])
-            init['instance'].start()
-            self.logger.debug('started %s' % init['name'])
+        for step in self.static_pipeline:
+            self.log.debug('starting %s' % step['name'])
+            step['instance'].start()
+            self.log.debug('started %s' % step['name'])
 
-        for stim in self.pipeline:
-            self.logger.debug('starting %s' % stim['name'])
-            stim['instance'].start()
-            self.logger.debug('started %s' % stim['name'])
+        for step in self.pipeline:
+            self.log.debug('starting %s' % step['name'])
+            step['instance'].start()
+            self.log.debug('started %s' % step['name'])
 
         while self.active:
-            self.logger.debug('waiting for message')
+            self.log.debug('waiting for message')
             message = self.input_socket.recv_multipart()
             topic, sync_time, data = parse_message(message)
-            self.logger.debug('received message')
-            for stim in self.pipeline:
-                if topic in stim['topic'].keys():
-                    self.logger.info('running %s at %s (acq at %s)',
-                                     stim['name'], time.time(), sync_time)
-                    # call run function with kwargs
-                    ret = stim['instance'].run({stim['topic'][topic]: data})
-                    self.logger.info('finished %s %s',
-                                     stim['name'], ret)
+            self.log.debug('received message')
+            for step in self.pipeline:
+                if topic in step['topic'].keys():
+                    self.log.info('running %s at %s (acq at %s)',
+                                  step['name'], time.time(), sync_time)
+                    ret = step['instance'].run({step['topic'][topic]: data})
+                    self.log.info('finished %s %s',
+                                  step['name'], ret)
 
     def stop(self):
-        for init in self.initialization:
-            self.logger.debug('stopping %s' % init['name'])
-            init['instance'].stop()
-            self.logger.debug('stopped %s' % init['name'])
-        for stim in self.pipeline:
-            self.logger.debug('stopping %s' % stim['name'])
-            stim['instance'].stop()
-            self.logger.debug('stopped %s' % stim['name'])
+        for step in self.static_pipeline:
+            self.log.debug('stopping %s' % step['name'])
+            step['instance'].stop()
+            self.log.debug('stopped %s' % step['name'])
+        for step in self.pipeline:
+            self.log.debug('stopping %s' % step['name'])
+            step['instance'].stop()
+            self.log.debug('stopped %s' % step['name'])
 
 
 class Stimulus(object):
@@ -219,18 +258,12 @@ class RoiBars(Stimulus):
 
 
 class SendToDashboard(Stimulus):
-    def __init__(self, host, port, **kwargs):
+    def __init__(self, **kwargs):
         super(SendToDashboard, self).__init__()
-        self.host = host
-        self.port = port
-        self.i = 0
+        self.redis = redis.Redis()
 
     def run(self, inp):
-        requests.post('http://' + self.host,
-                      data={'language': '{}{}'.format(inp['name'], self.i)})
-        self.i += 1
-        # data = np.fromstring(inp['data'], dtype='float32')
-        # return '{}'.format(len(data))
+        pass
 
 
 class Debug(Stimulus):
@@ -307,8 +340,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    stim = Stimulator(args.config, recording_id=args.recording_id,
-                      verbose=args.verbose)
+    stim = Stimulator.load_from_saved_pipelines(args.config, recording_id=args.recording_id,
+                                                verbose=args.verbose)
     try:
         stim.run()  # this will start an infinite run loop
     except KeyboardInterrupt:

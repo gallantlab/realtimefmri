@@ -1,9 +1,9 @@
-global_defaults:
-  nskip: 0
+global_parameters:
+  n_skip: 0
 
 pipeline:
   - name: debug
-    instance: !!python/object:realtimefmri.preprocess.Debug {}
+    step: realtimefmri.preprocess.Debug
     input: [ raw_image_nii ]
     output: [ volume_data, volume_shape, volume_name ]
     send: [ volume_name ]

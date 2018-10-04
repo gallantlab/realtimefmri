@@ -1,28 +1,28 @@
-global_defaults:
+global_parameters:
   subject: &SUBJECT RGfs
   xfm_name: &XFMNAME 20170705RG_movies
-  nskip: 0
+  n_skip: 0
 
 pipeline:
   - name: motion_correct
-    instance: !!python/object:realtimefmri.preprocess.MotionCorrect {}
+    step: realtimefmri.preprocess.MotionCorrect
     input: [ raw_image_nii ]
     output: [ image_nifti_mc ]
 
   - name: save_nifti
-    instance: !!python/object:realtimefmri.preprocess.SaveNifti {}
+    step: realtimefmri.preprocess.SaveNifti
     input:
       - image_nifti_mc
       - image_id
   
   - name: extract_gm_mask
-    instance: !!python/object:realtimefmri.preprocess.ApplyMask {}
+    step: realtimefmri.preprocess.ApplyMask
     kwargs: { mask_type: thick }
     input: [ image_nifti_mc ]
     output: [ gm_activity ]
 
   - name: running_mean_std
-    instance: !!python/object:realtimefmri.preprocess.RunningMeanStd {}
+    step: realtimefmri.preprocess.RunningMeanStd
     input:
       - gm_activity
       - image_id
@@ -31,7 +31,7 @@ pipeline:
       - gm_activity_std
 
   - name: gm_activity_zscore
-    instance: !!python/object:realtimefmri.preprocess.VoxelZScore {}
+    step: realtimefmri.preprocess.VoxelZScore
     input:
       - gm_activity
       - gm_activity_mean
