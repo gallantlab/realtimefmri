@@ -6,6 +6,7 @@ import os.path as op
 import struct
 import pickle
 import asyncio
+
 import zmq
 import zmq.asyncio
 import pydicom
@@ -36,7 +37,7 @@ class Collector(object):
         context = zmq.asyncio.Context()
         if loop is None:
             loop = asyncio.get_event_loop()
-
+        asyncio.set_event_loop(loop)
         volume_queue = asyncio.Queue(loop=loop)
 
         self.port = port

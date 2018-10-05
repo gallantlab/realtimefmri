@@ -29,6 +29,15 @@ def shell(cmd, verbose=True, check_output=True):
         return subprocess.call(shlex.split(cmd))
 
 
+def remove_prefix(text, prefix):
+    """Remove a prefix from text
+    """
+    if text.startswith(prefix):
+        return text[len(prefix):]
+
+    return text
+
+
 def load_class(absolute_class_name):
     """Import a class from a string
 

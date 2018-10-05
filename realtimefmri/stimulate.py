@@ -105,7 +105,6 @@ class Stimulator(object):
 
         self.pipeline = []
         for step in pipeline:
-            print(step)
             self.log.debug('initializing %s' % step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
@@ -219,18 +218,16 @@ class SendToDashboard(Stimulus):
     key_name : str
         Name of the key in the redis database
     """
-    def __init__(self, name, plot_type='marker', **kwargs):
+    def __init__(self, name, plot_type='marker', host='localhost', port=6379, **kwargs):
         super(SendToDashboard, self).__init__()
-        print(name, plot_type)
-        r = redis.Redis()
+        r = redis.Redis(host=host, port=port)
         key_name = 'rt_' + name
         r.set(key_name + '_type', plot_type)
 
         self.redis = r
         self.key_name = key_name
 
-    def run(self, inp):
-        data = inp['data']
+    def run(self, data):
         self.redis.set(self.key_name, pickle.dumps(data))
 
 

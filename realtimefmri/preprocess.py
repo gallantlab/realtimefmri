@@ -285,7 +285,7 @@ class Pipeline(object):
 
 
 class PreprocessingStep(object):
-    def __init__(self):
+    def __init__(self, **kwargs):
         pass
 
     def run(self):
@@ -410,18 +410,22 @@ class MotionCorrect(PreprocessingStep):
         return register(input_volume, self.reference_path, twopass=self.twopass)
 
 
-class ApplyMask(PreprocessingStep):
-    """Apply a voxel mask to the volume.
+class NiftiToVolume(PreprocessingStep):
+    """Extract data volume from Nifti image. Translates image dimensions to be consistent with 
+    pycortex convention, e.g., volume shape is (30, 100, 100)
+    """
+    def run(self, nii):
+        return nii.get_data().T[0]
 
-    Loads a mask from the realtimefmri database. Mask should be in xyz format
-    to match data. Mask is applied after transposing mask and data to zyx to
-    match the wm detrend training.
+
+class ApplyMask(PreprocessingStep):
+    """Apply a voxel mask from the pycortex database to a volume
 
     Parameters
     ----------
-    subject : str
+    surface : str
         Subject name
-    xfm_name : str
+    transform : str
         Pycortex transform name
     mask_type : str
         Type of mask
@@ -430,30 +434,44 @@ class ApplyMask(PreprocessingStep):
     ----------
     mask : numpy.ndarray
         Boolean voxel mask
-    mask_affine : numpy.ndarray
-        Affine transform for the mask
-
-    Methods
-    -------
-    run(volume)
-        Apply the mask to the input volume
     """
-    def __init__(self, subject, xfm_name, mask_type=None, **kwargs):
-        mask_path = op.join(cortex.database.default_filestore,
-                            subject, 'transforms', xfm_name,
-                            'mask_' + mask_type + '.nii.gz')
-        self.load_mask(mask_path)
-        print(mask_path)
-
-    def load_mask(self, mask_path):
-        mask_nifti1 = nib.load(mask_path)
-        self.mask_affine = mask_nifti1.affine
-        self.mask = mask_nifti1.get_data().astype(bool)
+    def __init__(self, surface, transform, mask_type=None, **kwargs):
+        mask = cortex.db.get_mask(surface, transform, mask_type)
+        self.mask = mask
 
     def run(self, volume):
-        same_affine = np.allclose(volume.affine[:3, :3], self.mask_affine[:3, :3])
-        assert same_affine, 'Input and mask volumes have different affines.'
-        return volume.get_data().T[self.mask.T]
+        """Apply the mask to a volume
+
+        Parameters
+        -----------
+        volume : array
+            Array with dimensions consistent with pycortex
+        """
+        return volume[self.mask.T]
+
+
+class ArrayMean(PreprocessingStep):
+    """Compute the mean of an array
+
+    Parameters
+    ----------
+    dimensions : tuple of int
+        Dimensions along which to take the mean. None takes the mean of all values in the array
+    """
+    def __init__(self, dimensions, **kwargs):
+        self.dimensions = dimensions
+
+    def run(self, array):
+        """Take the mean of the array along the specified dimensions
+
+        Parameters
+        -----------
+        array : array
+        """
+        if self.dimensions is None:
+            return np.mean(array)
+        else:
+            return np.mean(array, axis=self.dimensions)
 
 
 def secondary_mask(mask1, mask2, order='C'):
@@ -560,7 +578,7 @@ class RoiActivity(PreprocessingStep):
     def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
 
         subj_dir = get_subject_directory(subject)
-        pre_mask_path = op.join(subj_dir, pre_mask_name+'.nii')
+        pre_mask_path = op.join(subj_dir, pre_mask_name + '.nii')
 
         # mask in zyx
         pre_mask = nib.load(pre_mask_path).get_data().T.astype(bool)
