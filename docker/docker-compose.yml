@@ -1,0 +1,12 @@
+version: '1'
+
+services:
+  realtimefmri:
+    build: .
+    ports:
+      - "8050:8050"
+    links:
+      - redis
+
+  redis:
+    image: redis
