@@ -1,6 +1,3 @@
-import six
-if six.PY2:
-    range = xrange
 import os
 import subprocess
 import shlex

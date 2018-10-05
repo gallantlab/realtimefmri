@@ -1,10 +1,5 @@
-import six
-if six.PY2:
-    import cPickle as pickle
-elif six.PY3:
-    import pickle
-
 import os.path as op
+import pickle
 from sklearn.linear_model import LinearRegression
 from sklearn.decomposition import PCA
 

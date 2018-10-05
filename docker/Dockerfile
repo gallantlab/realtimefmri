@@ -25,4 +25,8 @@ RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
 COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
 
+RUN pip3 install redis
+
 ENV PATH="$HOME/abin:$PATH"
+
+ENTRYPOINT ["python3", "-m", "http.server", "8050"]

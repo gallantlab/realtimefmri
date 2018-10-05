@@ -1,18 +1,13 @@
-import six
 import os
 import os.path as op
 from shutil import rmtree
-from subprocess import call, check_output, check_call, STDOUT
+from subprocess import call, STDOUT
 import shlex
 from uuid import uuid4
 from tempfile import mkdtemp
 import numpy as np
-import pydicom
 import nibabel as nib
 from realtimefmri.utils import get_temporary_path
-
-if six.PY2:
-    range = xrange
 
 
 def register(inp, base, output_transform=False, twopass=False):
@@ -20,13 +15,13 @@ def register(inp, base, output_transform=False, twopass=False):
     temp_directory = mkdtemp()
 
     try:
-        if isinstance(base, six.string_types):
+        if isinstance(base, str):
             base_path = base
         else:
             base_path = get_temporary_path(directory=temp_directory, extension='.nii.gz')
             nib.save(base, base_path)
 
-        if isinstance(inp, six.string_types):
+        if isinstance(inp, str):
             in_path = inp
         else:
             in_path = get_temporary_path(directory=temp_directory, extension='.nii.gz')
