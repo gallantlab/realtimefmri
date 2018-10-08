@@ -14,6 +14,8 @@ def main():
           install_requires=["numpy",
                             "redis",
                             "dash",
+                            "dash_core_components",
+                            "dash_html_components",
                             "matplotlib",
                             "pydicom",
                             "nibabel",
