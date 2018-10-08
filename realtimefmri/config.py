@@ -37,9 +37,29 @@ def initialize():
         os.makedirs(DATASET_DIR)
 
 
-def get_example_data_directory(dataset):
-    """Return the directory of sample data"""
+def get_dataset(dataset):
+    """Return the directory of a dataset"""
     return op.join(DATASET_DIR, dataset)
+
+
+def get_datasets():
+    """List all available datasets"""
+    paths = sorted([d for d in os.listdir(DATASET_DIR)
+                    if op.isdir(op.join(DATASET_DIR, d))])
+    datasets = []
+    for path in paths:
+        datasets.append(op.splitext(op.basename(path))[0])
+
+    return datasets
+
+
+def get_pipelines(pipeline_type):
+    paths = sorted(glob(op.join(PIPELINE_DIR, pipeline_type + '-*.yaml')))
+    pipelines = []
+    for path in paths:
+        pipelines.append(op.splitext(op.basename(path))[0])
+
+    return pipelines
 
 
 def get_subject_directory(subject):

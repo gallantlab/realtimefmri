@@ -14,7 +14,7 @@ from realtimefmri.collect import Collector
 from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (SCANNER_DIR, RECORDING_DIR, PACKAGE_DIR,
-                                 get_example_data_directory)
+                                 get_dataset)
 
 
 def collect(recording_id, directory=None, parent_directory=None, simulate=False,
@@ -89,7 +89,7 @@ def simulate(simulate_dataset):
     """Simulate sync pulses and image acquisition
     """
 
-    ex_directory = get_example_data_directory(simulate_dataset)
+    ex_directory = get_dataset(simulate_dataset)
     paths = glob(op.join(ex_directory, '*.dcm'))
 
     dest_directory = op.join(SCANNER_DIR, str(uuid4()))
