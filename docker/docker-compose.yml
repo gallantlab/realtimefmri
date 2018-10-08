@@ -2,11 +2,25 @@ version: '3'
 
 services:
   realtimefmri:
-    build: .
+    build: "./realtimefmri"
+    command: "control_panel"
+    devices:
+      - "/dev/input/event3:/dev/input/event3"
     ports:
-      - "8050:8050"
-    links:
-      - redis
+      - "127.0.0.1:8051:8051"
+    # links:
+    #   - redis
+
+  dashboard:
+    build: "./realtimefmri"
+    command: ["dashboard", "--redis_host", "redis"]
+    ports:
+      - "127.0.0.1:8050:8050"
+    # links:
+    #   - redis
 
   redis:
     image: redis
+
+  # networks:
+  #   redis-net:
