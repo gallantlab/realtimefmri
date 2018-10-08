@@ -12,9 +12,9 @@ from realtimefmri.device_utils import list_devices
 
 
 class Scanner(object):
-    '''Detect and record pulses from the scanner. Can record to a local log
+    """Detect and record pulses from the scanner. Can record to a local log
     file or transmit to a network destination.
-    '''
+    """
     def __init__(self, simulate=False, loop=None, verbose=False):
         logger = get_logger('scanner', to_console=verbose, to_network=True)
 
@@ -96,7 +96,6 @@ class Scanner(object):
 def is_available_port(port):
     try:
         serial.Serial(port)
-        available = True
+        return True
     except serial.SerialException:
-        available = False
-    return available
+        return False
