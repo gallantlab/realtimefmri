@@ -21,6 +21,7 @@ def main():
                             "nibabel",
                             "dicom2nifti",
                             "pycortex",
+                            "aionotify",
                             "pyserial",
                             "evdev",
                             "PyYAML",
