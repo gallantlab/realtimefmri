@@ -2,7 +2,8 @@
 import argparse
 from realtimefmri import control_panel
 from realtimefmri import dashboard
-from realtimefmri.interface import collect, preprocess, simulate
+from realtimefmri import interfaces
+from realtimefmri import synchronize
 from realtimefmri.config import SCANNER_DIR
 
 
@@ -12,23 +13,16 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Collect data')
     subcommand = parser.add_subparsers(title='subcommand', dest='subcommand')
 
+    sync = subcommand.add_parser('synchronize', help="""Synchronize to TTL pulses""")
+    sync.set_defaults(command_name='synchronize')
+    sync.add_argument('source', action='store', default='keyboard',
+                      help='''TTL source. keyboard, serial, zmq, or simulate''')
+
     coll = subcommand.add_parser('collect',
                                  help="""Collect and synchronize""")
     coll.set_defaults(command_name='collect')
     coll.add_argument('recording_id', action='store', default=None,
                       help='''An identifier for this recording''')
-    coll.add_argument('-d', '--directory', action='store',
-                      dest='directory', default=None,
-                      help=('''Directory to watch. If simulate is True,
-                              simulate from this directory'''))
-    coll.add_argument('-p', '--parent_directory', action='store',
-                      dest='parent_directory', default=SCANNER_DIR,
-                      help=('''Parent directory to watch. If provided,
-                               monitor the directory for the first new folder,
-                               then monitor that folder for new files'''))
-    coll.add_argument('-s', '--simulate', action='store_true',
-                      dest='simulate', default=False,
-                      help=('''Simulate a run'''))
     coll.add_argument('-v', '--verbose', action='store_true',
                       default=False, dest='verbose',
                       help=('''Print log messages to console if true'''))
@@ -56,13 +50,15 @@ def parse_arguments():
     control = subcommand.add_parser('control_panel',
                                     help="""Launch web interface for controlling real-time
                                             experiments""")
+    control.set_defaults(command_name='control_panel')
 
     dashb = subcommand.add_parser('dashboard',
                                   help="""Launch web interface for viewing results from real-time 
                                           experiments""")
-    dashb.add_argument('--host', default='localhost', dest='host', action='store')
+    dashb.set_defaults(command_name='dashboard')
+    dashb.add_argument('--host', default='0.0.0.0', dest='host', action='store')
     dashb.add_argument('--port', default=8050, dest='port', action='store')
-    dashb.add_argument('--redis_host', default='localhost', dest='redis_host', action='store')
+    dashb.add_argument('--redis_host', default='redis', dest='redis_host', action='store')
     dashb.add_argument('--redis_port', default=6379, dest='redis_port', action='store')
 
     args = parser.parse_args()
@@ -72,18 +68,15 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    if args.subcommand == 'collect':
-        print(args)
-        collect(args.recording_id, directory=args.directory,
-                parent_directory=args.parent_directory, simulate=args.simulate,
-                verbose=args.verbose)
+    if args.subcommand == 'synchronize':
+        synchronize.Synchronize(ttl_source=args.source).run()
+
+    elif args.subcommand == 'collect':
+        interfaces.collect(args.recording_id, verbose=args.verbose)
 
     elif args.subcommand == 'preprocess':
-        preprocess(args.recording_id, preproc_config=args.preproc_config,
-                   stim_config=args.stim_config, verbose=args.verbose)
-
-    elif args.subcommand == 'simulate':
-        simulate(args.simulate_dataset)
+        interfaces.preprocess(args.recording_id, preproc_config=args.preproc_config,
+                              stim_config=args.stim_config, verbose=args.verbose)
 
     elif args.subcommand == 'control_panel':
         control_panel.main()

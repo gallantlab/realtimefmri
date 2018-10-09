@@ -9,19 +9,16 @@ import shutil
 from uuid import uuid4
 import asyncio
 
-from realtimefmri import synchronize
 from realtimefmri.collect import Collector
-from realtimefmri.scan import Scanner
 from realtimefmri.utils import get_logger
 from realtimefmri.config import (SCANNER_DIR, RECORDING_DIR, PACKAGE_DIR,
                                  get_dataset)
 
 
-def collect(recording_id, directory=None, parent_directory=None, simulate=False,
+def collect(recording_id, directory=None, parent_directory=None, ttl_source='keyboard',
             verbose=False):
     """Collect volumes and synchronize with the scanner
     """
-
     log_path = op.join(RECORDING_DIR, recording_id, 'recording.log')
     if not op.exists(op.dirname(log_path)):
         os.makedirs(op.dirname(log_path))
@@ -30,22 +27,11 @@ def collect(recording_id, directory=None, parent_directory=None, simulate=False,
 
     logger = get_logger('root', to_file=log_path, to_console=verbose)
 
-    loop = asyncio.get_event_loop()
-
     tasks = []
-
-    logger.info('starting synchronize.Synchronizer')
-    sync = synchronize.Synchronizer(verbose=True, loop=loop)
-    tasks.append(sync.run())
-
-    logger.info('starting scanner')
-    scan = Scanner(simulate=simulate, verbose=True, loop=loop)
-    tasks.append(scan.run())
-
     logger.info('starting collector')
-    coll = Collector(directory=directory, parent_directory=parent_directory,
-                     verbose=True, loop=loop)
-    tasks.append(coll.run())
+    loop = asyncio.get_event_loop()
+    coll = Collector(loop=loop, verbose=True)
+    tasks.append(coll.gather())
 
     try:
         logger.info('starting tasks')
@@ -60,7 +46,6 @@ def preprocess(recording_id, preproc_config=None, stim_config=None,
                verbose=None):
     """Run realtime
     """
-
     processes = []
 
     # Preprocessing

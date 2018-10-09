@@ -19,7 +19,7 @@ from realtimefmri.image_utils import register
 from realtimefmri.utils import get_logger, load_class
 from realtimefmri.config import (get_subject_directory,
                                  RECORDING_DIR, PIPELINE_DIR,
-                                 VOLUME_PORT, PREPROC_PORT)
+                                 VOLUME_ADDRESS, PREPROC_ADDRESS)
 
 
 class Preprocessor(object):
@@ -36,11 +36,11 @@ class Preprocessor(object):
         `pipeline` filestore
     recording_id : str
         A unique identifier for the recording
-    in_port : int
-        Port number to which data are sent from data collector
-    out_port : int
-        Port number to publish preprocessed data to. Stimulation script will
-        read from this port
+    in_address : str
+        Address to which data are sent from data collector
+    out_address : str
+        Address to publish preprocessed data to. Stimulation script will
+        read from this address
     log : bool
         Whether to send log messages to the network logger
     verbose : bool
@@ -49,14 +49,14 @@ class Preprocessor(object):
 
     Attributes
     ----------
-    in_port : int
-        Port number to which data are sent from data collector.
+    in_address : str
+        Address to which data are sent from data collector.
     input_socket : zmq.socket.Socket
         The subscriber socket that receives data sent over from the data
         collector.
-    out_port : int
-        Port number to publish preprocessed data to. Stimulation script will
-        read from this port.
+    out_address : str
+        Address to publish preprocessed data to. Stimulation script will
+        read from this address.
     output_socket : zmq.socket.Socket
         The publisher socket that sends data over to the stimulator.
     active : bool
@@ -76,25 +76,27 @@ class Preprocessor(object):
         Initialize and listen for incoming volumes, processing them through the
         pipeline as they arrive
     """
-    def __init__(self, preproc_config, recording_id=None, in_port=VOLUME_PORT,
-                 out_port=PREPROC_PORT, verbose=False, log=True, **kwargs):
+    def __init__(self, preproc_config, recording_id=None, in_address=VOLUME_ADDRESS,
+                 out_address=PREPROC_ADDRESS, verbose=False, log=True, **kwargs):
         super(Preprocessor, self).__init__()
 
         # initialize input and output sockets
         context = zmq.Context()
-        self.in_port = in_port
+        self.in_address = in_address
         self.input_socket = context.socket(zmq.SUB)
-        self.input_socket.connect('tcp://localhost:%d' % in_port)
+        self.input_socket.connect(in_address)
         self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self.out_port = out_port
+        self.out_address = out_address
         self.output_socket = context.socket(zmq.PUB)
-        self.output_socket.bind('tcp://*:%d' % out_port)
+        self.output_socket.bind(out_address)
 
         self.active = False
 
         self.pipeline = Pipeline.load_from_saved_pipelines(preproc_config,
-            recording_id=recording_id, output_socket=self.output_socket, log=log, verbose=verbose)
+                                                           recording_id=recording_id,
+                                                           output_socket=self.output_socket,
+                                                           log=log, verbose=verbose)
 
         self.log = get_logger('preprocess', to_console=verbose,
                               to_network=log)

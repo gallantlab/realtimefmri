@@ -1,95 +1,104 @@
-#!/usr/bin/env python3
-"""Collect files and align them to sync pulses from scanner
-
-or coroutine waits for pulses adds them to queue
-and coroutine waits for images, pulls pulse from pulse queue
-join them in order
-
-"""
+import time
+import serial
 import struct
+import argparse
 import asyncio
 import zmq
 import zmq.asyncio
+import evdev
 
-from realtimefmri.config import (SYNC_PORT, VOLUME_PORT,
-                                 PREPROC_PORT, STIM_PORT)
-from realtimefmri.utils import get_logger
+from realtimefmri import utils
+from realtimefmri import config
 
 
-class Synchronizer(object):
-    def __init__(self, loop=None, verbose=False):
+class Synchronize(object):
+    """Detect and record pulses from the scanner. Can record to a local log
+    file or transmit to a network destination.
+    """
+    def __init__(self, ttl_source='keyboard', verbose=True):
+        logger = utils.get_logger('scanner', to_console=verbose, to_network=True)
 
-        logger = get_logger('synchronizer',
-                            to_console=verbose,
-                            to_network=True)
+        if ttl_source == 'keyboard':
+            collect_ttl = self._collect_ttl_keyboard
+        elif ttl_source == 'simulate':
+            collect_ttl = self._collect_ttl_simulate
+        elif ttl_source == 'serial':
+            collect_ttl = self._collect_ttl_serial
+        elif ttl_source == 'zmq':
+            collect_ttl = self._collect_ttl_zmq
+        else:
+            raise NotImplementedError("TTL source {} not implemented.".format(ttl_source))
+        logger.info(f'receiving TTL from {ttl_source}')
 
-        context = zmq.asyncio.Context()
-        if loop is None:
-            loop = asyncio.get_event_loop()
+        context = zmq.Context()
 
-        sync_queue = asyncio.Queue(loop=loop)
-        volume_queue = asyncio.Queue(loop=loop)
-        sync_times = dict()
-
-        self.logger = logger
+        self.active = True
         self.context = context
-        self.loop = loop
-        self.sync_queue = sync_queue
-        self.volume_queue = volume_queue
-        self.sync_times = sync_times        
+        self.logger = logger
+        self.collect_ttl = collect_ttl
 
-    @asyncio.coroutine
     def collect_syncs(self):
         """Receive TTL pulses from scanner that indicate the start of volume
         acquisition and add them to a queue
         """
         socket = self.context.socket(zmq.PULL)
-        socket.connect('tcp://127.0.0.1:{}'.format(SYNC_PORT))
+        socket.connect(config.SYNC_ADDRESS)
 
         while True:
             sync_time = yield from socket.recv()
             sync_time = struct.unpack('d', sync_time)[0]
-            yield from self.sync_queue.put(sync_time)
+            self.sync_queue.put(sync_time)
 
     @asyncio.coroutine
-    def timestamp_volumes(self):
-        """Pair each image volume with its corresponding acquisition pulse
-        """
-        socket = self.context.socket(zmq.SUB)
-        socket.connect('tcp://127.0.0.1:{}'.format(VOLUME_PORT))
-        socket.setsockopt(zmq.SUBSCRIBE, b'')
-
-        while True:
-            (_, image_id, _) = yield from socket.recv_multipart()
-            image_id = struct.unpack('i', image_id)[0]
-            sync_time = yield from self.sync_queue.get()
-            self.sync_times[image_id] = sync_time
+    def _collect_ttl_keyboard(self):
+        keyboard = evdev.InputDevice(config.TTL_KEYBOARD_DEV)
+        while self.active:
+            try:
+                events = keyboard.read()
+                for event in events:
+                    event = evdev.categorize(event)
+                    if (isinstance(event, evdev.KeyEvent) and
+                       (event.keycode == 'KEY_5') and  # 5 key
+                       (event.keystate == event.key_down)):
+                        yield time.time()
+            except BlockingIOError:
+                time.sleep(0.1)
 
     @asyncio.coroutine
-    def publish_preprocessed(self):
-        """Send timestamped preprocessed data to subscribers
-        """
-        in_socket = self.context.socket(zmq.SUB)
-        in_socket.connect('tcp://127.0.0.1:{}'.format(PREPROC_PORT))
-        in_socket.setsockopt(zmq.SUBSCRIBE, b'')
+    def _collect_ttl_serial(self):
+        img_msg = 'TR'
+        ser = serial.Serial(config.TTL_SERIAL_DEV)
+        while self.active:
+            msg = ser.read()
+            if msg == img_msg:
+                yield time.time()
 
-        out_socket = self.context.socket(zmq.PUB)
-        out_socket.bind('tcp://127.0.0.1:{}'.format(STIM_PORT))
+    @asyncio.coroutine
+    def _collect_ttl_zmq(self):
+        socket = self.context.socket(zmq.PULL)
+        socket.connect(config.TTL_ZMQ_ADDR)
 
-        while True:
-            (topic, image_id, msg) = yield from in_socket.recv_multipart()
-            image_id = struct.unpack('i', image_id)[0]
-            sync_time = self.sync_times[image_id]
-            yield from out_socket.send_multipart([topic,
-                                                  struct.pack('d', sync_time),
-                                                  msg])
+        while self.active:
+            _ = socket.recv()
+            yield time.time()
+
+    @asyncio.coroutine
+    def _collect_ttl_simulate(self):
+        while self.active:
+            yield time.time()
+            time.sleep(2)
 
     def run(self):
-        return asyncio.gather(self.collect_syncs(),
-                              self.timestamp_volumes(),
-                              self.publish_preprocessed())
+        socket = self.context.socket(zmq.PUSH)
+        socket.bind(config.SYNC_ADDRESS)
+
+        for t in self.collect_ttl():
+            self.logger.info('TR %s', t)
+            socket.send(struct.pack('d', t))
 
 
-if __name__ == '__main__':
-    synchronizer = Synchronizer()
-    synchronizer.run()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source', default='keyboard', action='store', type='str')
+    args = parser.parse_args()
+    sync = Synchronize(ttl_source=args.source)

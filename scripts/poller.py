@@ -1,12 +1,12 @@
 import zmq
 import numpy as np
 from realtimefmri.utils import parse_message
-from realtimefmri.config import STIM_PORT
+from realtimefmri.config import STIM_ADDRESS
 
 
 context = zmq.Context()
 socket = context.socket(zmq.SUB)
-socket.connect('tcp://localhost:%d' % STIM_PORT)
+socket.connect('tcp://localhost:%d' % STIM_ADDRESS)
 socket.setsockopt(zmq.SUBSCRIBE, b'')
 
 poller = zmq.Poller()

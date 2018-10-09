@@ -8,9 +8,7 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
-from realtimefmri.interface import collect, preprocess
 from realtimefmri.config import SCANNER_DIR, get_pipelines, get_datasets
-from realtimefmri.utils import simulate_keystroke
 
 
 server = flask.Flask('app')
@@ -83,7 +81,6 @@ def start_simulation(n):
               [Input('simulate-tr', 'n_clicks')])
 def simulate_tr(n):
     print('simulating TR')
-    simulate_keystroke()
     raise PreventUpdate()
 
 

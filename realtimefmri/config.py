@@ -81,15 +81,16 @@ RECORDING_DIR = op.expanduser(config.get('directories', 'recordings'))
 DATASET_DIR = op.expanduser(config.get('directories', 'datasets'))
 initialize()
 
-# PORTS
-SYNC_PORT = int(config.get('ports', 'sync'))
-VOLUME_PORT = int(config.get('ports', 'volume'))
-PREPROC_PORT = int(config.get('ports', 'preproc'))
-STIM_PORT = int(config.get('ports', 'stim'))
+# addresses
+SYNC_ADDRESS = config.get('addresses', 'sync')
+VOLUME_ADDRESS = config.get('addresses', 'volume')
+PREPROC_ADDRESS = config.get('addresses', 'preproc')
+STIM_ADDRESS = config.get('addresses', 'stim')
 
 # TTL
-KEYBOARD_FN = config.get('sync', 'keyboard')
-TTL_SERIAL_PORT = config.get('sync', 'serial')
+TTL_KEYBOARD_DEV = config.get('sync', 'keyboard')
+TTL_SERIAL_DEV = config.get('sync', 'serial')
+TTL_ZMQ_ADDR = config.get('sync', 'zmq')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'

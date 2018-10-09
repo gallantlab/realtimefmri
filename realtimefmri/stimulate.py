@@ -15,7 +15,7 @@ import redis
 import cortex
 
 from realtimefmri.utils import get_logger, load_class, parse_message
-from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_PORT
+from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_ADDRESS
 
 
 class Stimulator(object):
@@ -32,8 +32,8 @@ class Stimulator(object):
     recording_id : str
         A unique identifier for the recording. If none is provided, one will be
         generated from the subject name and date
-    in_port : int
-        Port number to which data are sent from preprocessing pipeline
+    in_address : int
+        Address to which data are sent from preprocessing pipeline
     log : bool
         Whether to send log messages to the network log
     verbose : bool
@@ -63,13 +63,13 @@ class Stimulator(object):
         arrive
     """
     def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None,
-                 in_port=STIM_PORT, log=True, verbose=False):
+                 in_address=STIM_ADDRESS, log=True, verbose=False):
         """
         """
         super(Stimulator, self).__init__()
         zmq_context = zmq.Context()
         input_socket = zmq_context.socket(zmq.SUB)
-        input_socket.connect('tcp://localhost:%d' % in_port)
+        input_socket.connect(in_address)
         input_socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         if recording_id is None:
