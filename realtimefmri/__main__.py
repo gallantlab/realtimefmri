@@ -16,7 +16,7 @@ def parse_arguments():
     sync = subcommand.add_parser('synchronize', help="""Synchronize to TTL pulses""")
     sync.set_defaults(command_name='synchronize')
     sync.add_argument('source', action='store', default='keyboard',
-                      help='''TTL source. keyboard, serial, zmq, or simulate''')
+                      help='''TTL source. keyboard, serial, redis, or simulate''')
 
     coll = subcommand.add_parser('collect',
                                  help="""Collect and synchronize""")

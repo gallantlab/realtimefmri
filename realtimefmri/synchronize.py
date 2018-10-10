@@ -2,9 +2,9 @@ import time
 import serial
 import struct
 import argparse
-import asyncio
 import zmq
-import zmq.asyncio
+import redis
+import rq
 import evdev
 
 from realtimefmri import utils
@@ -24,8 +24,8 @@ class Synchronize(object):
             collect_ttl = self._collect_ttl_simulate
         elif ttl_source == 'serial':
             collect_ttl = self._collect_ttl_serial
-        elif ttl_source == 'zmq':
-            collect_ttl = self._collect_ttl_zmq
+        elif ttl_source == 'redis':
+            collect_ttl = self._collect_ttl_redis
         else:
             raise NotImplementedError("TTL source {} not implemented.".format(ttl_source))
         logger.info(f'receiving TTL from {ttl_source}')
@@ -37,19 +37,6 @@ class Synchronize(object):
         self.logger = logger
         self.collect_ttl = collect_ttl
 
-    def collect_syncs(self):
-        """Receive TTL pulses from scanner that indicate the start of volume
-        acquisition and add them to a queue
-        """
-        socket = self.context.socket(zmq.PULL)
-        socket.connect(config.SYNC_ADDRESS)
-
-        while True:
-            sync_time = yield from socket.recv()
-            sync_time = struct.unpack('d', sync_time)[0]
-            self.sync_queue.put(sync_time)
-
-    @asyncio.coroutine
     def _collect_ttl_keyboard(self):
         keyboard = evdev.InputDevice(config.TTL_KEYBOARD_DEV)
         while self.active:
@@ -64,7 +51,6 @@ class Synchronize(object):
             except BlockingIOError:
                 time.sleep(0.1)
 
-    @asyncio.coroutine
     def _collect_ttl_serial(self):
         img_msg = 'TR'
         ser = serial.Serial(config.TTL_SERIAL_DEV)
@@ -73,16 +59,13 @@ class Synchronize(object):
             if msg == img_msg:
                 yield time.time()
 
-    @asyncio.coroutine
-    def _collect_ttl_zmq(self):
-        socket = self.context.socket(zmq.PULL)
-        socket.connect(config.TTL_ZMQ_ADDR)
-
-        while self.active:
-            _ = socket.recv()
+    def _collect_ttl_redis(self):
+        r = redis.Redis(host=config.REDIS_HOST)
+        p = r.pubsub()
+        p.subscribe('ttl')
+        for i in p.listen():
             yield time.time()
-
-    @asyncio.coroutine
+            
     def _collect_ttl_simulate(self):
         while self.active:
             yield time.time()

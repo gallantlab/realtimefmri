@@ -1,5 +1,6 @@
 import os
 import os.path as op
+import logging
 from uuid import uuid4
 from subprocess import Popen
 import flask
@@ -8,7 +9,8 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
-from realtimefmri.config import (TTL_ZMQ_ADDR, SCANNER_DIR,
+import redis
+from realtimefmri.config import (SCANNER_DIR, REDIS_HOST,
                                  get_pipelines, get_datasets)
 
 
@@ -42,13 +44,15 @@ app.layout = html.Div([html.Div([dcc.Input(id='recording-id',
 
                        ])
 
+r = redis.Redis(REDIS_HOST)
+print(REDIS_HOST)
 
 @app.callback(Output('empty-div2', 'children'),
               [Input('start-collection', 'n_clicks')],
               [State('recording-id', 'value')])
 def start_collection(n, recording_id):
     print("start_collection", n)
-    cmd = ['realtimefmri', 'collect', recording_id, '--parent_directory', scanner_directory]
+    cmd = ['realtimefmri', 'collect', recording_id]
     # pid = Popen(cmd)
     print(' '.join(cmd))
     raise PreventUpdate()
@@ -70,8 +74,9 @@ def start_recording(n, recording_id, preproc_config, stim_config):
 @app.callback(Output('empty-div4', 'children'),
               [Input('simulate-tr', 'n_clicks')])
 def simulate_tr(n):
-    print('simulating TR')
-    raise PreventUpdate()
+    print('simulating ttl')
+    logging.info('simulating ttl')
+    r.publish('ttl', 'message')
 
 
 @app.callback(Output('empty-div3', 'children'),

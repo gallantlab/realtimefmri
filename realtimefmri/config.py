@@ -86,11 +86,11 @@ SYNC_ADDRESS = config.get('addresses', 'sync')
 VOLUME_ADDRESS = config.get('addresses', 'volume')
 PREPROC_ADDRESS = config.get('addresses', 'preproc')
 STIM_ADDRESS = config.get('addresses', 'stim')
+REDIS_HOST = config.get('addresses', 'redis_host')
 
 # TTL
 TTL_KEYBOARD_DEV = config.get('sync', 'keyboard')
 TTL_SERIAL_DEV = config.get('sync', 'serial')
-TTL_ZMQ_ADDR = config.get('sync', 'zmq')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
