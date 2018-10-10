@@ -8,7 +8,8 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
-from realtimefmri.config import SCANNER_DIR, get_pipelines, get_datasets
+from realtimefmri.config import (TTL_ZMQ_ADDR, SCANNER_DIR,
+                                 get_pipelines, get_datasets)
 
 
 server = flask.Flask('app')
@@ -18,18 +19,17 @@ app.layout = html.Div([html.Div([dcc.Input(id='recording-id',
                                            placeholder='...enter recording id...',
                                            type='text', value=''),
                                  dcc.Dropdown(id='preproc-config',
-                                              options=get_pipelines('preproc'),
+                                              options=[{'label': p, 'value': p}
+                                                       for p in get_pipelines('preproc')],
                                               value=''),
                                  dcc.Dropdown(id='stim-config',
-                                              options=get_pipelines('stim'),
+                                              options=[{'label': p,  'value': p}
+                                                       for p in get_pipelines('stim')],
                                               value=''),
                                  html.Button('Start recording', id='start-recording')]),
-                       html.Div([dcc.Input(id='scanner-directory', type='text',
-                                           value=SCANNER_DIR, style={'width': '50%'}),
-                                 dcc.Input(id='volume-directory', type='text',
-                                           value='', style={'width': '50%'}),
-                                 dcc.Dropdown(id='simulated-dataset',
-                                              options=get_datasets(),
+                       html.Div([dcc.Dropdown(id='simulated-dataset',
+                                              options=[{'label': d, 'value': d}
+                                                       for d in get_datasets()],
                                               value=''),
                                  html.Button('Start collection', id='start-collection'),
                                  html.Button('Start simulation', id='start-simulation'),
@@ -45,9 +45,8 @@ app.layout = html.Div([html.Div([dcc.Input(id='recording-id',
 
 @app.callback(Output('empty-div2', 'children'),
               [Input('start-collection', 'n_clicks')],
-              [State('recording-id', 'value'),
-               State('scanner-directory', 'value')])
-def start_collection(n, recording_id, scanner_directory):
+              [State('recording-id', 'value')])
+def start_collection(n, recording_id):
     print("start_collection", n)
     cmd = ['realtimefmri', 'collect', recording_id, '--parent_directory', scanner_directory]
     # pid = Popen(cmd)
@@ -66,15 +65,6 @@ def start_recording(n, recording_id, preproc_config, stim_config):
     # pid = Popen(cmd)
     print(' '.join(cmd))
     raise PreventUpdate()
-
-
-@app.callback(Output('volume-directory', 'value'),
-              [Input('start-simulation', 'n_clicks')])
-def start_simulation(n):
-    dest_directory = op.join(SCANNER_DIR, str(uuid4()))
-    os.makedirs(dest_directory)
-
-    return dest_directory
 
 
 @app.callback(Output('empty-div4', 'children'),
