@@ -18,14 +18,13 @@ RUN pip3 install redis
 # pycortex
 RUN pip3 install pycortex
 RUN python3 -c "import cortex"
-COPY pycortex-options.cfg /root/.config/pycortex/options.cfg
-COPY pycortex_store /data/pycortex_store
+# COPY pycortex-options.cfg /root/.config/pycortex/options.cfg
+# COPY pycortex_store /data/pycortex_store
 
 # realtimefmri
-RUN echo "hi4"
 RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
-COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
+# COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
 COPY pipelines /root/.local/share/realtimefmri/pipelines
 
 ENV PATH="$HOME/abin:$PATH"
