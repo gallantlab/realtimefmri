@@ -21,15 +21,19 @@ RUN python3 -c "import cortex"
 # COPY pycortex-options.cfg /root/.config/pycortex/options.cfg
 # COPY pycortex_store /data/pycortex_store
 
+RUN pip3 install numpy redis rq dash dash_core_components dash_html_components \
+                 matplotlib pydicom nibabel dicom2nifti pycortex aionotify \
+		 pyserial evdev PyYAML pyzmq
 # realtimefmri
 RUN mkdir -p /code/realtimefmri/realtimefmri
 COPY realtimefmri /code/realtimefmri/realtimefmri
 COPY setup.py /code/realtimefmri/setup.py
 WORKDIR /code/realtimefmri
+RUN pip3 install .
 # RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
 # COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
-COPY pipelines /root/.local/share/realtimefmri/pipelines
+COPY realtimefmri/pipelines /root/.local/share/realtimefmri/pipelines
 
 WORKDIR /
 ENV PATH="$HOME/abin:$PATH"
