@@ -22,11 +22,16 @@ RUN python3 -c "import cortex"
 # COPY pycortex_store /data/pycortex_store
 
 # realtimefmri
-RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
+RUN mkdir -p /code/realtimefmri/realtimefmri
+COPY realtimefmri /code/realtimefmri/realtimefmri
+COPY setup.py /code/realtimefmri/setup.py
+WORKDIR /code/realtimefmri
+# RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
 # COPY test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
 COPY pipelines /root/.local/share/realtimefmri/pipelines
 
+WORKDIR /
 ENV PATH="$HOME/abin:$PATH"
 
 ENTRYPOINT ["realtimefmri"]
