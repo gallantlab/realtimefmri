@@ -25,7 +25,7 @@ app.layout = html.Div([html.Div([dcc.Input(id='recording-id',
                                                        for p in get_pipelines('preproc')],
                                               value=''),
                                  dcc.Dropdown(id='stim-config',
-                                              options=[{'label': p,  'value': p}
+                                              options=[{'label': p, 'value': p}
                                                        for p in get_pipelines('stim')],
                                               value=''),
                                  html.Button('Start recording', id='start-recording')]),
