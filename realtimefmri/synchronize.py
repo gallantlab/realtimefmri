@@ -4,7 +4,6 @@ import struct
 import argparse
 import zmq
 import redis
-import rq
 import evdev
 
 from realtimefmri import utils
@@ -26,6 +25,8 @@ class Synchronize(object):
             collect_ttl = self._collect_ttl_serial
         elif ttl_source == 'redis':
             collect_ttl = self._collect_ttl_redis
+        elif ttl_source == 'zmq':
+            collect_ttl = self._collect_ttl_zmq
         else:
             raise NotImplementedError("TTL source {} not implemented.".format(ttl_source))
         logger.info(f'receiving TTL from {ttl_source}')
@@ -51,12 +52,17 @@ class Synchronize(object):
             except BlockingIOError:
                 time.sleep(0.1)
 
+    def _collect_ttl_simulate(self):
+        while self.active:
+            yield time.time()
+            time.sleep(2)
+
     def _collect_ttl_serial(self):
-        img_msg = 'TR'
+        target_message = 'TR'
         ser = serial.Serial(config.TTL_SERIAL_DEV)
         while self.active:
-            msg = ser.read()
-            if msg == img_msg:
+            message = ser.read()
+            if message == target_message:
                 yield time.time()
 
     def _collect_ttl_redis(self):
@@ -65,11 +71,14 @@ class Synchronize(object):
         p.subscribe('ttl')
         for i in p.listen():
             yield time.time()
-            
-    def _collect_ttl_simulate(self):
+
+    def _collect_ttl_zmq(self):
+        socket = self.context.socket(zmq.SUB)
+        socket.connect(config.TTL_ZMQ_ADDR)
+        socket.setsockopt(zmq.SUBSCRIBE, b'')
         while self.active:
+            socket.recv()
             yield time.time()
-            time.sleep(2)
 
     def run(self):
         socket = self.context.socket(zmq.PUSH)
@@ -77,7 +86,7 @@ class Synchronize(object):
 
         for t in self.collect_ttl():
             self.logger.info('TR %s', t)
-            socket.send(struct.pack('d', t))
+            # socket.send(struct.pack('d', t))
 
 
 if __name__ == "__main__":
