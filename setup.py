@@ -13,6 +13,8 @@ def main():
           packages=['realtimefmri'],
           install_requires=["numpy",
                             "redis",
+                            "Flask",
+                            "Flask-Caching",
                             "dash",
                             "dash_core_components",
                             "dash_html_components",
@@ -24,8 +26,7 @@ def main():
                             "aionotify",
                             "pyserial",
                             "evdev",
-                            "PyYAML",
-                            "pyzmq"],
+                            "PyYAML"],
           entry_points={'console_scripts':
                         ['realtimefmri = realtimefmri.__main__:main']},
           package_data={'realtimefmri': ['config.cfg', 'pipelines/*-debug.yaml']})

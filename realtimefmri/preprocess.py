@@ -6,23 +6,17 @@ import pickle
 import time
 from uuid import uuid4
 import argparse
-
 import yaml
 import numpy as np
-import zmq
-
+import redis
 import nibabel as nib
-
 import cortex
-
 from realtimefmri.image_utils import register
 from realtimefmri.utils import get_logger, load_class
-from realtimefmri.config import (get_subject_directory,
-                                 RECORDING_DIR, PIPELINE_DIR,
-                                 VOLUME_ADDRESS, PREPROC_ADDRESS)
+from realtimefmri import config
 
 
-class Preprocessor(object):
+def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
     """Highest-level class for running preprocessing
 
     This class loads the preprocessing pipeline from the configuration
@@ -36,93 +30,28 @@ class Preprocessor(object):
         `pipeline` filestore
     recording_id : str
         A unique identifier for the recording
-    in_address : str
-        Address to which data are sent from data collector
-    out_address : str
-        Address to publish preprocessed data to. Stimulation script will
-        read from this address
     log : bool
         Whether to send log messages to the network logger
     verbose : bool
         Whether to log to the console
-
-
-    Attributes
-    ----------
-    in_address : str
-        Address to which data are sent from data collector.
-    input_socket : zmq.socket.Socket
-        The subscriber socket that receives data sent over from the data
-        collector.
-    out_address : str
-        Address to publish preprocessed data to. Stimulation script will
-        read from this address.
-    output_socket : zmq.socket.Socket
-        The publisher socket that sends data over to the stimulator.
-    active : bool
-        Indicates whether the pipeline should be run when data are received.
-    pipeline : dict
-        Dictionary that specifies preprocessing steps that receive each
-        incoming volume.
-    global_parameters : dict
-        Parameters that are sent to every stimulation step as keyword
-        arguments.
-    n_skip : int
-        Number of volumes to skip at start of run
-
-    Methods
-    -------
-    run()
-        Initialize and listen for incoming volumes, processing them through the
-        pipeline as they arrive
     """
-    def __init__(self, preproc_config, recording_id=None, in_address=VOLUME_ADDRESS,
-                 out_address=PREPROC_ADDRESS, verbose=False, log=True, **kwargs):
-        super(Preprocessor, self).__init__()
+    log = get_logger('preprocess', to_console=verbose, to_network=log)
+    redis_client = redis.Redis(config.REDIS_HOST)
+    pipeline = Pipeline.load_from_saved_pipelines(preproc_config, recording_id=recording_id,
+                                                  log=log, verbose=verbose)
+    n_skip = pipeline.global_parameters.get('n_skip', 0)
 
-        # initialize input and output sockets
-        context = zmq.Context()
-        self.in_address = in_address
-        self.input_socket = context.socket(zmq.SUB)
-        self.input_socket.connect(in_address)
-        self.input_socket.setsockopt(zmq.SUBSCRIBE, b'')
+    log.debug('waiting for image')
+    volume_subscription = redis_client.pubsub()
+    volume_subscription.subscribe('timestamped_volume')
+    for message in volume_subscription.listen():
+        image_number, timestamp, nii = message
 
-        self.out_address = out_address
-        self.output_socket = context.socket(zmq.PUB)
-        self.output_socket.bind(out_address)
-
-        self.active = False
-
-        self.pipeline = Pipeline.load_from_saved_pipelines(preproc_config,
-                                                           recording_id=recording_id,
-                                                           output_socket=self.output_socket,
-                                                           log=log, verbose=verbose)
-
-        self.log = get_logger('preprocess', to_console=verbose,
-                              to_network=log)
-
-        self.n_skip = self.pipeline.global_parameters.get('n_skip', 0)
-
-    def receive_image(self):
-        (_,
-         image_id,
-         raw_image_nii) = self.input_socket.recv_multipart()
-        return image_id, raw_image_nii
-
-    def run(self):
-        self.active = True
-        self.log.info('running')
-        while self.active:
-            self.log.debug('waiting for image')
-            image_id, raw_image_nii = self.receive_image()
-            image_id = struct.unpack('i', image_id)[0]
-            self.log.info('received image %d', image_id)
-            data_dict = {'image_id': image_id,
-                         'raw_image_nii': pickle.loads(raw_image_nii)}
-            _ = self.pipeline.process(data_dict)
-
-    def stop(self):
-        pass
+        image_number = struct.unpack('i', image_number)[0]
+        log.info('received image %d', image_number)
+        data_dict = {'image_number': image_number,
+                     'raw_image_nii': nii}
+        data_dict = pipeline.process(data_dict)
 
 
 class Pipeline(object):
@@ -142,8 +71,6 @@ class Pipeline(object):
     recording_id : str
         A unique identifier for the recording. If none is provided, one will be
         generated from the subject name and date
-    output_socket : zmq.socket.Socket
-        Socket (zmq.PUB) to which preprocessed outputs are sent
     log : bool
         Log to network logger
     verbose : bool
@@ -163,8 +90,6 @@ class Pipeline(object):
         run for each image that arrives at the pipeline.
     log : logging.Logger
         The logger object
-    output_socket : zmq.socket.Socket
-        Socket (zmq.PUB) to which preprocessed outputs are sent
 
     Methods
     -------
@@ -235,7 +160,7 @@ class Pipeline(object):
         -------
         A Pipeline class for the specified pipeline name
         """
-        config_path = op.join(PIPELINE_DIR, pipeline_name + '.yaml')
+        config_path = op.join(config.PIPELINE_DIR, pipeline_name + '.yaml')
         return cls.load_from_config(config_path, **kwargs)
 
     @classmethod
@@ -263,7 +188,7 @@ class Pipeline(object):
         -------
         A dictionary of all processing results
         """
-        image_id = struct.pack('i', data_dict['image_id'])
+        image_number = struct.pack('i', data_dict['image_number'])
         for step in self.pipeline:
             args = [data_dict[k] for k in step['input']]
 
@@ -281,7 +206,7 @@ class Pipeline(object):
             for topic in step.get('send', []):
                 message = d[topic]
                 self.log.debug('sending %s' % topic)
-                self.output_socket.send_multipart([topic.encode(), image_id, pickle.dumps(message)])
+                self.output_socket.send_multipart([topic.encode(), image_number, pickle.dumps(message)])
 
         return data_dict
 
@@ -349,7 +274,7 @@ class SaveNifti(PreprocessingStep):
                  **kwargs):
         if recording_id is None:
             recording_id = str(uuid4())
-        recording_dir = op.join(RECORDING_DIR, recording_id, 'nifti')
+        recording_dir = op.join(config.RECORDING_DIR, recording_id, 'nifti')
         try:
             os.makedirs(recording_dir)
         except OSError:
@@ -579,7 +504,7 @@ class RoiActivity(PreprocessingStep):
     """
     def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
 
-        subj_dir = get_subject_directory(subject)
+        subj_dir = config.get_subject_directory(subject)
         pre_mask_path = op.join(subj_dir, pre_mask_name + '.nii')
 
         # mask in zyx
@@ -632,7 +557,7 @@ class WMDetrend(PreprocessingStep):
         """
         """
         super(WMDetrend, self).__init__()
-        subj_dir = get_subject_directory(subject)
+        subj_dir = config.get_subject_directory(subject)
 
         model_path = op.join(subj_dir, 'model-%s.pkl' % model_name)
         pca_path = op.join(subj_dir, 'pca-%s.pkl' % model_name)

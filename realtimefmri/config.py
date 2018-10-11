@@ -53,6 +53,11 @@ def get_datasets():
     return datasets
 
 
+def get_dataset_volume_paths(dataset, extension='.dcm'):
+    directory = get_dataset(dataset)
+    return sorted(glob(op.join(directory, '*' + extension)))
+
+
 def get_pipelines(pipeline_type):
     paths = sorted(glob(op.join(PIPELINE_DIR, pipeline_type + '-*.yaml')))
     pipelines = []

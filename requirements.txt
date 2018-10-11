@@ -1,12 +1,11 @@
 numpy
 matplotlib
+redis
 pydicom
 nibabel
 dicom2nifti
 pycortex
 pyserial
 PyYAML
-pyzmq
-six
 tornado
 evdev

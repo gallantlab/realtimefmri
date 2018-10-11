@@ -1,8 +1,7 @@
 import time
-import serial
 import struct
+import serial
 import argparse
-import zmq
 import redis
 import evdev
 
@@ -10,33 +9,30 @@ from realtimefmri import utils
 from realtimefmri import config
 
 
-class Synchronize(object):
+class CollectTTL(object):
     """Detect and record pulses from the scanner. Can record to a local log
     file or transmit to a network destination.
     """
-    def __init__(self, ttl_source='keyboard', verbose=True):
+    def __init__(self, source='keyboard', verbose=True):
         logger = utils.get_logger('scanner', to_console=verbose, to_network=True)
 
-        if ttl_source == 'keyboard':
+        if source == 'keyboard':
             collect_ttl = self._collect_ttl_keyboard
-        elif ttl_source == 'simulate':
+        elif source == 'simulate':
             collect_ttl = self._collect_ttl_simulate
-        elif ttl_source == 'serial':
+        elif source == 'serial':
             collect_ttl = self._collect_ttl_serial
-        elif ttl_source == 'redis':
+        elif source == 'redis':
             collect_ttl = self._collect_ttl_redis
-        elif ttl_source == 'zmq':
-            collect_ttl = self._collect_ttl_zmq
         else:
-            raise NotImplementedError("TTL source {} not implemented.".format(ttl_source))
-        logger.info(f'receiving TTL from {ttl_source}')
-
-        context = zmq.Context()
+            raise NotImplementedError("TTL source {} not implemented.".format(source))
+        logger.info(f'receiving TTL from {source}')
 
         self.active = True
-        self.context = context
+        self.verbose = verbose
         self.logger = logger
         self.collect_ttl = collect_ttl
+        self.redis_client = redis.Redis(host=config.REDIS_HOST)
 
     def _collect_ttl_keyboard(self):
         keyboard = evdev.InputDevice(config.TTL_KEYBOARD_DEV)
@@ -66,31 +62,18 @@ class Synchronize(object):
                 yield time.time()
 
     def _collect_ttl_redis(self):
-        r = redis.Redis(host=config.REDIS_HOST)
-        p = r.pubsub()
+        p = self.redis_client.pubsub()
         p.subscribe('ttl')
         for i in p.listen():
             yield time.time()
 
-    def _collect_ttl_zmq(self):
-        socket = self.context.socket(zmq.SUB)
-        socket.connect(config.TTL_ZMQ_ADDR)
-        socket.setsockopt(zmq.SUBSCRIBE, b'')
-        while self.active:
-            socket.recv()
-            yield time.time()
-
-    def run(self):
-        socket = self.context.socket(zmq.PUSH)
-        socket.bind(config.SYNC_ADDRESS)
-
+    def collect(self):
         for t in self.collect_ttl():
-            self.logger.info('TR %s', t)
-            # socket.send(struct.pack('d', t))
+            if self.verbose:
+                self.logger.info('Received TTL at time {}'.format(t))
+            self.redis_client.lpush('timestamp', struct.pack('d', t))
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('source', default='keyboard', action='store', type='str')
-    args = parser.parse_args()
-    sync = Synchronize(ttl_source=args.source)
+def collect_ttl(source, verbose=True):
+    collector = CollectTTL(source, verbose=verbose)
+    collector.collect()

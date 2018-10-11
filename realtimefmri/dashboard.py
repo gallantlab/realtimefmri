@@ -33,7 +33,7 @@ def make_mosaic(volume, x=None, y=None, z=None):
             go.Heatmap(z=volume[:, :, z], colorscale='Greys')]
 
 
-def main(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
+def dashboard(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
 
     server = flask.Flask('app')
     app = dash.Dash('app', server=server)
@@ -106,7 +106,3 @@ def main(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
         return fig
 
     app.run_server(host=host, port=port, debug=True)
-
-
-if __name__ == '__main__':
-    main()
