@@ -96,7 +96,6 @@ REDIS_HOST = config.get('addresses', 'redis_host')
 # TTL
 TTL_KEYBOARD_DEV = config.get('sync', 'keyboard')
 TTL_SERIAL_DEV = config.get('sync', 'serial')
-TTL_ZMQ_ADDR = config.get('sync', 'zmq')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'

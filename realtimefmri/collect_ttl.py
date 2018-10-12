@@ -1,7 +1,6 @@
 import time
 import struct
 import serial
-import argparse
 import redis
 import evdev
 
@@ -26,7 +25,7 @@ class CollectTTL(object):
             collect_ttl = self._collect_ttl_redis
         else:
             raise NotImplementedError("TTL source {} not implemented.".format(source))
-        logger.info(f'receiving TTL from {source}')
+        logger.info(f'Receiving TTL from {source}')
 
         self.active = True
         self.verbose = verbose

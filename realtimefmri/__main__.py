@@ -69,7 +69,7 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     if args.subcommand == 'collect_ttl':
-        collect_ttl.collect_ttl(source=args.source).run()
+        collect_ttl.collect_ttl(source=args.source)
 
     elif args.subcommand == 'collect_volumes':
         collect_volumes.collect_volumes()
