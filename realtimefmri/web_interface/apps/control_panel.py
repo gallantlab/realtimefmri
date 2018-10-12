@@ -7,19 +7,16 @@ import multiprocessing
 import threading
 import signal
 import time
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import redis
-
 from realtimefmri import collect_volumes
 from realtimefmri import collect_ttl
 from realtimefmri import collect
 from realtimefmri import preprocess
 from realtimefmri import config
-
 from realtimefmri.web_interface.app import app
 
 session_id = 'admin'
@@ -67,16 +64,6 @@ r = redis.Redis(config.REDIS_HOST)
 r.flushall()
 
 
-start_time = time.time()
-def wait_to_start(wait_time=3):
-    elapsed_time = (time.time() - start_time)
-    if elapsed_time > wait_time:
-        return True
-    else:
-        print(f"{elapsed_time} less than {wait_time}. Not starting")
-        return False
-
-
 class TaskProxy(threading.Thread):
     def __init__(self, target, *args):
         super().__init__()
@@ -102,7 +89,7 @@ def start_task(target, *args):
               [Input('collect-ttl-status', 'n_clicks')],
               [State('session-id', 'children')])
 def collect_ttl_status(n, session_id):
-    if wait_to_start():
+    if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
             label = 'o'
@@ -126,7 +113,7 @@ def collect_ttl_status(n, session_id):
               [Input('collect-volumes-status', 'n_clicks')],
               [State('session-id', 'children')])
 def collect_volumes_status(n, session_id):
-    if wait_to_start():
+    if n is not None:
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
             label = 'o'
@@ -150,7 +137,7 @@ def collect_volumes_status(n, session_id):
               [Input('collect-status', 'n_clicks')],
               [State('session-id', 'children')])
 def collect_status(n, session_id):
-    if wait_to_start():
+    if n is not None:
         pid = r.get(session_id + '_collect_pid')
         if pid is None:
             label = 'o'
@@ -176,7 +163,7 @@ def collect_status(n, session_id):
                State('preproc-config', 'value'),
                State('session-id', 'children')])
 def preprocess_status(n, recording_id, preproc_config, session_id):
-    if wait_to_start():
+    if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
             label = 'o'
@@ -199,7 +186,7 @@ def preprocess_status(n, recording_id, preproc_config, session_id):
 @app.callback(Output('empty-div4', 'children'),
               [Input('simulate-ttl', 'n_clicks')])
 def simulate_ttl(n):
-    if wait_to_start():
+    if n is not None:
         print('simulating ttl at {}'.format(time.time()))
         logging.info('simulating ttl')
         r.publish('ttl', 'message')
@@ -212,7 +199,7 @@ def simulate_ttl(n):
               [State('simulated-dataset', 'value'),
                State('session-id', 'children')])
 def simulate_volume(n, simulated_dataset, session_id):
-    if wait_to_start():
+    if n is not None:
         paths = config.get_dataset_volume_paths(simulated_dataset)
 
         if len(paths) > 0:
