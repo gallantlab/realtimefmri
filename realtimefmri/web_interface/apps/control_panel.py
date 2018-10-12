@@ -7,30 +7,64 @@ import multiprocessing
 import threading
 import signal
 import time
-import flask
-from flask_caching import Cache
 import dash
+import dash_core_components as dcc
+import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import redis
 
-from realtimefmri.control_panel import layout
 from realtimefmri import collect_volumes
 from realtimefmri import collect_ttl
 from realtimefmri import collect
 from realtimefmri import preprocess
 from realtimefmri import config
 
+from realtimefmri.web_interface.app import app
 
-external_stylesheets = [] #'https://codepen.io/chriddyp/pen/bWLwgP.css']
+session_id = 'admin'
+layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display': 'none'}),
+                   html.Div([dcc.Input(id='recording-id',
+                                       placeholder='...enter recording id...',
+                                       type='text', value='TEST')]),
 
-server = flask.Flask('app')
-app = dash.Dash('app', server=server, external_stylesheets=external_stylesheets)
-app.layout = layout.serve_layout
+                   # TTL status
+                   html.Div([html.Button('x', id='collect-ttl-status',
+                                         className='status-indicator'),
+                             html.Span('Collect TTL', className='collect-label'),
+                             html.Button('Simulate TTL', id='simulate-ttl')]),
+
+                   # volumes status
+                   html.Div([html.Button('x', id='collect-volumes-status',
+                                         className='status-indicator'),
+                             html.Span('Collect volumes', className='collect-label'),
+                             html.Button('Simulate volume', id='simulate-volume'),
+                             dcc.Dropdown(id='simulated-dataset', value='',
+                                          options=[{'label': d, 'value': d}
+                                                   for d in config.get_datasets()],
+                                          style={'display': 'inline-block', 'width': '200px'})]),
+
+                   # collect status
+                   html.Div([html.Button('x', id='collect-status', className='status-indicator'),
+                             html.Span('Collect', className='collect-label')]),
+
+                   # preprocess status
+                   html.Div([html.Button('x', id='preprocess-status', 
+                                         className='status-indicator'),
+                             html.Span('Preprocess', className='collect-label'),
+                             dcc.Dropdown(id='preproc-config', value='',
+                                          options=[{'label': p, 'value': p}
+                                                   for p in config.get_pipelines('preproc')],
+                                          style={'display': 'inline-block', 'width': '200px'})]),
+
+                   html.Div(id='empty-div1', children=[]),
+                   html.Div(id='empty-div2', children=[]),
+                   html.Div(id='empty-div3', children=[]),
+                   html.Div(id='empty-div4', children=[])],
+                  style={'max-width': '600px'})
+
 r = redis.Redis(config.REDIS_HOST)
 r.flushall()
-
-cache = Cache(app.server, config={'CACHE_TYPE': 'redis', 'CACHE_THRESHOLD': 200})
 
 
 start_time = time.time()
@@ -192,11 +226,3 @@ def simulate_volume(n, simulated_dataset, session_id):
             r.set(session_id + '_simulated_volume_count', count)
 
     raise PreventUpdate()
-
-
-def serve(host='0.0.0.0', port=8051):
-    app.run_server(host=host, port=port, debug=True)
-
-
-if __name__ == "__main__":
-    serve()

@@ -1,0 +1,19 @@
+button {
+  width: 150px;
+}
+
+.status-indicator {
+  height: 25px;
+  width: 25px;
+  background-color: white;
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0.2em;
+
+}
+
+.collect-label {
+  display: inline-block;
+  width: 150px;
+  margin: 0.2em;
+}
