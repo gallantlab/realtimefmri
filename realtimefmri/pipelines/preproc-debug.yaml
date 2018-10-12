@@ -5,5 +5,14 @@ pipeline:
   - name: debug
     step: realtimefmri.preprocess.Debug
     input: [ raw_image_nii ]
-    output: [ volume, volume_shape, volume_name ]
-    send: [ volume_name, volume ]
+    output: [ nii_repr, nii_shape ]
+
+  - name: nifti_to_volume
+    step: realtimefmri.preprocess.NiftiToVolume
+    input: [ raw_image_nii ]
+    output: [ volume ]
+
+  - name: send
+    step: realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: volume, plot_type: mosaic }
+    input: [ volume ]

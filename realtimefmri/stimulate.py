@@ -221,8 +221,8 @@ class SendToDashboard(Stimulus):
     def __init__(self, name, plot_type='marker', host='localhost', port=6379, **kwargs):
         super(SendToDashboard, self).__init__()
         r = redis.Redis(host=host, port=port)
-        key_name = 'rt_' + name
-        r.set(key_name + '_type', plot_type)
+        key_name = 'dashboard:' + name
+        r.set(key_name + ':type', plot_type)
 
         self.redis = r
         self.key_name = key_name

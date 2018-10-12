@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os.path as op
 import struct
+import pickle
 import redis
 import pydicom
 from dicom2nifti import convert_siemens
@@ -31,4 +32,4 @@ def collect(verbose=True):
             nii = convert_siemens.dicom_to_nifti(dcm, None)['NII']
 
             logger.debug('%s %s', op.basename(new_volume_path), str(nii.shape))
-            redis_client.publish('timestamped_volume', [image_number, timestamp, nii])
+            redis_client.publish('timestamped_volume', pickle.dumps([image_number, timestamp, nii]))

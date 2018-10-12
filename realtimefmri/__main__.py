@@ -32,15 +32,10 @@ def parse_arguments():
     preproc.set_defaults(command_name='preprocess')
     preproc.add_argument('recording_id', action='store',
                          help='Unique recording identifier for this run')
-
     preproc.add_argument('preproc_config', action='store',
                          help='Name of preprocessing configuration file')
-
-    preproc.add_argument('stim_config', action='store',
-                         help='Name of stimulus configuration file')
-
     preproc.add_argument('-v', '--verbose', action='store_true',
-                         dest='verbose', default=False)
+                         dest='verbose', default=True)
 
     simul = subcommand.add_parser('simulate',
                                   help="""Simulate a real-time experiment""")
@@ -84,8 +79,8 @@ def main():
         control_panel.serve()
 
     elif args.subcommand == 'dashboard':
-        dashboard.dashboard(host=args.host, port=args.port,
-                            redis_host=args.redis_host, redis_port=args.redis_port)
+        dashboard.serve(host=args.host, port=args.port,
+                        redis_host=args.redis_host, redis_port=args.redis_port)
 
 
 if __name__ == '__main__':

@@ -41,17 +41,16 @@ def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
                                                   log=log, verbose=verbose)
     n_skip = pipeline.global_parameters.get('n_skip', 0)
 
-    log.debug('waiting for image')
     volume_subscription = redis_client.pubsub()
     volume_subscription.subscribe('timestamped_volume')
     for message in volume_subscription.listen():
-        image_number, timestamp, nii = message
-
-        image_number = struct.unpack('i', image_number)[0]
-        log.info('received image %d', image_number)
-        data_dict = {'image_number': image_number,
-                     'raw_image_nii': nii}
-        data_dict = pipeline.process(data_dict)
+        data = message['data']
+        if data != 1:  # subscription message
+            image_number, timestamp, nii = pickle.loads(data)
+            log.info('received image %d', image_number)
+            data_dict = {'image_number': image_number,
+                         'raw_image_nii': nii}
+            data_dict = pipeline.process(data_dict)
 
 
 class Pipeline(object):
@@ -192,7 +191,7 @@ class Pipeline(object):
         for step in self.pipeline:
             args = [data_dict[k] for k in step['input']]
 
-            self.log.debug('running %s' % step['name'])
+            self.log.info('running %s' % step['name'])
             outp = step['instance'].run(*args)
 
             self.log.debug('finished %s' % step['name'])
@@ -202,11 +201,6 @@ class Pipeline(object):
 
             d = dict(zip(step.get('output', []), outp))
             data_dict.update(d)
-
-            for topic in step.get('send', []):
-                message = d[topic]
-                self.log.debug('sending %s' % topic)
-                self.output_socket.send_multipart([topic.encode(), image_number, pickle.dumps(message)])
 
         return data_dict
 
@@ -237,9 +231,8 @@ class Debug(object):
     def __init__(self, **kwargs):
         pass
 
-    def run(self, volume):
-        print(volume.shape, 'a volume!')
-        return volume.get_data()[..., 0], volume.shape, 'a volume!'
+    def run(self, nii):
+        return str(nii), nii.shape
 
 
 class SaveNifti(PreprocessingStep):

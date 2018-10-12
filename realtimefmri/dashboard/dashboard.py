@@ -1,4 +1,3 @@
-import os
 import pickle
 import warnings
 import numbers
@@ -33,17 +32,14 @@ def make_mosaic(volume, x=None, y=None, z=None):
             go.Heatmap(z=volume[:, :, z], colorscale='Greys')]
 
 
-def dashboard(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
-
+def serve(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
     server = flask.Flask('app')
     app = dash.Dash('app', server=server)
 
     r = redis.Redis(host=redis_host, port=redis_port)
-    r.flushdb()
 
     app.layout = html.Div([html.H2("rtFMRI dashboard"),
-                           html.Div([dcc.Dropdown(id='data-list', value='', multi=True),
-                                     html.Button('refresh', id='data-list-refresh-button')],
+                           html.Div([dcc.Dropdown(id='data-list', value='', multi=True)],
                                     id='data-list-div'),
                            html.Div([dcc.Graph(id='graphs',
                                                style={'display': 'inline-block', 'height': '90%'})],
@@ -53,16 +49,16 @@ def dashboard(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
                           className="container")
 
     @app.callback(Output('data-list', 'options'),
-                  [Input('data-list-refresh-button', 'n_clicks'), Input('data-list', 'value')])
-    def update_data_list(n, value):
-        return [{'label': remove_prefix(key, b'rt_'), 'value': key}
-                for key in r.scan_iter()
-                if not key.endswith(b'_type')]
+                  [Input('interval-component', 'n_intervals')])
+    def update_data_list(n):
+        return [{'label': remove_prefix(key, b'dashboard:'), 'value': key}
+                for key in r.scan_iter(b'dashboard:*')
+                if not key.endswith(b':type')]
 
     @app.callback(Output('graphs', 'figure'),
-                  [Input('data-list', 'value'),
-                   Input('interval-component', 'n_intervals')])
-    def update_selected_graphs(selected_values, n):
+                  [Input('interval-component', 'n_intervals'),
+                   Input('data-list', 'value')])
+    def update_selected_graphs(n, selected_values):
         if len(selected_values) == 0:
             return go.Scatter()
 
@@ -70,8 +66,7 @@ def dashboard(host='0.0.0.0', port=8050, redis_host='redis', redis_port=6379):
         traces = []
         for i, value in enumerate(selected_values):
             data = pickle.loads(r.get(value))
-            plot_type = r.get(value + '_type')
-
+            plot_type = r.get(value + ':type')
             if plot_type == b'scatter':
                 traces.append(go.Scatter(y=data))
                 fig_specs.append([{'colspan': 3}, None, None])
