@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 import os
-import os.path as op
-import importlib
 import time
 import pickle
 import shlex
 import subprocess
-import argparse
-
-import yaml
 import numpy as np
 import redis
 import cortex
-
-from realtimefmri.utils import get_logger, load_class, parse_message
-from realtimefmri.config import RECORDING_DIR, PIPELINE_DIR, STIM_ADDRESS
+from realtimefmri import config
 
 
 class Stimulus(object):
@@ -55,7 +48,7 @@ class SendToDashboard(Stimulus):
     key_name : str
         Name of the key in the redis database
     """
-    def __init__(self, name, plot_type='marker', host='localhost', port=6379, **kwargs):
+    def __init__(self, name, plot_type='marker', host=config.REDIS_HOST, port=6379, **kwargs):
         super(SendToDashboard, self).__init__()
         r = redis.Redis(host=host, port=port)
         key_name = 'dashboard:' + name
@@ -132,7 +125,7 @@ class RoiBars(Stimulus):
 
 
 class AudioRecorder(object):
-    '''Record the microphone and save to file
+    """Record the microphone and save to file
 
     Record from the microphone and save as a ``.wav`` file inside of the
     recording folder
@@ -157,12 +150,10 @@ class AudioRecorder(object):
         Start the recording
     stop()
         Stop the recording
-
-
-    '''
+    """
     def __init__(self, jack_port, file_name, recording_id, **kwargs):
         super(AudioRecorder, self).__init__()
-        rec_path = os.path.join(RECORDING_DIR, recording_id, file_name + '.wav')
+        rec_path = os.path.join(config.RECORDING_DIR, recording_id, file_name + '.wav')
         if not os.path.exists(os.path.dirname(rec_path)):
             os.makedirs(os.path.dirname(rec_path))
 
