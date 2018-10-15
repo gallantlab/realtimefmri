@@ -5,23 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.realtimefmri
-    command: control_panel
+    command: web_interface
     devices:
       - "/dev/input/event3:/dev/input/event3"
-    ports:
-      - "127.0.0.1:8051:8051"
-
-  synchronize:
-    build:
-      context: .
-      dockerfile: Dockerfile.realtimefmri
-    command: ["synchronize", "redis"]
-
-  dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile.realtimefmri
-    command: ["dashboard", "--redis_host", "redis"]
     ports:
       - "127.0.0.1:8050:8050"
 

@@ -1,5 +1,5 @@
 """Setup file for realtimefmri"""
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def main():
@@ -10,20 +10,18 @@ def main():
           description='code for realtime fmri',
           author='robertg',
           author_email='robertg@berkeley.edu',
-          packages=['realtimefmri'],
+          packages=find_packages(),
           install_requires=["numpy",
                             "redis",
-                            "Flask",
-                            "Flask-Caching",
+                            "matplotlib",
+                            "nibabel",
+                            "pydicom",
+                            "pycortex",
                             "dash",
                             "dash_core_components",
                             "dash_html_components",
-                            "matplotlib",
-                            "pydicom",
-                            "nibabel",
                             "dicom2nifti",
-                            "pycortex",
-                            "aionotify",
+                            "pyinotify",
                             "pyserial",
                             "evdev",
                             "PyYAML"],

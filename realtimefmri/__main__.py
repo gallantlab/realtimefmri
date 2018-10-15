@@ -2,8 +2,7 @@
 import argparse
 from realtimefmri import collect_ttl, collect_volumes, collect
 from realtimefmri import preprocess
-from realtimefmri.control_panel import control_panel
-from realtimefmri import dashboard
+from realtimefmri import web_interface
 
 
 def parse_arguments():
@@ -42,19 +41,10 @@ def parse_arguments():
     simul.set_defaults(command_name='simulate')
     simul.add_argument('simulate_dataset', action='store')
 
-    control = subcommand.add_parser('control_panel',
+    control = subcommand.add_parser('web_interface',
                                     help="""Launch web interface for controlling real-time
                                             experiments""")
-    control.set_defaults(command_name='control_panel')
-
-    dashb = subcommand.add_parser('dashboard',
-                                  help="""Launch web interface for viewing results from real-time 
-                                          experiments""")
-    dashb.set_defaults(command_name='dashboard')
-    dashb.add_argument('--host', default='0.0.0.0', dest='host', action='store')
-    dashb.add_argument('--port', default=8050, dest='port', action='store')
-    dashb.add_argument('--redis_host', default='redis', dest='redis_host', action='store')
-    dashb.add_argument('--redis_port', default=6379, dest='redis_port', action='store')
+    control.set_defaults(command_name='web_interface')
 
     args = parser.parse_args()
 
@@ -75,12 +65,10 @@ def main():
     elif args.subcommand == 'preprocess':
         preprocess.preprocess(args.recording_id, args.preproc_config, verbose=args.verbose)
 
-    elif args.subcommand == 'control_panel':
-        control_panel.serve()
-
-    elif args.subcommand == 'dashboard':
-        dashboard.serve(host=args.host, port=args.port,
-                        redis_host=args.redis_host, redis_port=args.redis_port)
+    elif args.subcommand == 'web_interface':
+        print(web_interface)
+        print(dir(web_interface))
+        web_interface.index.serve()
 
 
 if __name__ == '__main__':
