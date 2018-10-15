@@ -9,6 +9,10 @@ import plotly.graph_objs as go
 import redis
 from realtimefmri import config
 from realtimefmri.web_interface.app import app
+from realtimefmri.utils import get_logger
+
+
+log = get_logger('dashboard', to_console=True, to_network=False)
 
 
 def remove_prefix(text, prefix):
@@ -42,15 +46,21 @@ layout = html.Div([html.H2("rtFMRI dashboard"),
                   style={'display': 'inline-block', 'width': '100vh', 'height': '100vh'},
                   className="container")
 
-r = redis.Redis(config.REDIS_HOST)
+r = redis.StrictRedis(config.REDIS_HOST)
 
 
 @app.callback(Output('data-list', 'options'),
               [Input('interval-component', 'n_intervals')])
 def update_data_list(n):
-    return [{'label': remove_prefix(key, b'dashboard:'), 'value': key}
-            for key in r.scan_iter(b'dashboard:*')
-            if not key.endswith(b':type')]
+    data_list = []
+    for key in r.scan_iter(b'dashboard:*'):
+        key = key.decode('utf-8')
+        if not key.endswith(':type'):
+            label = remove_prefix(key, 'dashboard:')
+            data_list.append({'label': label,
+                              'value': key})
+
+    return data_list
 
 
 @app.callback(Output('graphs', 'figure'),

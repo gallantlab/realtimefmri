@@ -16,7 +16,7 @@ def collect(verbose=True):
     logger = get_logger('collector', to_console=verbose, to_network=True)
     logger.info('data collector initialized')
 
-    redis_client = redis.Redis(config.REDIS_HOST)
+    redis_client = redis.StrictRedis(config.REDIS_HOST)
     volume_subscriber = redis_client.pubsub()
     volume_subscriber.subscribe('volume')
 

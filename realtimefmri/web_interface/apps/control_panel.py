@@ -60,7 +60,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                    html.Div(id='empty-div4', children=[])],
                   style={'max-width': '600px'})
 
-r = redis.Redis(config.REDIS_HOST)
+r = redis.StrictRedis(config.REDIS_HOST)
 r.flushall()
 
 

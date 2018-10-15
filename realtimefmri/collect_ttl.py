@@ -31,7 +31,7 @@ class CollectTTL(object):
         self.verbose = verbose
         self.logger = logger
         self.collect_ttl = collect_ttl
-        self.redis_client = redis.Redis(host=config.REDIS_HOST)
+        self.redis_client = redis.StrictRedis(host=config.REDIS_HOST)
 
     def _collect_ttl_keyboard(self):
         keyboard = evdev.InputDevice(config.TTL_KEYBOARD_DEV)

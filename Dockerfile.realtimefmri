@@ -17,7 +17,6 @@ RUN python3 -m pip install --upgrade pip
 # pycortex
 RUN pip3 install pycortex
 RUN python3 -c "import cortex"
-ENTRYPOINT ["sleep", "1000"]
 COPY data/pycortex-options.cfg /root/.config/pycortex/options.cfg
 COPY data/pycortex_store /data/pycortex_store
 
@@ -30,7 +29,7 @@ WORKDIR /code/realtimefmri
 RUN pip3 install -r requirements.txt
 
 RUN pip3 install .
-# # RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
+# RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
 COPY data/test_dataset /root/.local/share/realtimefmri/datasets/test_dataset
 COPY realtimefmri/pipelines /root/.local/share/realtimefmri/pipelines

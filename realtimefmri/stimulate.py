@@ -8,6 +8,10 @@ import numpy as np
 import redis
 import cortex
 from realtimefmri import config
+from realtimefmri.utils import get_logger
+
+
+log = get_logger('stimulate', to_console=True, to_network=False)
 
 
 class Stimulus(object):
@@ -50,7 +54,7 @@ class SendToDashboard(Stimulus):
     """
     def __init__(self, name, plot_type='marker', host=config.REDIS_HOST, port=6379, **kwargs):
         super(SendToDashboard, self).__init__()
-        r = redis.Redis(host=host, port=port)
+        r = redis.StrictRedis(host=host, port=port)
         key_name = 'dashboard:' + name
         r.set(key_name + ':type', plot_type)
 

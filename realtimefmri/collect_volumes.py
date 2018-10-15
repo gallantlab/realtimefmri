@@ -10,7 +10,7 @@ from realtimefmri import config
 
 class VolumeCollector(pyinotify.ProcessEvent):
     def __init__(self, extension='.dcm', verbose=True):
-        self.redis_client = redis.Redis(config.REDIS_HOST)
+        self.redis_client = redis.StrictRedis(config.REDIS_HOST)
         self.extension = extension
         self.verbose = verbose
 

@@ -36,7 +36,7 @@ def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
         Whether to log to the console
     """
     log = get_logger('preprocess', to_console=verbose, to_network=log)
-    redis_client = redis.Redis(config.REDIS_HOST)
+    redis_client = redis.StrictRedis(config.REDIS_HOST)
     pipeline = Pipeline.load_from_saved_pipelines(preproc_config, recording_id=recording_id,
                                                   log=log, verbose=verbose)
     n_skip = pipeline.global_parameters.get('n_skip', 0)
