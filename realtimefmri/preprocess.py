@@ -379,7 +379,7 @@ class ArrayMean(PreprocessingStep):
         Dimensions along which to take the mean. None takes the mean of all values in the array
     """
     def __init__(self, dimensions, **kwargs):
-        self.dimensions = dimensions
+        self.dimensions = tuple(dimensions)
 
     def run(self, array):
         """Take the mean of the array along the specified dimensions
