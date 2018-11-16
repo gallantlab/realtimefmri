@@ -9,40 +9,31 @@ Checkout the code from github and install using ``pip``.
     pip install realtimefmri
 
 
-Dependencies
-------------
+Using ``docker-compose``
+------------------------
 
-The safest way to use the module is within a Python virtual environment. Create a new virtual environment and install the dependencies.
+We recommend using `docker <https://docs.docker.com/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ to run ``realtimefmri``.
 
+Configuration
+~~~~~~~~~~~~~
+Modify the ``.env`` file with the appropriate paths and device number. In particular, set the following variables to point to
 
-``realtimefmri`` relies on ``asyncio`` to perform some asynchronous operations. This module is only available in Python 3.
+- ``PYCORTEX_STORE``: path to pycortex store containing subject surfaces and transforms
+- ``PIPELINE_PATH``: path where pipelines are stored
+- ``TEST_DATASET_PATH``: path where the test dataset is stored
+- ``EVENT_DEVICE``: keyboard input device
 
-.. code-block:: bash
-    
-    virtualenv <environment_name> --python=python3
-    source <environment_name>/bin/activate
-    
-    cd realtimefmri
-    pip install -r requirements.txt # installs the dependencies
-    pip install . # installs the realtimefmri module from setup.py
+Running ``docker-compose``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    # do real-time things
-
-    # to exit the virtual environment
-    deactive 
-
-Network
--------
-
-To receive files in real-time from the scanner, you need to set up Samba on the real-time computer. The real-time computer will host a shared folder, and the scanner console will write to that folder over SMB/CIFS. General instructions for setting up Samba share can be found `here <https://help.ubuntu.com/community/How%20to%20Create%20a%20Network%20Share%20Via%20Samba%20Via%20CLI%20%28Command-line%20interface/Linux%20Terminal%29%20-%20Uncomplicated%2C%20Simple%20and%20Brief%20Way%21>`_, and the we provide more specific instructions in the section :ref:`Connecting to the scanner network <network>`.
-
-
-Uninstall
----------
-
-Uninstall the package using ``pip``.
+From the path containing the ``docker-compose.yml`` file, run the following command:
 
 .. code-block:: bash
-    
-    pip uninstall realtimefmri
+   
+   docker-compose up -d
 
+It will pull the ``redis`` docker image, build the ``realtimefmri`` image, and start both containers. To stop them, run
+
+.. code-block:: bash
+   
+   docker-compose down

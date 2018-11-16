@@ -11,8 +11,8 @@ Contents
 .. toctree::
     :maxdepth: 1
 
-    installation
     overview
+    installation
     network
     pipelines
     together
