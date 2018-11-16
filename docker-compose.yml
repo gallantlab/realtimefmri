@@ -7,9 +7,15 @@ services:
       dockerfile: Dockerfile.realtimefmri
     command: web_interface
     devices:
-      - "/dev/input/event3:/dev/input/event3"
+      - "${EVENT_DEVICE}:${EVENT_DEVICE}"
     ports:
       - "127.0.0.1:8050:8050"
+    volumes:
+      - "${PYCORTEX_STORE}:/data/pycortex_store"
+      - "${PIPELINE_PATH}:/root/.local/share/realtimefmri/pipelines"
+      - "${TEST_DATASET_PATH}:/root/.local/share/realtimefmri/datasets/test_dataset"
+    restart: always
 
   redis:
     image: redis
+    restart: always
