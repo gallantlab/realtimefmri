@@ -19,7 +19,7 @@ Modify the ``.env`` file with the appropriate paths and device number. In partic
 Running ``docker-compose``
 --------------------------
 
-From the path containing the ``docker-compose.yaml`` file, run the following command:
+From the path containing the ``docker-compose.yml`` file, run the following command:
 
 .. code-block:: bash
    
