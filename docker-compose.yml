@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.realtimefmri
     command: web_interface
     devices:
-      - "${EVENT_DEVICE}:${EVENT_DEVICE}"
+      - "${EVENT_DEVICE}:/dev/input/event3"
     ports:
       - "127.0.0.1:8050:8050"
     volumes:
