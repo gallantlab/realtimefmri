@@ -89,8 +89,8 @@ def compute_posterior_variance(x, prior_mean, alpha, beta, axis=0):
         For data arrays, the dimension to compute the variance along
     """
     N = len(x)
-    v1 = 1 / (N + 2 * alpha + 2)
-    v2 = 2 * beta + np.sum((x - prior_mean)**2, axis)
+    v1 = 1. / (N + 2 * alpha + 2)
+    v2 = 2. * beta + np.sum((x - prior_mean)**2, axis)
     variance = v1 * v2
     return variance
 
@@ -112,7 +112,7 @@ def compute_posterior_mean(x, prior_mean, belief=10., axis=0):
         For data arrays, the dimension to compute the mean along
     """
     N = len(x)
-    m1 = 1 / (N + belief)
+    m1 = 1. / (N + belief)
     m2 = np.sum(x, axis) + belief * prior_mean
     mean = m1 * m2
     return mean
