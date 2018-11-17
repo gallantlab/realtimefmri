@@ -39,10 +39,14 @@ class BayesianZScore(object):
             Flag indicating whether to update the prior with the posterior after each 
             input value
         """
+        inverse_gamma = InvGammaParameters(None, None, prior_variances)
+        inverse_gamma.alpha = variance_alpha
+        inverse_gamma.beta = inverse_gamma.get_beta()
+
         self.prior_means = prior_means
         self.prior_variances = prior_variances
         self.mean_belief = mean_belief
-        self.inverse_gamma = InvGammaParameters(None, None, prior_variances)
+        self.inverse_gamma = inverse_gamma
         self.update_prior = update_prior
 
     def run(self, inp):
