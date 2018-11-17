@@ -20,6 +20,25 @@ class InvGammaParameters(object):
 class BayesianZScore(object):
     def __init__(self, prior_means, prior_variances,
                  mean_belief, variance_alpha, update_prior=True):
+        """Preprocessing module that z-scores data using mean and variance estimated 
+        using Bayesian methods
+
+        Attributes
+        ----------
+        prior_means : numpy.ndarray
+            A vector containing the mean prior values for each feature
+        prior_variances : numpy.ndarray
+            A vector containing the variance prior values for each features
+        mean_belief : float or numpy.ndarray
+            A float or vector of floats of the ratio determining how much to weigh 
+            the prior over the data
+        variance_alpha : float or numpy.ndarray
+            A float or vector of floats containing the alpha parameter for the 
+            prior distribution on the variance
+        update_prior : bool
+            Flag indicating whether to update the prior with the posterior after each 
+            input value
+        """
         self.prior_means = prior_means
         self.prior_variances = prior_variances
         self.mean_belief = mean_belief
