@@ -1,7 +1,7 @@
 .. _pipelines:
 
 Configuring a real-time pipeline
-=====================================
+================================
 
 The flexibility of this package comes from your ability to configure custom preprocessing and stimulation pipelines. To run a real-time experiment, you'll need to configure these. Pipelines are specified using :mod:`yaml` files stored in the ``pipelines`` directory.
 
