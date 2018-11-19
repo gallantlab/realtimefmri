@@ -1,4 +1,6 @@
 import numpy as np
+from realtimefmri import buffered_array
+from realtimefmri import preprocess
 
 
 class InvGammaParameters(object):
@@ -17,7 +19,7 @@ class InvGammaParameters(object):
         return self.beta / (self.alpha + 1)
 
 
-class BayesianZScore(object):
+class BayesianZScore(preprocess.PreprocessingStep):
     def __init__(self, prior_means, prior_variances,
                  mean_belief, variance_alpha, update_prior=True):
         """Preprocessing module that z-scores data using mean and variance estimated 
@@ -61,19 +63,26 @@ class BayesianZScore(object):
         -------
         The input array z-scored using the posterior mean and variance
         """
-        if len(inp) == 0:
-            return self.prior_means, self.prior_variances
+        if not hasattr(self, 'data'):
+            self.data = buffered_array.BufferedArray(inp.size, dtype=inp.dtype)
 
-        post_var = compute_posterior_variance(inp, self.prior_means,
+        self.data.append(inp)
+
+        post_var = compute_posterior_variance(self.data.get_array(),
+                                              self.prior_means,
                                               self.inverse_gamma.alpha,
                                               self.inverse_gamma.beta)
-        post_mean = compute_posterior_mean(inp, self.prior_means, self.mean_belief)
+        post_mean = compute_posterior_mean(self.data.get_array(),
+                                           self.prior_means, self.mean_belief)
 
         if self.update_prior:
             self.prior_means = post_mean
             self.prior_variances = post_var
         
         return (inp - post_mean) / np.sqrt(post_var)
+
+    def reset(self):
+        del self.data
 
 
 def compute_posterior_variance(x, prior_mean, alpha, beta, axis=0):
