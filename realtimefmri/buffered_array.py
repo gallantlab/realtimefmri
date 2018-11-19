@@ -2,8 +2,16 @@ import numpy as np
 
 
 class BufferedArray(object):
-    """docstring for DataArray"""
     def __init__(self, size, dtype='float32', buffer_size=1000):
+        """An array that grows with the syntax of a list and the efficiency of an ndarray
+        
+        Attributes
+        ----------
+        size : int
+            Number of columns in the array
+        dtype : str
+        buffer_size : int
+        """
         super(BufferedArray, self).__init__()
         self._array = np.empty((buffer_size, size), dtype)
         self._current_size = 0
