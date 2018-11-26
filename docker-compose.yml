@@ -14,8 +14,22 @@ services:
       - "${PYCORTEX_STORE}:/data/pycortex_store"
       - "${PIPELINE_PATH}:/root/.local/share/realtimefmri/pipelines"
       - "${TEST_DATASET_PATH}:/root/.local/share/realtimefmri/datasets/test_dataset"
+      - scanner:/root/.local/share/realtimefmri/scanner
     restart: always
 
   redis:
     image: redis
     restart: always
+
+  samba:
+    build:
+      context: "./samba"
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:139:139"
+      - "0.0.0.0:445:445"
+    volumes:
+      - scanner:/mnt/scanner
+
+volumes:
+  scanner:
