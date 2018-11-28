@@ -23,9 +23,6 @@ pipeline:
     input: [ volume ]
     output: [ gm_responses ]
 
-  - name: zscore
-    step: realtimefmri.preprocess.OnlineZScore
-
   - name: array_mean
     step: realtimefmri.preprocess.ArrayMean
     kwargs: { dimensions: [0]}
