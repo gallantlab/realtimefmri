@@ -21,11 +21,13 @@ COPY data/pycortex-options.cfg /root/.config/pycortex/options.cfg
 
 # realtimefmri
 RUN mkdir -p /code/realtimefmri/realtimefmri
-COPY requirements.txt /code/realtimefmri
-COPY setup.py /code/realtimefmri
-COPY realtimefmri /code/realtimefmri/realtimefmri
 WORKDIR /code/realtimefmri
+
+COPY requirements.txt .
 RUN pip3 install -r requirements.txt
+
+COPY setup.py .
+COPY realtimefmri ./realtimefmri
 
 RUN pip3 install .
 # RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
@@ -34,4 +36,5 @@ RUN python3 -c "import realtimefmri"
 WORKDIR /
 ENV PATH="$HOME/abin:$PATH"
 EXPOSE 8050
+EXPOSE 8051
 ENTRYPOINT ["realtimefmri"]

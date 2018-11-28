@@ -12,7 +12,7 @@ from realtimefmri.web_interface.app import app
 from realtimefmri.utils import get_logger
 
 
-log = get_logger('dashboard', to_console=True, to_network=False)
+logger = get_logger('dashboard', to_console=True, to_network=False)
 
 
 def remove_prefix(text, prefix):
@@ -67,34 +67,36 @@ def update_data_list(n):
               [Input('interval-component', 'n_intervals'),
                Input('data-list', 'value')])
 def update_selected_graphs(n, selected_values):
-    if len(selected_values) == 0:
-        return go.Scatter()
-
     fig_specs = []
     traces = []
     for i, value in enumerate(selected_values):
-        data = pickle.loads(r.get(value))
-        plot_type = r.get(value + ':type')
-        if plot_type == b'scatter':
-            traces.append(go.Scatter(y=data))
-            fig_specs.append([{'colspan': 3}, None, None])
+        val = r.get(value)
+        if val is not None:
+            data = pickle.loads(val)
+            plot_type = r.get(value + ':type')
+            if plot_type == b'scatter':
+                traces.append(go.Scatter(y=data))
+                fig_specs.append([{'colspan': 3}, None, None])
 
-        elif plot_type == b'bar':
-            if isinstance(data, numbers.Number):
-                data = [data]
-            traces.append(go.Bar(y=data))
-            fig_specs.append([{'colspan': 3}, None, None])
+            elif plot_type == b'bar':
+                if isinstance(data, numbers.Number):
+                    data = [data]
+                traces.append(go.Bar(y=data))
+                fig_specs.append([{'colspan': 3}, None, None])
 
-        elif plot_type == b'timeseries':
-            traces.append(go.Scatter(y=[1, 2, 3]))
-            fig_specs.append([{'colspan': 3}, None, None])
+            elif plot_type == b'timeseries':
+                traces.append(go.Scatter(y=[1, 2, 3]))
+                fig_specs.append([{'colspan': 3}, None, None])
 
-        elif plot_type == b'mosaic':
-            traces.append(make_mosaic(data))
-            fig_specs.append([{}, {}, {}])
+            elif plot_type == b'mosaic':
+                traces.append(make_mosaic(data))
+                fig_specs.append([{}, {}, {}])
 
-        else:
-            warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))
+            else:
+                warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))
+
+    if len(traces) == 0:
+        return go.Scatter()
 
     fig = plotly.tools.make_subplots(rows=len(selected_values), cols=3, specs=fig_specs,
                                      print_grid=False)

@@ -97,7 +97,7 @@ class Pipeline(object):
         Run the data in ```data_dict``` through each of the preprocessing steps
     """
     def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None,
-                 log=False, output_socket=None, verbose=False):
+                 log=False, verbose=False):
         if recording_id is None:
             recording_id = 'recording_{}'.format(time.strftime('%Y%m%d_%H%M'))
 
@@ -107,7 +107,6 @@ class Pipeline(object):
 
         self.recording_id = recording_id
         self.log = log
-        self.output_socket = output_socket
 
         self.build(pipeline, static_pipeline, global_parameters)
 
@@ -366,9 +365,8 @@ class ApplyMask(PreprocessingStep):
         Parameters
         -----------
         volume : array
-            Array with dimensions consistent with pycortex
         """
-        return volume[self.mask.T]
+        return volume[self.mask]
 
 
 class ArrayMean(PreprocessingStep):
