@@ -44,13 +44,14 @@ def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
     volume_subscription = redis_client.pubsub()
     volume_subscription.subscribe('timestamped_volume')
     for message in volume_subscription.listen():
-        data = message['data']
-        if data != 1:  # subscription message
-            image_number, timestamp, nii = pickle.loads(data)
-            log.info('received image %d', image_number)
-            data_dict = {'image_number': image_number,
-                         'raw_image_nii': nii}
-            data_dict = pipeline.process(data_dict)
+        if message['type'] == 'message':
+            data = message['data']
+            if data != 1:  # subscription message
+                image_number, timestamp, nii = pickle.loads(data)
+                log.info('received image %d', image_number)
+                data_dict = {'image_number': image_number,
+                             'raw_image_nii': nii}
+                data_dict = pipeline.process(data_dict)
 
 
 class Pipeline(object):

@@ -63,8 +63,9 @@ class CollectTTL(object):
     def _collect_ttl_redis(self):
         p = self.redis_client.pubsub()
         p.subscribe('ttl')
-        for i in p.listen():
-            yield time.time()
+        for message in p.listen():
+            if message['type'] == 'message':
+                yield time.time()
 
     def collect(self):
         for t in self.collect_ttl():
