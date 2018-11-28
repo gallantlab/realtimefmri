@@ -59,13 +59,10 @@ class PyCortexViewer(object):
         subscriber.subscribe('viewer')
         logger.info('Listening for volumes')
         for message in subscriber.listen():
-            logger.info('Received volume')
-            try:
+            if message['type'] == 'message':
+                logger.info('Received volume')
                 vol = pickle.loads(message['data'])
                 self.update_viewer(vol)
-
-            except Exception as e:
-                logger.warning(e)
 
 
 def serve(surface, transform, mask_type, vmin, vmax):
