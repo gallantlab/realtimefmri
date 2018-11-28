@@ -106,11 +106,11 @@ def collect_ttl_status(n, session_id):
     if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
-            logger.info(f"Starting TTL collector (pid {pid})")
             label = 'o'
             process = start_task(collect_ttl.collect_ttl, 'redis')
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started TTL collector (pid {pid})")
             r.set(session_id + '_collect_ttl_pid', process.pid)
         else:
             logger.info(f"Stopping TTL collector (pid {pid})")
@@ -132,12 +132,11 @@ def collect_volumes_status(n, session_id):
     if n is not None:
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
-            logger.info(f"Starting volume collector (pid {pid})")
-
             label = 'o'
             process = start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started volume collector (pid {pid})")
             r.set(session_id + '_collect_volumes_pid', process.pid)
         else:
             logger.info(f"Stopping volume collector (pid {pid})")
@@ -159,11 +158,11 @@ def collect_status(n, session_id):
     if n is not None:
         pid = r.get(session_id + '_collect_pid')
         if pid is None:
-            logger.info(f"Starting collector viewer (pid {pid})")
             label = 'o'
             process = start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started collector viewer (pid {pid})")
             r.set(session_id + '_collect_pid', process.pid)
         else:
             logger.info(f"Stopping collector viewer (pid {pid})")
@@ -187,11 +186,11 @@ def preprocess_status(n, recording_id, preproc_config, session_id):
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
-            logger.info(f"Starting preprocessor (pid {pid})")
             label = 'o'
             process = start_task(preprocess.preprocess, recording_id, preproc_config)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started preprocessor (pid {pid})")
             r.set(session_id + '_preprocess_pid', process.pid)
         else:
             logger.info(f"Stopping preprocessor (pid {pid})")
@@ -215,11 +214,11 @@ def viewer_status(n, session_id, surface, transform):
     if n is not None:
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
-            logger.info(f"Starting pycortex viewer (pid {pid})")
             label = 'o'
             process = start_task(viewer.serve, surface, transform, "thick", 0, 2000)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started pycortex viewer (pid {pid})")
             r.set(session_id + '_viewer_pid', process.pid)
         else:
             logger.info(f"Stopping pycortex viewer (pid {pid})")
