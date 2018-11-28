@@ -17,8 +17,6 @@ class PyCortexViewer(object):
 
     def __init__(self, surface, transform, mask_type='thick', vmin=-1., vmax=1.,
                  **kwargs):
-        super(PyCortexViewer, self).__init__()
-
         npts = cortex.db.get_mask(surface, transform, mask_type).sum()
         data = np.zeros((self.bufferlen, npts), 'float32')
         vol = cortex.Volume(data, surface, transform, vmin=vmin, vmax=vmax)
