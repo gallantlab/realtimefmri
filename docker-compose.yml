@@ -14,7 +14,7 @@ services:
     volumes:
       - "${PYCORTEX_STORE}:/data/pycortex_store"
       - "${PIPELINE_PATH}:/root/.local/share/realtimefmri/pipelines"
-      - "${TEST_DATASET_PATH}:/root/.local/share/realtimefmri/datasets/test_dataset"
+      - "${TEST_DATASET_PATH}:/root/.local/share/realtimefmri/datasets"
       - scanner:/root/.local/share/realtimefmri/scanner
     restart: always
 
