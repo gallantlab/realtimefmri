@@ -17,12 +17,18 @@ class PyCortexViewer(object):
 
     def __init__(self, surface, transform, mask_type='thick', vmin=-1., vmax=1.,
                  **kwargs):
-        npts = cortex.db.get_mask(surface, transform, mask_type).sum()
-        data = np.zeros((self.bufferlen, npts), 'float32')
+        if mask_type == '':
+            logger.info('No mask')
+            data = np.zeros((self.bufferlen, 100, 100, 30), 'float32')
+        else:
+            logger.info(f'{mask_type} mask')
+            npts = cortex.db.get_mask(surface, transform, mask_type).sum()
+            data = np.zeros((self.bufferlen, npts), 'float32')
+
         vol = cortex.Volume(data, surface, transform, vmin=vmin, vmax=vmax)
-        logger.info('starting pycortex viewer')
+        logger.info('Starting pycortex viewer')
         view = cortex.webgl.show(vol, open_browser=True, autoclose=False, port=8051)
-        logger.info(f'started pycortex viewer {surface}, {transform}, {npts}')
+        logger.info(f'Started pycortex viewer {surface}, {transform}, {mask_type}')
 
         self.surface = surface
         self.transform = transform
@@ -46,9 +52,7 @@ class PyCortexViewer(object):
         i, = self.view.setFrame()
         i = round(i)
         self.view.playpause('play')
-        logger.info('start pause')
         time.sleep(1)
-        logger.info('stop pause')
         self.view.playpause('pause')
         self.view.setFrame(i + 0.99)
 

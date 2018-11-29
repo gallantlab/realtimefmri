@@ -16,7 +16,7 @@ from realtimefmri.utils import get_logger, load_class
 from realtimefmri import config
 
 
-def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
+def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, log=True, **kwargs):
     """Highest-level class for running preprocessing
 
     This class loads the preprocessing pipeline from the configuration
@@ -25,7 +25,7 @@ def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
 
     Parameters
     ----------
-    preproc_config : str
+    pipeline_name : str
         Name of preprocessing configuration to use. Should be a file in the
         `pipeline` filestore
     recording_id : str
@@ -37,8 +37,16 @@ def preprocess(recording_id, preproc_config, verbose=False, log=True, **kwargs):
     """
     log = get_logger('preprocess', to_console=verbose, to_network=log)
     redis_client = redis.StrictRedis(config.REDIS_HOST)
-    pipeline = Pipeline.load_from_saved_pipelines(preproc_config, recording_id=recording_id,
-                                                  log=log, verbose=verbose)
+
+    config_path = op.join(config.PIPELINE_DIR, pipeline_name + '.yaml')
+    with open(config_path, 'rb') as f:
+        pipeline_config = yaml.load(f)
+
+    pipeline_config['global_parameters']['surface'] = surface
+    pipeline_config['global_parameters']['transform'] = transform
+
+    pipeline = Pipeline(log=log, verbose=verbose, **pipeline_config)
+
     n_skip = pipeline.global_parameters.get('n_skip', 0)
 
     volume_subscription = redis_client.pubsub()
@@ -213,16 +221,16 @@ class PreprocessingStep(object):
         raise NotImplementedError
 
 
-def load_mask(subject, xfm_name, mask_type):
+def load_mask(surface, transform, mask_type):
         mask_path = op.join(cortex.database.default_filestore,
-                            subject, 'transforms', xfm_name,
+                            surface, 'transforms', transform,
                             'mask_' + mask_type + '.nii.gz')
         return nib.load(mask_path)
 
 
-def load_reference(subject, xfm_name):
+def load_reference(surface, transform):
         ref_path = op.join(cortex.database.default_filestore,
-                           subject, 'transforms', xfm_name,
+                           surface, 'transforms', transform,
                            'reference.nii.gz')
         return nib.load(ref_path)
 
@@ -327,6 +335,7 @@ class MotionCorrect(PreprocessingStep):
             print(input_volume.affine)
             print(self.reference_affine)
             raise Exception('Input and reference volumes have different affines.')
+
         return register(input_volume, self.reference_path, twopass=self.twopass)
 
 
@@ -419,9 +428,9 @@ class ApplyMask2(PreprocessingStep):
 
     Parameters
     ----------
-    subject : str
+    surface : str
         Subject name
-    xfm_name : str
+    transform : str
         Pycortex transform name
     mask_type_1 : str
         Mask type for initial mask. Incoming vector results from applying this
@@ -441,9 +450,9 @@ class ApplyMask2(PreprocessingStep):
         Returns a vector of voxel activity of the intersection between primary
         and secondary masks
     """
-    def __init__(self, subject, xfm_name, mask_type_1, mask_type_2, **kwargs):
-        mask1 = cortex.db.get_mask(subject, xfm_name, mask_type_1).T  # in xyz
-        mask2 = cortex.db.get_mask(subject, xfm_name, mask_type_2).T  # in xyz
+    def __init__(self, surface, transform, mask_type_1, mask_type_2, **kwargs):
+        mask1 = cortex.db.get_mask(surface, transform, mask_type_1).T  # in xyz
+        mask2 = cortex.db.get_mask(surface, transform, mask_type_2).T  # in xyz
         self.mask = secondary_mask(mask1, mask2, order='F')
 
     def run(self, x):
@@ -472,9 +481,9 @@ class RoiActivity(PreprocessingStep):
 
     Parameters
     ----------
-    subject : str
-        subject ID
-    xfm_name : str
+    surface : str
+        Subject name
+    transform : str
         pycortex transform ID
     pre_mask_name : str
         ROI masks returned by pycortex are in volume space, but activity is
@@ -494,16 +503,16 @@ class RoiActivity(PreprocessingStep):
     run():
         Returns a list of floats of mean activity in the requested ROIs
     """
-    def __init__(self, subject, xfm_name, pre_mask_name, roi_names, **kwargs):
+    def __init__(self, surface, transform, pre_mask_name, roi_names, **kwargs):
 
-        subj_dir = config.get_subject_directory(subject)
+        subj_dir = config.get_subject_directory(surface)
         pre_mask_path = op.join(subj_dir, pre_mask_name + '.nii')
 
         # mask in zyx
         pre_mask = nib.load(pre_mask_path).get_data().T.astype(bool)
 
         # returns masks in zyx
-        roi_masks, roi_dict = cortex.get_roi_masks(subject, xfm_name, roi_names)
+        roi_masks, roi_dict = cortex.get_roi_masks(surface, transform, roi_names)
 
         self.masks = dict()
         for name, mask_value in roi_dict.items():

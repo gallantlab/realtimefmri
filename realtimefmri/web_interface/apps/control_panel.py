@@ -67,7 +67,10 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                                    for d in config.get_surfaces()],
                                           style={'display': 'inline-block', 'width': '200px'}),
                              dcc.Dropdown(id='pycortex-transform',
-                                          style={'display': 'inline-block', 'width': '200px'})]),
+                                          style={'display': 'inline-block', 'width': '200px'}),
+                             dcc.Input(id='pycortex-mask', placeholder='',
+                                       type='text', value='',
+                                       style={'display': 'inline-block', 'width': '200px'})]),
 
                    html.Div(id='empty-div1', children=[]),
                    html.Div(id='empty-div2', children=[]),
@@ -179,15 +182,18 @@ def collect_status(n, session_id):
 
 @app.callback(Output('preprocess-status', 'children'),
               [Input('preprocess-status', 'n_clicks')],
-              [State('recording-id', 'value'),
+              [State('session-id', 'children'),
+               State('recording-id', 'value'),
                State('preproc-config', 'value'),
-               State('session-id', 'children')])
-def preprocess_status(n, recording_id, preproc_config, session_id):
+               State('pycortex-surface', 'value'),
+               State('pycortex-transform', 'value')])
+def preprocess_status(n, session_id, recording_id, preproc_config, surface, transform):
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
             label = 'o'
-            process = start_task(preprocess.preprocess, recording_id, preproc_config)
+            process = start_task(preprocess.preprocess,
+                                 recording_id, preproc_config, surface, transform)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started preprocessor (pid {process.pid})")
@@ -209,13 +215,14 @@ def preprocess_status(n, recording_id, preproc_config, session_id):
               [Input('viewer-status', 'n_clicks')],
               [State('session-id', 'children'),
                State('pycortex-surface', 'value'),
-               State('pycortex-transform', 'value')])
-def viewer_status(n, session_id, surface, transform):
+               State('pycortex-transform', 'value'),
+               State('pycortex-mask', 'value')])
+def viewer_status(n, session_id, surface, transform, mask):
     if n is not None:
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
             label = 'o'
-            process = start_task(viewer.serve, surface, transform, "thick", 0, 2000)
+            process = start_task(viewer.serve, surface, transform, mask, 0, 2000)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started pycortex viewer (pid {process.pid})")

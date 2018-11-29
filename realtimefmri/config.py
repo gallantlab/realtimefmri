@@ -43,7 +43,13 @@ def get_surfaces():
 
 
 def get_transforms(surface):
-    return sorted(getattr(cortex.db, surface).transforms.xfms)
+    try:
+        surf = getattr(cortex.db, surface)
+        transforms = sorted(surf.transforms.xfms)
+    except AttributeError:
+        transforms = []
+
+    return transforms
 
 
 def get_dataset(dataset):
