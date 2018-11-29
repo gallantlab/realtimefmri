@@ -10,6 +10,7 @@ services:
       - "${EVENT_DEVICE}:/dev/input/event3"
     ports:
       - "127.0.0.1:8050:8050"
+      - "127.0.0.1:8051:8051"
     volumes:
       - "${PYCORTEX_STORE}:/data/pycortex_store"
       - "${PIPELINE_PATH}:/root/.local/share/realtimefmri/pipelines"

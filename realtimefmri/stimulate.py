@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 import os
-import time
 import pickle
 import shlex
 import subprocess
 import numpy as np
 import redis
-import cortex
 from realtimefmri import config
 from realtimefmri.utils import get_logger
 
 
-log = get_logger('stimulate', to_console=True, to_network=False)
+logger = get_logger('stimulate', to_console=True, to_network=True)
 
 
 class Stimulus(object):
@@ -65,61 +63,23 @@ class SendToDashboard(Stimulus):
         self.redis.set(self.key_name, pickle.dumps(data))
 
 
-class PyCortexViewer(Stimulus):
-    bufferlen = 50
+class SendToPycortexViewer(Stimulus):
+    """Send data to the pycortex webgl viewer
 
-    def __init__(self, subject, xfm_name, mask_type='thick', vmin=-1., vmax=1.,
-                 **kwargs):
-        super(PyCortexViewer, self).__init__()
-        npts = cortex.db.get_mask(subject, xfm_name, mask_type).sum()
+    Parameters
+    ----------
+    name : str
 
-        data = np.zeros((self.bufferlen, npts), 'float32')
-        vol = cortex.Volume(data, subject, xfm_name, vmin=vmin, vmax=vmax)
-        view = cortex.webshow(vol, autoclose=False)
+    Attributes
+    ----------
+    redis : redis connection
+    """
+    def __init__(self, name, host=config.REDIS_HOST, port=6379, **kwargs):
+        super(SendToPycortexViewer, self).__init__()
+        self.redis = redis.StrictRedis(host=host, port=port)
 
-        self.subject = subject
-        self.xfm_name = xfm_name
-        self.mask_type = mask_type
-
-        self.view = view
-        self.active = True
-        self.i = 0
-
-    def update_volume(self, mos):
-        i, = self.view.setFrame()
-        i = round(i)
-        new_frame = (i + 1) % self.bufferlen
-        self.view.dataviews.data.data[0]._setData(new_frame, mos)
-
-    def advance_frame(self):
-        i, = self.view.setFrame()
-        i = round(i)
-        self.view.playpause('play')
-        time.sleep(1)
-        self.view.playpause('pause')
-        self.view.setFrame(i + 0.99)
-
-    def run(self, inp):
-        if self.active:
-            try:
-                data = np.fromstring(inp['data'], dtype='float32')
-                print(self.subject, self.xfm_name, data.shape)
-                vol = cortex.Volume(data, self.subject, self.xfm_name)
-                mos, _ = cortex.mosaic(vol.volume[0], show=False)
-                self.update_volume(mos)
-                self.advance_frame()
-
-                return 'i={}, data[0]={:.4f}'.format(self.i, data[0])
-
-            except IndexError as e:
-                self.active = False
-                return e
-
-            except Exception as e:
-                return e
-
-    def stop(self):
-        self.view.playpause('pause')
+    def run(self, data):
+        self.redis.publish("viewer", pickle.dumps(data))
 
 
 class RoiBars(Stimulus):

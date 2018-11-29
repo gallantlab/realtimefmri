@@ -17,7 +17,12 @@ from realtimefmri import collect_ttl
 from realtimefmri import collect
 from realtimefmri import preprocess
 from realtimefmri import config
+from realtimefmri import viewer
 from realtimefmri.web_interface.app import app
+from realtimefmri.utils import get_logger
+
+
+logger = get_logger('control_panel', to_console=True, to_network=True)
 
 session_id = 'admin'
 layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display': 'none'}),
@@ -28,13 +33,13 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                    # TTL status
                    html.Div([html.Button('x', id='collect-ttl-status',
                                          className='status-indicator'),
-                             html.Span('Collect TTL', className='collect-label'),
+                             html.Span('Collect TTL', className='status-label'),
                              html.Button('Simulate TTL', id='simulate-ttl')]),
 
                    # volumes status
                    html.Div([html.Button('x', id='collect-volumes-status',
                                          className='status-indicator'),
-                             html.Span('Collect volumes', className='collect-label'),
+                             html.Span('Collect volumes', className='status-label'),
                              html.Button('Simulate volume', id='simulate-volume'),
                              dcc.Dropdown(id='simulated-dataset', value='',
                                           options=[{'label': d, 'value': d}
@@ -43,16 +48,26 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
 
                    # collect status
                    html.Div([html.Button('x', id='collect-status', className='status-indicator'),
-                             html.Span('Collect', className='collect-label')]),
+                             html.Span('Collect', className='status-label')]),
 
                    # preprocess status
                    html.Div([html.Button('x', id='preprocess-status', 
                                          className='status-indicator'),
-                             html.Span('Preprocess', className='collect-label'),
+                             html.Span('Preprocess', className='status-label'),
                              dcc.Dropdown(id='preproc-config', value='',
                                           options=[{'label': p, 'value': p}
                                                    for p in config.get_pipelines('preproc')],
                                           style={'display': 'inline-block', 'width': '200px'})]),
+                   # pycortex viewer status
+                   html.Div([html.Button('x', id='viewer-status',
+                                         className='status-indicator'),
+                             html.Span('Viewer', className='status-label'),
+                             dcc.Input(id='pycortex-surface',
+                                       placeholder='...enter pycortex surface name...',
+                                       type='text', value='RGfs'),
+                             dcc.Input(id='pycortex-transform',
+                                       placeholder='...enter pycortex transform name...',
+                                       type='text', value='20170705RG_movies')]),
 
                    html.Div(id='empty-div1', children=[]),
                    html.Div(id='empty-div2', children=[]),
@@ -74,7 +89,6 @@ class TaskProxy(threading.Thread):
         p = multiprocessing.Process(target=self.target, args=self.args)
         self.target_process = p
         p.start()
-        print(p.pid)
         p.join()
 
 
@@ -96,8 +110,10 @@ def collect_ttl_status(n, session_id):
             process = start_task(collect_ttl.collect_ttl, 'redis')
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started TTL collector (pid {process.pid})")
             r.set(session_id + '_collect_ttl_pid', process.pid)
         else:
+            logger.info(f"Stopping TTL collector (pid {pid})")
             label = 'x'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
@@ -120,8 +136,10 @@ def collect_volumes_status(n, session_id):
             process = start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started volume collector (pid {process.pid})")
             r.set(session_id + '_collect_volumes_pid', process.pid)
         else:
+            logger.info(f"Stopping volume collector (pid {pid})")
             label = 'x'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
@@ -144,8 +162,10 @@ def collect_status(n, session_id):
             process = start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started collector viewer (pid {process.pid})")
             r.set(session_id + '_collect_pid', process.pid)
         else:
+            logger.info(f"Stopping collector viewer (pid {pid})")
             label = 'x'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
@@ -170,8 +190,10 @@ def preprocess_status(n, recording_id, preproc_config, session_id):
             process = start_task(preprocess.preprocess, recording_id, preproc_config)
             while not process.is_alive():
                 time.sleep(0.1)
+            logger.info(f"Started preprocessor (pid {process.pid})")
             r.set(session_id + '_preprocess_pid', process.pid)
         else:
+            logger.info(f"Stopping preprocessor (pid {pid})")
             label = 'x'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
@@ -183,12 +205,39 @@ def preprocess_status(n, recording_id, preproc_config, session_id):
         raise PreventUpdate()
 
 
+@app.callback(Output('viewer-status', 'children'),
+              [Input('viewer-status', 'n_clicks')],
+              [State('session-id', 'children'),
+               State('pycortex-surface', 'value'),
+               State('pycortex-transform', 'value')])
+def viewer_status(n, session_id, surface, transform):
+    if n is not None:
+        pid = r.get(session_id + '_viewer_pid')
+        if pid is None:
+            label = 'o'
+            process = start_task(viewer.serve, surface, transform, "thick", 0, 2000)
+            while not process.is_alive():
+                time.sleep(0.1)
+            logger.info(f"Started pycortex viewer (pid {process.pid})")
+            r.set(session_id + '_viewer_pid', process.pid)
+        else:
+            logger.info(f"Stopping pycortex viewer (pid {pid})")
+            label = 'x'
+            pid = int(pid)
+            os.kill(pid, signal.SIGKILL)
+            r.delete(session_id + '_viewer_pid')
+
+        return label
+
+    else:
+        raise PreventUpdate()
+
+
 @app.callback(Output('empty-div4', 'children'),
               [Input('simulate-ttl', 'n_clicks')])
 def simulate_ttl(n):
     if n is not None:
-        print('simulating ttl at {}'.format(time.time()))
-        logging.info('simulating ttl')
+        logging.info('simulating ttl at {}'.format(time.time()))
         r.publish('ttl', 'message')
     else:
         raise PreventUpdate()
@@ -206,7 +255,7 @@ def simulate_volume(n, simulated_dataset, session_id):
             count = int(r.get(session_id + '_simulated_volume_count') or 0)
             count = count % len(paths)
 
-            print('Simulating volume {}'.format(count))
+            logger.info('Simulating volume {}'.format(count))
             path = paths[count]
             shutil.copy(path, op.join(config.SCANNER_DIR, str(uuid4()) + '.dcm'))
             count += 1
