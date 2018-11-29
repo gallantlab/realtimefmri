@@ -5,6 +5,7 @@ from glob import glob
 import shutil
 import logging
 from configparser import ConfigParser
+import cortex
 import realtimefmri
 
 
@@ -35,6 +36,14 @@ def initialize():
 
     if not op.exists(DATASET_DIR):
         os.makedirs(DATASET_DIR)
+
+
+def get_surfaces():
+    return sorted(list(cortex.db.subjects.keys()))
+
+
+def get_transforms(surface):
+    return sorted(getattr(cortex.db, surface).transforms.xfms)
 
 
 def get_dataset(dataset):

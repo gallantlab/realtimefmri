@@ -62,12 +62,12 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                    html.Div([html.Button('x', id='viewer-status',
                                          className='status-indicator'),
                              html.Span('Viewer', className='status-label'),
-                             dcc.Input(id='pycortex-surface',
-                                       placeholder='...enter pycortex surface name...',
-                                       type='text', value='RGfs'),
-                             dcc.Input(id='pycortex-transform',
-                                       placeholder='...enter pycortex transform name...',
-                                       type='text', value='20170705RG_movies')]),
+                             dcc.Dropdown(id='pycortex-surface', value='',
+                                          options=[{'label': d, 'value': d}
+                                                   for d in config.get_surfaces()],
+                                          style={'display': 'inline-block', 'width': '200px'}),
+                             dcc.Dropdown(id='pycortex-transform',
+                                          style={'display': 'inline-block', 'width': '200px'})]),
 
                    html.Div(id='empty-div1', children=[]),
                    html.Div(id='empty-div2', children=[]),
@@ -262,3 +262,9 @@ def simulate_volume(n, simulated_dataset, session_id):
             r.set(session_id + '_simulated_volume_count', count)
 
     raise PreventUpdate()
+
+
+@app.callback(Output('pycortex-transform', 'options'),
+              [Input('pycortex-surface', 'value')])
+def populate_transforms(surface):
+    return [{'label': d, 'value': d} for d in config.get_transforms(surface)]
