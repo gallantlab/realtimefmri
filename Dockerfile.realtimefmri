@@ -34,7 +34,7 @@ RUN pip3 install .
 RUN python3 -c "import realtimefmri"
 
 WORKDIR /
-ENV PATH="$HOME/abin:$PATH"
+ENV PATH="$PATH:/usr/lib/afni/bin"
 EXPOSE 8050
 EXPOSE 8051
 ENTRYPOINT ["realtimefmri"]
