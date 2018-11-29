@@ -12,6 +12,12 @@ pipeline:
     input: [ raw_image_nii ]
     output: [ volume ]
 
+  - name: motion_correct
+    step: realtimefmri.preprocess.MotionCorrect
+    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
+    input: [ raw_image_nii ]
+    output: [ image_nifti_mc ]
+
   - name: send_volume
     step: realtimefmri.stimulate.SendToDashboard
     kwargs: { name: volume, plot_type: mosaic }
@@ -19,7 +25,7 @@ pipeline:
 
   - name: gm_mask
     step: realtimefmri.preprocess.ApplyMask
-    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick}
+    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
     input: [ volume ]
     output: [ gm_responses ]
 

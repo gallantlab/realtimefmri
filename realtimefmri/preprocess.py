@@ -291,10 +291,10 @@ class MotionCorrect(PreprocessingStep):
 
     Parameters
     ----------
-    subject : str
-        Subject name in pycortex filestore
-    xfm_name : str
-        Transform name for the subject in pycortex filestore
+    surface : str
+        surface name in pycortex filestore
+    transform : str
+        Transform name for the surface in pycortex filestore
 
     Attributes
     ----------
@@ -309,9 +309,9 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, subject, xfm_name, twopass=False, **kwargs):
+    def __init__(self, surface, transform, twopass=False, **kwargs):
         ref_path = op.join(cortex.database.default_filestore,
-                           subject, 'transforms', xfm_name,
+                           surface, 'transforms', transform,
                            'reference.nii.gz')
 
         nii = nib.load(ref_path)
