@@ -19,7 +19,7 @@ class PyCortexViewer(object):
                  **kwargs):
         if mask_type == '':
             logger.info('No mask')
-            data = np.zeros((self.bufferlen, 100, 100, 30), 'float32')
+            data = np.zeros((self.bufferlen, 30, 100, 100), 'float32')
         else:
             logger.info(f'{mask_type} mask')
             npts = cortex.db.get_mask(surface, transform, mask_type).sum()
