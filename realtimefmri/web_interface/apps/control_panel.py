@@ -83,20 +83,22 @@ r.flushall()
 
 
 class TaskProxy(threading.Thread):
-    def __init__(self, target, *args):
+    def __init__(self, target, *args, **kwargs):
         super().__init__()
         self.target = target
         self.args = args
+        self.kwargs = kwargs
 
     def run(self):
-        p = multiprocessing.Process(target=self.target, args=self.args)
+        p = multiprocessing.Process(target=self.target,
+                                    args=self.args, kwargs=self.kwargs)
         self.target_process = p
         p.start()
         p.join()
 
 
-def start_task(target, *args):
-    t = TaskProxy(target, *args)
+def start_task(target, *args, **kwargs):
+    t = TaskProxy(target, *args, **kwargs)
     t.daemon = True
     t.start()
     return t.target_process
@@ -136,7 +138,8 @@ def collect_volumes_status(n, session_id):
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
             label = 'o'
-            process = start_task(collect_volumes.collect_volumes)
+            process = start_task(collect_volumes.collect_volumes_poll,
+                                 parent_directory=config.SCANNER_DIR, extension='.dcm')
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started volume collector (pid {process.pid})")
@@ -258,15 +261,27 @@ def simulate_volume(n, simulated_dataset, session_id):
     if n is not None:
         paths = config.get_dataset_volume_paths(simulated_dataset)
 
-        if len(paths) > 0:
-            count = int(r.get(session_id + '_simulated_volume_count') or 0)
-            count = count % len(paths)
+        count = r.get(session_id + '_simulated_volume_count')
+        if count is None:
+            count = 0
 
-            logger.info('Simulating volume {}'.format(count))
-            path = paths[count]
-            shutil.copy(path, op.join(config.SCANNER_DIR, str(uuid4()) + '.dcm'))
-            count += 1
-            r.set(session_id + '_simulated_volume_count', count)
+            dest_directory = op.join(config.SCANNER_DIR, str(uuid4()))
+            os.makedirs(dest_directory)
+            time.sleep(0.5)
+            logger.info(f'Simulating volume {count} {dest_directory}')
+            paths = config.get_dataset_volume_paths(simulated_dataset)
+            r.set(session_id + '_simulated_volume_directory', dest_directory)
+
+        else:
+            count = int(count)
+            dest_directory = r.get(session_id + '_simulated_volume_directory').decode('utf-8')
+
+        path = paths[count % len(paths)]
+        dest_path = op.join(dest_directory, f"IM{count:04}.dcm")
+        logger.info(f'Copying {path} to {dest_directory}')
+        shutil.copy(path, dest_path)
+        count += 1
+        r.set(session_id + '_simulated_volume_count', count)
 
     raise PreventUpdate()
 

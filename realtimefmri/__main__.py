@@ -3,6 +3,7 @@ import argparse
 from realtimefmri import collect_ttl, collect_volumes, collect
 from realtimefmri import preprocess
 from realtimefmri import web_interface
+from realtimefmri import config
 
 
 def parse_arguments():
@@ -57,7 +58,7 @@ def main():
         collect_ttl.collect_ttl(source=args.source)
 
     elif args.subcommand == 'collect_volumes':
-        collect_volumes.collect_volumes()
+        collect_volumes.collect_volumes_poll(parent_directory=config.SCANNER_DIR, extension='.dcm')
 
     elif args.subcommand == 'collect':
         collect.collect(args.verbose)
