@@ -138,8 +138,7 @@ def collect_volumes_status(n, session_id):
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
             label = 'o'
-            process = start_task(collect_volumes.collect_volumes_poll,
-                                 parent_directory=config.SCANNER_DIR, extension='.dcm')
+            process = start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started volume collector (pid {process.pid})")

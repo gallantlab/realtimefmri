@@ -58,7 +58,7 @@ def main():
         collect_ttl.collect_ttl(source=args.source)
 
     elif args.subcommand == 'collect_volumes':
-        collect_volumes.collect_volumes_poll(parent_directory=config.SCANNER_DIR, extension='.dcm')
+        collect_volumes.collect_volumes()
 
     elif args.subcommand == 'collect':
         collect.collect(args.verbose)
