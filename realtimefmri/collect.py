@@ -1,12 +1,40 @@
 #!/usr/bin/env python3
+import os
 import os.path as op
 import struct
+import tempfile
+import subprocess
+import nibabel
 import pickle
 import redis
-import pydicom
-from dicom2nifti import convert_siemens
 from realtimefmri.utils import get_logger
 from realtimefmri import config
+
+
+def dicom_to_nifti(dicom_path):
+    """Convert dicom image to nibabel nifti
+
+    Parameters
+    ----------
+    dicom_path : str
+        Path to dicom image
+
+    Returns
+    -------
+    A nibabel.nifti1.Nifti1Image
+    """
+    d = tempfile.TemporaryDirectory()
+    cmd = ['dcm2niix',
+           '-s', 'y',
+           '-b', 'n',
+           '-1',
+           '-o', d.name, dicom_path]
+
+    subprocess.check_call(cmd)
+    nii = nibabel.load(op.join(d.name, os.listdir(d.name)[0]), mmap=False)
+    d.cleanup()
+
+    return nii
 
 
 def collect(verbose=True):
@@ -28,8 +56,7 @@ def collect(verbose=True):
             timestamp = struct.unpack('d', timestamp)[0]
             logger.info('Collected at {}'.format(timestamp))
 
-            dcm = [pydicom.read_file(new_volume_path)]
-            nii = convert_siemens.dicom_to_nifti(dcm, None)['NII']
+            nii = dicom_to_nifti(new_volume_path)
 
             logger.debug('%s %s', op.basename(new_volume_path), str(nii.shape))
             redis_client.publish('timestamped_volume', pickle.dumps([image_number, timestamp, nii]))
