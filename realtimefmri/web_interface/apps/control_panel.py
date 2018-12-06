@@ -30,13 +30,13 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                        placeholder='...enter recording id...',
                                        type='text', value='TEST')]),
 
-                   # TTL status
+                   # collect TTL
                    html.Div([html.Button('x', id='collect-ttl-status',
                                          className='status-indicator'),
                              html.Span('Collect TTL', className='status-label'),
                              html.Button('Simulate TTL', id='simulate-ttl')]),
 
-                   # volumes status
+                   # collect volumes
                    html.Div([html.Button('x', id='collect-volumes-status',
                                          className='status-indicator'),
                              html.Span('Collect volumes', className='status-label'),
@@ -46,11 +46,11 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                                    for d in config.get_datasets()],
                                           style={'display': 'inline-block', 'width': '200px'})]),
 
-                   # collect status
+                   # collect
                    html.Div([html.Button('x', id='collect-status', className='status-indicator'),
                              html.Span('Collect', className='status-label')]),
 
-                   # preprocess status
+                   # preprocess
                    html.Div([html.Button('x', id='preprocess-status', 
                                          className='status-indicator'),
                              html.Span('Preprocess', className='status-label'),
@@ -58,7 +58,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                           options=[{'label': p, 'value': p}
                                                    for p in config.get_pipelines('preproc')],
                                           style={'display': 'inline-block', 'width': '200px'})]),
-                   # pycortex viewer status
+                   # pycortex viewer
                    html.Div([html.Button('x', id='viewer-status',
                                          className='status-indicator'),
                              html.Span('Viewer', className='status-label'),

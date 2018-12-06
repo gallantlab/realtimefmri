@@ -34,9 +34,6 @@ def initialize():
     if not op.exists(DATASET_DIR):
         os.makedirs(DATASET_DIR)
 
-    if not op.exists(DATASET_DIR):
-        os.makedirs(DATASET_DIR)
-
 
 def get_surfaces():
     return sorted(list(cortex.db.subjects.keys()))
