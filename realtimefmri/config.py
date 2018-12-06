@@ -60,7 +60,7 @@ def get_datasets():
                     if op.isdir(op.join(DATASET_DIR, d))])
     datasets = []
     for path in paths:
-        datasets.append(op.splitext(op.basename(path))[0])
+        datasets.append(op.basename(path))
 
     return datasets
 
