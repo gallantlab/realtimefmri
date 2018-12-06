@@ -5,6 +5,7 @@ import struct
 import pickle
 import time
 from uuid import uuid4
+import warnings
 import argparse
 import yaml
 import numpy as np
@@ -334,7 +335,7 @@ class MotionCorrect(PreprocessingStep):
         if not same_affine:
             print(input_volume.affine)
             print(self.reference_affine)
-            raise Exception('Input and reference volumes have different affines.')
+            warnings.warn('Input and reference volumes have different affines.')
 
         return register(input_volume, self.reference_path, twopass=self.twopass)
 
@@ -344,7 +345,7 @@ class NiftiToVolume(PreprocessingStep):
     pycortex convention, e.g., volume shape is (30, 100, 100)
     """
     def run(self, nii):
-        return nii.get_data().T[0]
+        return nii.get_data().T
 
 
 class ApplyMask(PreprocessingStep):
