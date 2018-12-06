@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-RUN apt update && apt install samba -y
+RUN apt-get update && apt-get install samba -y
 RUN mkdir -p /usr/local/samba/var/
 ADD smb.conf /etc/samba/smb.conf
 

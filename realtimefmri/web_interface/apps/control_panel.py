@@ -207,9 +207,12 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         else:
             logger.info(f"Stopping preprocessor (pid {pid})")
             label = 'x'
-            pid = int(pid)
-            os.kill(pid, signal.SIGKILL)
-            r.delete(session_id + '_preprocess_pid')
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            finally:
+                r.delete(session_id + '_preprocess_pid')
 
         return label
 

@@ -11,7 +11,7 @@ class InvGammaParameters(object):
 
     def get_alpha(self):
         return 1 + (self.beta / self.variance)
-    
+
     def get_beta(self):
         return self.variance * (self.alpha + 1)
 
@@ -78,7 +78,7 @@ class BayesianZScore(preprocess.PreprocessingStep):
         if self.update_prior:
             self.prior_means = post_mean
             self.prior_variances = post_var
-        
+
         return (inp - post_mean) / np.sqrt(post_var)
 
     def reset(self):

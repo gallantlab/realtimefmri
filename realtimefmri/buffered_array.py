@@ -4,7 +4,7 @@ import numpy as np
 class BufferedArray(object):
     def __init__(self, size, dtype='float32', buffer_size=1000):
         """An array that grows with the syntax of a list and the efficiency of an ndarray
-        
+
         Attributes
         ----------
         size : int
@@ -22,6 +22,10 @@ class BufferedArray(object):
 
     def get_array(self):
         return self._array[:self._current_size]
+
+    @property
+    def shape(self):
+        return self._current_size, self._array.shape[1]
 
     def __getitem__(self, index):
         array = self.get_array()

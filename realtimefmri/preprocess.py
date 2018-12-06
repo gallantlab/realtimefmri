@@ -15,6 +15,7 @@ import cortex
 from realtimefmri.image_utils import register
 from realtimefmri.utils import get_logger, load_class
 from realtimefmri import config
+from realtimefmri import buffered_array
 
 
 def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, log=True, **kwargs):
@@ -579,6 +580,40 @@ class WMDetrend(PreprocessingStep):
         return gm_activity - gm_trend
 
 
+class RunningZScore(PreprocessingStep):
+    def __init__(self, **kwargs):
+        """Preprocessing module that z-scores data using running mean and variance
+        """
+        self.n = 0
+
+    def run(self, inp):
+        """Run the z-scoring on one time point and update the prior
+
+        Parameters
+        ----------
+        inp : numpy.ndarray
+            A vector of data to be z-scored
+
+        Returns
+        -------
+        The input array z-scored using the posterior mean and variance
+        """
+        if not hasattr(self, 'data'):
+            self.data = buffered_array.BufferedArray(inp.size, dtype=inp.dtype)
+            self.data.append(inp)
+            return np.zeros(inp.size, dtype=inp.dtype)
+
+        self.data.append(inp)
+
+        std = np.std(self.data.get_array(), 0)
+        mean = np.mean(self.data.get_array(), 0)
+
+        return (inp - mean) / std
+
+    def reset(self):
+        del self.data
+
+
 class RunningMeanStd(PreprocessingStep):
     """Compute a running mean and standard deviation for a set of voxels
 
@@ -620,9 +655,10 @@ class RunningMeanStd(PreprocessingStep):
             return np.zeros(inp.size), np.ones(inp.size)
 
         if self.mean is None:
-            self.samples = np.empty((self.n, inp.size))*np.nan
+            self.samples = np.empty((self.n, inp.size)) * np.nan
         else:
             self.samples[:-1, :] = self.samples[1:, :]
+
         self.samples[-1, :] = inp
         self.mean = np.nanmean(self.samples, 0)
         self.std = np.nanstd(self.samples, 0)

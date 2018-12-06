@@ -1,64 +1,92 @@
 import os
 import os.path as op
-from shutil import rmtree
-from subprocess import call, STDOUT
+import tempfile
+import subprocess
 import shlex
-from uuid import uuid4
-from tempfile import mkdtemp
 import numpy as np
-import nibabel as nib
+import nibabel
 from realtimefmri.utils import get_temporary_path
 
 
-def register(inp, base, output_transform=False, twopass=False):
-    """Register the input image to the base image"""
-    temp_directory = mkdtemp()
+def dicom_to_nifti(dicom_path):
+    """Convert dicom image to nibabel nifti
 
-    try:
-        if isinstance(base, str):
-            base_path = base
-        else:
-            base_path = get_temporary_path(directory=temp_directory, extension='.nii.gz')
-            nib.save(base, base_path)
+    Parameters
+    ----------
+    dicom_path : str
+        Path to dicom image
 
-        if isinstance(inp, str):
-            in_path = inp
-        else:
-            in_path = get_temporary_path(directory=temp_directory, extension='.nii.gz')
-            nib.save(inp, in_path)
+    Returns
+    -------
+    A nibabel.nifti1.Nifti1Image
+    """
+    d = tempfile.TemporaryDirectory()
+    cmd = ['dcm2niix',
+           '-s', 'y',
+           '-b', 'n',
+           '-1',
+           '-o', d.name, dicom_path]
 
-        out_path = get_temporary_path(directory=temp_directory, extension='.nii')
-        cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(base_path,
-                                                                out_path))
-        if output_transform:
-            transform_path = op.join(temp_directory, str(uuid4()) + '.aff12.1D')
-            cmd.extend(['-1Dmatrix_save', transform_path])
-        if twopass:
-            cmd.append('-twopass')
+    subprocess.check_call(cmd)
+    nii = nibabel.load(op.join(d.name, os.listdir(d.name)[0]), mmap=False)
+    _ = nii.get_data()
+    d.cleanup()
 
-        cmd.append(in_path)
+    return nii
 
-        devnull = open(os.devnull, 'w')
-        ret = call(cmd, stdout=devnull, stderr=STDOUT, close_fds=True)
-        if ret > 0:
-            print(' '.join(cmd))
 
-        out_img = nib.load(out_path)
-        out_img.get_data()
+def register(volume, reference, output_transform=False, twopass=False):
+    """Register the input image to the reference image
 
-        if output_transform:
-            xfm = load_afni_xfm(transform_path)
+    Parameters
+    ----------
+    volume : str or nibabel.nifti1.Nifti1Image
+    reference : str or nibabel.nifti1.Nifti1Image
+    output_transform : bool
+    twopass : bool
 
-    except Exception as e:
-        raise Exception(e)
+    """
+    temp_directory = tempfile.TemporaryDirectory()
 
-    finally:
-        rmtree(temp_directory)
+    if isinstance(reference, str):
+        reference_path = reference
+    else:
+        reference_path = get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
+        nibabel.save(reference, reference_path)
+
+    if isinstance(volume, str):
+        volume_path = volume
+    else:
+        volume_path = get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
+        nibabel.save(volume, volume_path)
+
+    registered_volume_path = get_temporary_path(directory=temp_directory.name, extension='.nii')
+    cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(reference_path,
+                                                            registered_volume_path))
+    if output_transform:
+        transform_path = get_temporary_path(temp_directory.name, extension='.aff12.1D')
+        cmd.extend(['-1Dmatrix_save', transform_path])
+    if twopass:
+        cmd.append('-twopass')
+
+    cmd.append(volume_path)
+
+    with open(os.devnull, 'w') as devnull:
+        ret = subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT, close_fds=True)
+
+    if ret > 0:
+        print(' '.join(cmd))
+
+    registered_volume = nibabel.load(registered_volume_path)
+    registered_volume.get_data()
 
     if output_transform:
-        return out_img, xfm
+        xfm = load_afni_xfm(transform_path)
+
+    if output_transform:
+        return registered_volume, xfm
     else:
-        return out_img
+        return registered_volume
 
 
 def mosaic_to_volume(mosaic, nrows=6, ncols=6):
