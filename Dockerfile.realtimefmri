@@ -5,7 +5,7 @@ RUN apt-get update && \
     wget -O- http://neuro.debian.net/lists/bionic.us-ca.full | tee /etc/apt/sources.list.d/neurodebian.sources.list && \
     apt-key adv --recv-keys --keyserver hkp://pool.sks-keyservers.net:80 0xA5D32F012649A5A9 && \
     apt-get update && \
-    apt-get install -y afni && \
+    apt-get install -y afni dcm2niix && \
     apt-get install -y python3-dev python3-pip && \
     apt-get install -y cython3 python3-numpy python3-scipy python3-numexpr \
                        python3-matplotlib python3-shapely libxml2 git tmux nano && \
@@ -33,8 +33,10 @@ RUN pip3 install .
 # RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
 RUN python3 -c "import realtimefmri"
 
-WORKDIR /
 ENV PATH="$PATH:/usr/lib/afni/bin"
+
 EXPOSE 8050
 EXPOSE 8051
+
+WORKDIR /
 ENTRYPOINT ["realtimefmri"]

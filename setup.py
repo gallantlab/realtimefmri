@@ -20,7 +20,6 @@ def main():
                             "dash",
                             "dash_core_components",
                             "dash_html_components",
-                            "dicom2nifti",
                             "pyinotify",
                             "pyserial",
                             "evdev",
