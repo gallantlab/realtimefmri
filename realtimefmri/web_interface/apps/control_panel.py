@@ -173,8 +173,12 @@ def collect_status(n, session_id):
             logger.info(f"Stopping collector viewer (pid {pid})")
             label = 'x'
             pid = int(pid)
-            os.kill(pid, signal.SIGKILL)
-            r.delete(session_id + '_collect_pid')
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            finally:
+                r.delete(session_id + '_collect_pid')
 
         return label
 
