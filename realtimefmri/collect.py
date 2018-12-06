@@ -32,6 +32,7 @@ def dicom_to_nifti(dicom_path):
 
     subprocess.check_call(cmd)
     nii = nibabel.load(op.join(d.name, os.listdir(d.name)[0]), mmap=False)
+    _ = nii.get_data()
     d.cleanup()
 
     return nii
