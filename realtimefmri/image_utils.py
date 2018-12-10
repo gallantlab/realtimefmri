@@ -1,11 +1,13 @@
 import os
 import os.path as op
 import tempfile
-import subprocess
 import shlex
 import numpy as np
 import nibabel
-from realtimefmri.utils import get_temporary_path
+from realtimefmri import utils
+
+
+logger = utils.get_logger('image_utils', to_console=True)
 
 
 def dicom_to_nifti(dicom_path):
@@ -27,9 +29,13 @@ def dicom_to_nifti(dicom_path):
            '-1',
            '-o', d.name, dicom_path]
 
-    subprocess.check_call(cmd)
+    _ = utils.run_command(cmd)
     nii = nibabel.load(op.join(d.name, os.listdir(d.name)[0]), mmap=False)
-    _ = nii.get_data()
+
+    affine = nii.affine
+    affine[1, 1] *= -1
+    nii = nibabel.Nifti1Image(nii.get_data()[:, ::-1], affine, nii.header)
+
     d.cleanup()
 
     return nii
@@ -67,40 +73,39 @@ def register(volume, reference, output_transform=False, twopass=False):
     if isinstance(reference, str):
         reference_path = reference
     else:
-        reference_path = get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
+        reference_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
         nibabel.save(reference, reference_path)
 
     if isinstance(volume, str):
         volume_path = volume
     else:
-        volume_path = get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
+        volume_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
         nibabel.save(volume, volume_path)
 
-    registered_volume_path = get_temporary_path(directory=temp_directory.name, extension='.nii')
+    registered_volume_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii')
     cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(reference_path,
                                                             registered_volume_path))
     if output_transform:
-        transform_path = get_temporary_path(temp_directory.name, extension='.aff12.1D')
+        transform_path = utils.get_temporary_path(temp_directory.name, extension='.aff12.1D')
         cmd.extend(['-1Dmatrix_save', transform_path])
     if twopass:
         cmd.append('-twopass')
 
     cmd.append(volume_path)
 
-    with open(os.devnull, 'w') as devnull:
-        ret = subprocess.call(cmd, stdout=devnull, stderr=subprocess.STDOUT, close_fds=True)
-
-    if ret > 0:
-        print(' '.join(cmd))
+    env = os.environ.copy()
+    env['AFNI_NIFTI_TYPE_WARN'] = 'NO'
+    error_message = utils.run_command(cmd, raise_errors=False, env=env)
+    if (error_message is not None):
+        logger.debug(error_message)
 
     registered_volume = nibabel.load(registered_volume_path)
     registered_volume.get_data()
 
     if output_transform:
         xfm = load_afni_xfm(transform_path)
-
-    if output_transform:
         return registered_volume, xfm
+
     else:
         return registered_volume
 

@@ -21,7 +21,7 @@ from realtimefmri import buffered_array
 logger = get_logger('preprocess', to_console=True, to_network=True)
 
 
-def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, log=True, **kwargs):
+def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     """Highest-level class for running preprocessing
 
     This class loads the preprocessing pipeline from the configuration
@@ -59,10 +59,10 @@ def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, l
         if message['type'] == 'message':
             data = message['data']
             if data != 1:  # subscription message
-                image_number, timestamp, nii = pickle.loads(data)
-                logger.info(f'Received image {image_number}')
-                data_dict = {'image_number': image_number,
-                             'raw_image_nii': nii}
+                timestamped_volume = pickle.loads(data)
+                logger.info('Received image %d', timestamped_volume['image_number'])
+                data_dict = {'image_number': timestamped_volume['image_number'],
+                             'raw_image_nii': timestamped_volume['volume']}
                 data_dict = pipeline.process(data_dict)
 
 
