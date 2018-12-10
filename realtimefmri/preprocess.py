@@ -233,9 +233,6 @@ def load_reference(surface, transform):
 
 
 class Debug(object):
-    def __init__(self, **kwargs):
-        pass
-
     def run(self, nii):
         return str(nii), nii.shape
 
