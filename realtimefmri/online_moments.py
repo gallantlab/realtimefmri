@@ -42,9 +42,9 @@ class OnlineMoments(PreprocessingStep):
     def __init__(self, order=4, **kwargs):
         self.n = 0.0
         self.order = order
-        self.all_raw_moments = [0.0]*self.order
+        self.all_raw_moments = [0.0] * self.order
         for odx in range(self.order):
-            self.__setattr__('rawmnt%i'%(odx+1), self.all_raw_moments[odx])
+            self.__setattr__('rawmnt%i' % (odx + 1), self.all_raw_moments[odx])
 
     def __repr__(self):
         return '%s.online_moments' % (__name__)
