@@ -35,6 +35,22 @@ def dicom_to_nifti(dicom_path):
     return nii
 
 
+def secondary_mask(mask1, mask2, order='C'):
+    """
+    Given an array, X and two 3d masks, mask1 and mask2
+    X[mask1] = x
+    X[mask1 & mask2] = y
+    x[new_mask] = y
+    """
+    assert mask1.shape == mask2.shape
+    mask1_flat = mask1.ravel(order=order)
+    mask2_flat = mask2.ravel(order=order)
+
+    masks = np.c_[mask1_flat, mask2_flat]
+    masks = masks[mask1_flat, :]
+    return masks[:, 1].astype(bool)
+
+
 def register(volume, reference, output_transform=False, twopass=False):
     """Register the input image to the reference image
 
