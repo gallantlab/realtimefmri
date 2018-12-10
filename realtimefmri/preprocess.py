@@ -232,7 +232,7 @@ def load_reference(surface, transform):
         return nib.load(ref_path)
 
 
-class Debug(object):
+class Debug(PreprocessingStep):
     def run(self, nii):
         return str(nii), nii.shape
 

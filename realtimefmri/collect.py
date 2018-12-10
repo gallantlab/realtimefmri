@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-import os
 import os.path as op
 import struct
-import tempfile
-import subprocess
-import nibabel
 import pickle
 import redis
 from realtimefmri.utils import get_logger
@@ -13,7 +9,7 @@ from realtimefmri import image_utils
 
 
 def collect(verbose=True):
-    """Continuously monitor for incoming volumes, merge with TTL timestamps, and send to 
+    """Continuously monitor for incoming volumes, merge with TTL timestamps, and send to
     preprocessor
     """
     logger = get_logger('collector', to_console=verbose, to_network=True)
@@ -32,6 +28,8 @@ def collect(verbose=True):
             logger.info('Collected at {}'.format(timestamp))
 
             nii = image_utils.dicom_to_nifti(new_volume_path)
+            timestamped_volume = {'time': timestamp,
+                                  'volume': nii.get_data()}
 
             logger.debug('%s %s', op.basename(new_volume_path), str(nii.shape))
             redis_client.publish('timestamped_volume', pickle.dumps([image_number, timestamp, nii]))
