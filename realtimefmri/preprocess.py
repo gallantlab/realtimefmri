@@ -12,13 +12,16 @@ import numpy as np
 import redis
 import nibabel as nib
 import cortex
-from realtimefmri.image_utils import register
+from realtimefmri import image_utils
 from realtimefmri.utils import get_logger, load_class
 from realtimefmri import config
 from realtimefmri import buffered_array
 
 
-def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, log=True, **kwargs):
+logger = get_logger('preprocess', to_console=True, to_network=True)
+
+
+def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     """Highest-level class for running preprocessing
 
     This class loads the preprocessing pipeline from the configuration
@@ -37,7 +40,6 @@ def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, l
     verbose : bool
         Whether to log to the console
     """
-    log = get_logger('preprocess', to_console=verbose, to_network=log)
     redis_client = redis.StrictRedis(config.REDIS_HOST)
 
     config_path = op.join(config.PIPELINE_DIR, pipeline_name + '.yaml')
@@ -47,7 +49,7 @@ def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, l
     pipeline_config['global_parameters']['surface'] = surface
     pipeline_config['global_parameters']['transform'] = transform
 
-    pipeline = Pipeline(log=log, verbose=verbose, **pipeline_config)
+    pipeline = Pipeline(**pipeline_config)
 
     n_skip = pipeline.global_parameters.get('n_skip', 0)
 
@@ -57,10 +59,10 @@ def preprocess(recording_id, pipeline_name, surface, transform, verbose=False, l
         if message['type'] == 'message':
             data = message['data']
             if data != 1:  # subscription message
-                image_number, timestamp, nii = pickle.loads(data)
-                log.info('received image %d', image_number)
-                data_dict = {'image_number': image_number,
-                             'raw_image_nii': nii}
+                timestamped_volume = pickle.loads(data)
+                logger.info('Received image %d', timestamped_volume['image_number'])
+                data_dict = {'image_number': timestamped_volume['image_number'],
+                             'raw_image_nii': timestamped_volume['volume']}
                 data_dict = pipeline.process(data_dict)
 
 
@@ -106,18 +108,11 @@ class Pipeline(object):
     process(data_dict)
         Run the data in ```data_dict``` through each of the preprocessing steps
     """
-    def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None,
-                 log=False, verbose=False):
+    def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None):
         if recording_id is None:
             recording_id = 'recording_{}'.format(time.strftime('%Y%m%d_%H%M'))
 
-        log = get_logger('preprocess.pipeline',
-                         to_console=verbose,
-                         to_network=log)
-
         self.recording_id = recording_id
-        self.log = log
-
         self.build(pipeline, static_pipeline, global_parameters)
 
     def build(self, pipeline, static_pipeline, global_parameters):
@@ -132,7 +127,7 @@ class Pipeline(object):
         """
         self.static_pipeline = []
         for step in static_pipeline:
-            self.log.debug('initializing %s' % step['name'])
+            logger.debug('Initializing %s' % step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', {})
             for k, v in global_parameters.items():
@@ -144,7 +139,7 @@ class Pipeline(object):
 
         self.pipeline = []
         for step in pipeline:
-            self.log.debug('initializing %s' % step['name'])
+            logger.debug('initializing %s' % step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
             for k, v in global_parameters.items():
@@ -201,10 +196,10 @@ class Pipeline(object):
         for step in self.pipeline:
             args = [data_dict[k] for k in step['input']]
 
-            self.log.info('running %s' % step['name'])
+            logger.info('running %s' % step['name'])
             outp = step['instance'].run(*args)
 
-            self.log.debug('finished %s' % step['name'])
+            logger.debug('finished %s' % step['name'])
 
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
@@ -237,10 +232,7 @@ def load_reference(surface, transform):
         return nib.load(ref_path)
 
 
-class Debug(object):
-    def __init__(self, **kwargs):
-        pass
-
+class Debug(PreprocessingStep):
     def run(self, nii):
         return str(nii), nii.shape
 
@@ -338,7 +330,7 @@ class MotionCorrect(PreprocessingStep):
             print(self.reference_affine)
             warnings.warn('Input and reference volumes have different affines.')
 
-        return register(input_volume, self.reference_path, twopass=self.twopass)
+        return image_utils.register(input_volume, self.reference_path, twopass=self.twopass)
 
 
 class NiftiToVolume(PreprocessingStep):
@@ -347,6 +339,14 @@ class NiftiToVolume(PreprocessingStep):
     """
     def run(self, nii):
         return nii.get_data().T
+
+
+class VolumeToMosaic(PreprocessingStep):
+    def __init__(self, dim=0, **kwargs):
+        self.dim = dim
+
+    def run(self, volume):
+        return cortex.mosaic(volume, dim=self.dim, show=False)[0]
 
 
 class ApplyMask(PreprocessingStep):
@@ -404,23 +404,7 @@ class ArrayMean(PreprocessingStep):
             return np.mean(array, axis=self.dimensions)
 
 
-def secondary_mask(mask1, mask2, order='C'):
-    """
-    Given an array, X and two 3d masks, mask1 and mask2
-    X[mask1] = x
-    X[mask1 & mask2] = y
-    x[new_mask] = y
-    """
-    assert mask1.shape == mask2.shape
-    mask1_flat = mask1.ravel(order=order)
-    mask2_flat = mask2.ravel(order=order)
-
-    masks = np.c_[mask1_flat, mask2_flat]
-    masks = masks[mask1_flat, :]
-    return masks[:, 1].astype(bool)
-
-
-class ApplyMask2(PreprocessingStep):
+class ApplySecondaryMask(PreprocessingStep):
     """Apply a second mask to a vector produced by a first mask.
 
     Given a vector of voxel activity from a primary mask, return voxel activity
@@ -455,7 +439,7 @@ class ApplyMask2(PreprocessingStep):
     def __init__(self, surface, transform, mask_type_1, mask_type_2, **kwargs):
         mask1 = cortex.db.get_mask(surface, transform, mask_type_1).T  # in xyz
         mask2 = cortex.db.get_mask(surface, transform, mask_type_2).T  # in xyz
-        self.mask = secondary_mask(mask1, mask2, order='F')
+        self.mask = image_utils.secondary_mask(mask1, mask2, order='F')
 
     def run(self, x):
         if x.ndim > 1:
@@ -580,18 +564,15 @@ class WMDetrend(PreprocessingStep):
         return gm_activity - gm_trend
 
 
-class RunningZScore(PreprocessingStep):
-    def __init__(self, **kwargs):
-        """Preprocessing module that z-scores data using running mean and variance
-        """
-        self.n = 0
-
-    def run(self, inp):
+class IncrementalMeanStd(PreprocessingStep):
+    """Preprocessing module that z-scores data using running mean and variance
+    """
+    def run(self, array):
         """Run the z-scoring on one time point and update the prior
 
         Parameters
         ----------
-        inp : numpy.ndarray
+        array : numpy.ndarray
             A vector of data to be z-scored
 
         Returns
@@ -599,16 +580,17 @@ class RunningZScore(PreprocessingStep):
         The input array z-scored using the posterior mean and variance
         """
         if not hasattr(self, 'data'):
-            self.data = buffered_array.BufferedArray(inp.size, dtype=inp.dtype)
-            self.data.append(inp)
-            return np.zeros(inp.size, dtype=inp.dtype)
+            self.array_shape = array.shape
+            self.data = buffered_array.BufferedArray(array.size, dtype=array.dtype)
+            self.data.append(array.ravel())
+            return None, None
 
-        self.data.append(inp)
+        self.data.append(array.ravel())
 
         std = np.std(self.data.get_array(), 0)
         mean = np.mean(self.data.get_array(), 0)
 
-        return (inp - mean) / std
+        return mean.reshape(self.array_shape), std.reshape(self.array_shape)
 
     def reset(self):
         del self.data
@@ -665,49 +647,19 @@ class RunningMeanStd(PreprocessingStep):
         return self.mean, self.std
 
 
-class VoxelZScore(PreprocessingStep):
-    """Compute a z-score of a vector
-
-    Z-score a vector given precomputed mean and standard deviation
-
-    Attributes
-    ----------
-    mean : numpy.ndarray
-        A vector of voxel means
-    std : numpy.ndarray
-        A vector of voxel standard deviations
+class ZScore(PreprocessingStep):
+    """Compute a z-scored version of an input array given precomputed means and standard deviations
 
     Methods
     -------
-    zscore(data)
-        Apply the mean and standard deviation to compute and return a z-scored
-        version of the data
-    run(inp, mean=None, std=None)
+    run(inp, mean, std)
         Return the z-scored version of the data
     """
-    def __init__(self, **kwargs):
-        self.mean = None
-        self.std = None
-
-    def zscore(self, data):
-        return (data - self.mean) / self.std
-
-    def run(self, inp, mean=None, std=None):
-        # update mean and std if provided
-        if mean is not None:
-            self.mean = mean
-        if std is not None:
-            self.std = std
-
-        # zscore
-        if self.mean is None:
-            z = inp
+    def run(self, array, mean, std):
+        if mean is None:
+            return np.zeros_like(array)
         else:
-            if (self.std == 0).all():
-                z = np.zeros_like(inp)
-            else:
-                z = self.zscore(inp)
-        return z
+            return (array - mean) / std
 
 
 if __name__ == '__main__':

@@ -17,3 +17,20 @@ button {
   width: 150px;
   margin: 0.2em;
 }
+
+#container {
+  display: inline-block;
+  width: 90vw;
+  min-width: 400px;
+  height: 90vh;
+  min-height: 400px},
+
+}
+
+#graph-div {
+  height: 100%;
+}
+#graphs {
+  display: inline-block;
+  height: 100%
+}

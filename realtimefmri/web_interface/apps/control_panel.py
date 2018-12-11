@@ -34,6 +34,10 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                    html.Div([html.Button('x', id='collect-ttl-status',
                                          className='status-indicator'),
                              html.Span('Collect TTL', className='status-label'),
+                             dcc.Dropdown(id='ttl-source', value='',
+                                          options=[{'label': d, 'value': d}
+                                                   for d in ['redis', 'keyboard']],
+                                          style={'display': 'inline-block', 'width': '200px'}),
                              html.Button('Simulate TTL', id='simulate-ttl')]),
 
                    # collect volumes
@@ -106,13 +110,14 @@ def start_task(target, *args, **kwargs):
 
 @app.callback(Output('collect-ttl-status', 'children'),
               [Input('collect-ttl-status', 'n_clicks')],
-              [State('session-id', 'children')])
-def collect_ttl_status(n, session_id):
+              [State('session-id', 'children'),
+               State('ttl-source', 'value')])
+def collect_ttl_status(n, session_id, ttl_source):
     if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
             label = 'o'
-            process = start_task(collect_ttl.collect_ttl, 'redis')
+            process = start_task(collect_ttl.collect_ttl, ttl_source)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started TTL collector (pid {process.pid})")
@@ -207,6 +212,7 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         else:
             logger.info(f"Stopping preprocessor (pid {pid})")
             label = 'x'
+            pid = int(pid)
             try:
                 os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:

@@ -8,7 +8,6 @@ from glob import glob
 import importlib
 import pickle
 import subprocess
-import shlex
 import struct
 
 import logging
@@ -20,13 +19,27 @@ from nibabel import Nifti1Image, load as nibload
 from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
 
 
-def shell(cmd, verbose=True, check_output=True):
-    if verbose:
-        print(cmd)
-    if check_output:
-        return subprocess.check_output(shlex.split(cmd))
-    else:
-        return subprocess.call(shlex.split(cmd))
+def run_command(cmd, raise_errors=True, **kwargs):
+    """Run a command
+
+    Parameters
+    ----------
+    cmd : str or list of str
+
+    Returns
+    -------
+    None if command exited successfully, stderr message if there was an error and raise_errors is
+    False
+    """
+    process = subprocess.Popen(cmd, stderr=subprocess.PIPE, **kwargs)
+    stdout, stderr = process.communicate()
+
+    if (stderr is not None) and (len(stderr) > 0):
+        stderr = stderr.decode('utf-8')
+        if raise_errors:
+            raise RuntimeError(stderr)
+        else:
+            return stderr
 
 
 def load_class(absolute_class_name):
@@ -49,7 +62,7 @@ def load_class(absolute_class_name):
 
 def parse_message(message):
     topic, sync_time, data = message
-    topic = topic.decode('utf8')
+    topic = topic.decode('utf-8')
     sync_time = struct.unpack('d', sync_time)[0]
     data = pickle.loads(data)
     return topic, sync_time, data
