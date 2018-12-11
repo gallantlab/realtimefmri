@@ -1,5 +1,6 @@
 import pickle
 import warnings
+from collections import defaultdict
 import numbers
 import numpy as np
 import PIL
@@ -15,6 +16,9 @@ from realtimefmri.utils import get_logger
 
 
 logger = get_logger('dashboard', to_console=True, to_network=False)
+
+
+graphs = defaultdict(list)
 
 
 def remove_prefix(text, prefix):
@@ -55,7 +59,7 @@ def update_data_list(n):
     data_list = []
     for key in r.scan_iter(b'dashboard:*'):
         key = key.decode('utf-8')
-        if not key.endswith(':type'):
+        if len(key.split(':')) == 2:
             label = remove_prefix(key, 'dashboard:')
             data_list.append({'label': label,
                               'value': key})
@@ -67,49 +71,58 @@ def update_data_list(n):
               [Input('interval-component', 'n_intervals'),
                Input('data-list', 'value')])
 def update_selected_graphs(n, selected_values):
-    fig_specs = []
-    traces = []
+
+    if len(selected_values) == 0:
+        return go.Scatter()
+
+    titles = [remove_prefix(k, 'dashboard:') for k in selected_values]
+    fig = plotly.tools.make_subplots(rows=len(selected_values), cols=1,
+                                     subplot_titles=titles, print_grid=False)
+
     new_layouts = []
     images = []
-    axis_number = 1
 
-    for i, value in enumerate(selected_values):
-        val = r.get(value)
-        if val is not None:
-            data = pickle.loads(val)
-            plot_type = r.get(value + ':type')
-            if plot_type == b'scatter':
-                traces.append(go.Scatter(y=data))
-                fig_specs.append([{'colspan': 3}, None, None])
-                axis_number += 1
+    for i, key in enumerate(selected_values):
+        axis_number = i + 1
+        dat = r.get(key)
+        if dat is not None:
+            data = pickle.loads(dat)
+            plot_type = r.get(key + ':type')
 
-            elif plot_type == b'bar':
+            if plot_type == b'bar':
                 if isinstance(data, numbers.Number):
                     data = [data]
-                traces.append(go.Bar(y=data))
-                fig_specs.append([{'colspan': 3}, None, None])
-                axis_number += 1
+
+                trace = go.Bar(y=data)
+                fig.append_trace(trace, axis_number, 1)
 
             elif plot_type == b'timeseries':
-                traces.append(go.Scatter(y=[1, 2, 3]))
-                fig_specs.append([{'colspan': 3}, None, None])
-                axis_number += 1
+                update = r.get(key + ':update')
+                if update == b'true':
+                    graphs[key].append(data)
+                    r.set(key + ':update', b'false')
+
+                data = np.array(graphs[key])
+                if data.ndim == 1:
+                    data = data.reshape(-1, 1)
+
+                for trace_index in range(data.shape[1]):
+                    trace = go.Scatter(y=data[:, trace_index])
+                    fig.append_trace(trace, axis_number, 1)
 
             elif plot_type == b'image':
-                logger.info(f"min {data.min()}, max {data.max()}")
                 if data.dtype != np.dtype('uint8'):
                     data = ((data - np.nanmin(data)) / np.nanmax(data))
                     data[np.isnan(data)] = 0.5
                     data *= 255
                     data = data.astype('uint8')
-                logger.info(f"min {data.min()}, max {data.max()}")
 
                 if data.shape[0] < data.shape[1]:
                     data = data.T
 
                 img = PIL.Image.fromarray(data)
-                traces.append(go.Scatter())
-                fig_specs.append([{'colspan': 3}, None, None])
+
+                fig.append_trace(go.Scatter(), axis_number, 1)
                 image = {'source': img,
                          'xref': f"x{axis_number}", 'yref': f"y{axis_number}",
                          'x': 0, 'y': 1,
@@ -121,29 +134,11 @@ def update_selected_graphs(n, selected_values):
 
                 new_layout = {f'xaxis{axis_number}': {'range': [0, 1]},
                               f'yaxis{axis_number}': {'range': [0, 1]}}
-                axis_number += 1
                 new_layouts.append(new_layout)
-
-            elif plot_type == b'volume_slices':
-                traces.append(make_volume_slices(data))
-                fig_specs.append([{}, {}, {}])
-                axis_number += 3
+                titles.append(remove_prefix(key, 'dashboard:'))
 
             else:
                 warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))
-
-    if len(traces) == 0:
-        return go.Scatter()
-
-    fig = plotly.tools.make_subplots(rows=len(traces), cols=3, specs=fig_specs,
-                                     print_grid=False)
-
-    for row_index, trace in enumerate(traces):
-        if isinstance(trace, list):
-            for column_index, tr in enumerate(trace):
-                fig.append_trace(tr, row_index + 1, column_index + 1)
-        else:
-            fig.append_trace(trace, row_index + 1, 1)
 
     fig.layout.update({'autosize': True})
 
