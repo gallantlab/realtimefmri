@@ -61,6 +61,7 @@ class SendToDashboard(Stimulus):
 
     def run(self, data):
         self.redis.set(self.key_name, pickle.dumps(data))
+        self.redis.set(self.key_name + ':update', b'true')
 
 
 class SendToPycortexViewer(Stimulus):
