@@ -17,6 +17,9 @@ services:
       - "${TEST_DATASET_PATH}:/root/.local/share/realtimefmri/datasets"
       - scanner:/root/.local/share/realtimefmri/scanner
     restart: always
+    depends_on:
+      - redis
+      - samba
 
   redis:
     image: redis
