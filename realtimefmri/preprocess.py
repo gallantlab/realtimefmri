@@ -503,7 +503,7 @@ class RoiActivity(PreprocessingStep):
         self.masks = dict()
         for name, mask_value in roi_dict.items():
             roi_mask = roi_masks == mask_value
-            self.masks[name] = secondary_mask(pre_mask, roi_mask)
+            self.masks[name] = image_utils.secondary_mask(pre_mask, roi_mask)
 
     def run(self, activity):
         if activity.ndim > 1:
