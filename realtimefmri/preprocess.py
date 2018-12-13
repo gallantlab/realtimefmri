@@ -322,7 +322,9 @@ class SaveNifti(PreprocessingStep):
     """
 
     def __init__(self, recording_id=None, path_format='volume_{:04}.nii', **kwargs):
-        super(SaveNifti, self).__init__(recording_id, path_format, **kwargs)
+        parameters = {'recording_id': recording_id, 'path_format': path_format}
+        parameters.update(kwargs)
+        super(SaveNifti, self).__init__(**parameters)
 
         if recording_id is None:
             recording_id = str(uuid4())
@@ -369,7 +371,9 @@ class MotionCorrect(PreprocessingStep):
         returns the motion corrected volume
     """
     def __init__(self, surface, transform, twopass=False, *args, **kwargs):
-        super(MotionCorrect, self).__init__(surface, transform, twopass, *args, **kwargs)
+        parameters = {'surface': surface, 'transform': transform, 'twopass': twopass}
+        parameters.update(kwargs)
+        super(MotionCorrect, self).__init__(**parameters)
         ref_path = op.join(cortex.database.default_filestore,
                            surface, 'transforms', transform,
                            'reference.nii.gz')
@@ -401,7 +405,9 @@ class NiftiToVolume(PreprocessingStep):
 
 class VolumeToMosaic(PreprocessingStep):
     def __init__(self, dim=0, *args, **kwargs):
-        super(VolumeToMosaic, self).__init__(*args, **kwargs)
+        parameters = {'dim': dim}
+        parameters.update(kwargs)
+        super(VolumeToMosaic, self).__init__(**parameters)
         self.dim = dim
 
     def run(self, volume):
@@ -426,8 +432,9 @@ class ApplyMask(PreprocessingStep):
         Boolean voxel mask
     """
     def __init__(self, surface, transform, mask_type=None, *args, **kwargs):
-        kwargs.update({'surface': surface, 'transform': transform, 'mask_type': mask_type})
-        super(ApplyMask, self).__init__(**kwargs)
+        parameters = {'surface': surface, 'transform': transform, 'mask_type': mask_type}
+        parameters.update(kwargs)
+        super(ApplyMask, self).__init__(**parameters)
         mask = cortex.db.get_mask(surface, transform, mask_type)
         self.mask = mask
 
@@ -450,7 +457,9 @@ class ArrayMean(PreprocessingStep):
         Dimensions along which to take the mean. None takes the mean of all values in the array
     """
     def __init__(self, dimensions, *args, **kwargs):
-        super(ArrayMean, self).__init__(**kwargs)
+        parameters = {'dimensions': dimensions}
+        parameters.update(kwargs)
+        super(ArrayMean, self).__init__(**parameters)
         self.dimensions = tuple(dimensions)
 
     def run(self, array):
@@ -499,7 +508,10 @@ class ApplySecondaryMask(PreprocessingStep):
         and secondary masks
     """
     def __init__(self, surface, transform, mask_type_1, mask_type_2, **kwargs):
-        super(ApplySecondaryMask, self).__init__(**kwargs)
+        parameters = {'surface': surface, 'transform': transform,
+                      'mask_type_1': mask_type_1, 'mask_type_2': mask_type_2,}
+        parameters.update(kwargs)
+        super(ApplySecondaryMask, self).__init__(**parameters)
         mask1 = cortex.db.get_mask(surface, transform, mask_type_1).T  # in xyz
         mask2 = cortex.db.get_mask(surface, transform, mask_type_2).T  # in xyz
         self.mask = image_utils.secondary_mask(mask1, mask2, order='F')
@@ -553,7 +565,10 @@ class RoiActivity(PreprocessingStep):
         Returns a list of floats of mean activity in the requested ROIs
     """
     def __init__(self, surface, transform, pre_mask_name, roi_names, *args, **kwargs):
-        super(RoiActivity, self).__init__(**kwargs)
+        parameters = {'surface': surface, 'transform': transform,
+                      'pre_mask_name': pre_mask_name, 'roi_names': roi_names}
+        parameters.update(kwargs)
+        super(RoiActivity, self).__init__(**parameters)
 
         subj_dir = config.get_subject_directory(surface)
         pre_mask_path = op.join(subj_dir, pre_mask_name + '.nii')
@@ -605,10 +620,9 @@ class WMDetrend(PreprocessingStep):
         activity
     """
     def __init__(self, subject, model_name=None, *args, **kwargs):
-        super(WMDetrend, self).__init__(*args, **kwargs)
-        """
-        """
-        super(WMDetrend, self).__init__()
+        parameters = {'subject': subject, 'model_name': model_name}
+        parameters.update(kwargs)
+        super(WMDetrend, self).__init__(**parameters)
         subj_dir = config.get_subject_directory(subject)
 
         model_path = op.join(subj_dir, 'model-%s.pkl' % model_name)
@@ -691,15 +705,17 @@ class RunningMeanStd(PreprocessingStep):
         Adds the input vector to the stored samples (discard the oldest sample)
         and compute and return the mean and standard deviation.
     """
-    def __init__(self, n=20, skip=5, *args, **kwargs):
-        super(RunningMeanStd, self).__init__(**kwargs)
+    def __init__(self, n=20, n_skip=5, *args, **kwargs):
+        parameters = {'n': n, 'n_skip': n_skip}
+        parameters.update(kwargs)
+        super(RunningMeanStd, self).__init__(**parameters)
         self.n = n
         self.mean = None
         self.samples = None
-        self.skip = skip
+        self.n_skip = n_skip
 
     def run(self, inp, image_number=None):
-        if image_number < self.skip:
+        if image_number < self.n_skip:
             return np.zeros(inp.size), np.ones(inp.size)
 
         if self.mean is None:

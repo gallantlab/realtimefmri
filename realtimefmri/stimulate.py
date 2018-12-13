@@ -4,7 +4,6 @@ import pickle
 import shlex
 import subprocess
 
-import numpy as np
 import redis
 
 from realtimefmri import config
@@ -12,15 +11,6 @@ from realtimefmri.preprocess import PreprocessingStep
 from realtimefmri.utils import get_logger
 
 logger = get_logger('stimulate', to_console=True, to_network=True)
-
-
-class Debug(PreprocessingStep):
-    def __init__(self, **kwargs):
-        super(Debug, self).__init__()
-
-    def run(self, inp):
-        data = np.fromstring(inp['data'], dtype='float32')
-        return '{}'.format(len(data))
 
 
 class SendToDashboard(PreprocessingStep):
@@ -39,13 +29,14 @@ class SendToDashboard(PreprocessingStep):
         Name of the key in the redis database
     """
     def __init__(self, name, plot_type='marker', host=config.REDIS_HOST, port=6379, **kwargs):
-        super(SendToDashboard, self).__init__()
+        parameters = {'name': name, 'plot_type': plot_type}
+        parameters.update(kwargs)
+        super(SendToDashboard, self).__init__(**parameters)
         r = redis.StrictRedis(host=host, port=port)
         key_name = 'dashboard:data:' + name
         r.set(key_name, b'')
         r.set(key_name + ':type', plot_type)
         r.set(key_name + ':update', b'true')
-
 
         self.redis = r
         self.key_name = key_name
@@ -66,8 +57,10 @@ class SendToPycortexViewer(PreprocessingStep):
     ----------
     redis : redis connection
     """
-    def __init__(self, name, host=config.REDIS_HOST, port=6379, **kwargs):
-        super(SendToPycortexViewer, self).__init__()
+    def __init__(self, name, host=config.REDIS_HOST, port=6379, *args, **kwargs):
+        parameters = {'name': name}
+        parameters.update(kwargs)
+        super(SendToPycortexViewer, self).__init__(**parameters)
         self.redis = redis.StrictRedis(host=host, port=port)
 
     def run(self, data):
