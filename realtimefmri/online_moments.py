@@ -5,6 +5,7 @@ Anwar O. Nunez-Elizalde (anwarnunez@berkeley.edu)
 """
 
 import numpy as np
+
 from realtimefmri.preprocess import PreprocessingStep
 
 

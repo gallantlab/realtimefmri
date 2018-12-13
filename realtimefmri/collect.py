@@ -1,10 +1,11 @@
 import os.path as op
-import struct
 import pickle
+import struct
+
 import redis
+
+from realtimefmri import config, image_utils
 from realtimefmri.utils import get_logger
-from realtimefmri import config
-from realtimefmri import image_utils
 
 
 def collect(verbose=True):

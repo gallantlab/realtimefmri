@@ -5,7 +5,6 @@ from dash.dependencies import Input, Output
 from realtimefmri.web_interface.app import app
 from realtimefmri.web_interface.apps import control_panel, dashboard, pipeline
 
-
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')])

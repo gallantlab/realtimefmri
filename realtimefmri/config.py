@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+import logging
 import os
 import os.path as op
-from glob import glob
 import shutil
-import logging
 from configparser import ConfigParser
+from glob import glob
+
 import cortex
 import realtimefmri
 

@@ -3,11 +3,13 @@ import os
 import pickle
 import shlex
 import subprocess
+
 import numpy as np
 import redis
+
 from realtimefmri import config
-from realtimefmri.utils import get_logger
 from realtimefmri.preprocess import PreprocessingStep
+from realtimefmri.utils import get_logger
 
 logger = get_logger('stimulate', to_console=True, to_network=True)
 

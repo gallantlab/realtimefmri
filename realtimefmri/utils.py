@@ -3,19 +3,21 @@
 Utility functions and configuration
 '''
 from __future__ import print_function
-import os.path as op
-from glob import glob
-import pickle
-import subprocess
-import struct
 
 import logging
 import logging.handlers
+import os.path as op
+import pickle
+import struct
+import subprocess
 import tempfile
+from glob import glob
 
 import numpy as np
-from nibabel import Nifti1Image, load as nibload
-from realtimefmri.config import LOG_LEVEL, LOG_FORMAT, RECORDING_DIR
+from nibabel import Nifti1Image
+from nibabel import load as nibload
+
+from realtimefmri.config import LOG_FORMAT, LOG_LEVEL, RECORDING_DIR
 
 
 def run_command(cmd, raise_errors=True, **kwargs):

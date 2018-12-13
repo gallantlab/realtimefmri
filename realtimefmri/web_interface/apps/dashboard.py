@@ -1,19 +1,20 @@
+import numbers
 import pickle
 import warnings
 from collections import defaultdict
-import numbers
-import numpy as np
-import PIL
-from dash.dependencies import Input, Output
+
 import dash_core_components as dcc
 import dash_html_components as html
+import numpy as np
+import PIL
 import plotly
 import plotly.graph_objs as go
 import redis
-from realtimefmri import config
-from realtimefmri.web_interface.app import app
-from realtimefmri.utils import get_logger
+from dash.dependencies import Input, Output
 
+from realtimefmri import config
+from realtimefmri.utils import get_logger
+from realtimefmri.web_interface.app import app
 
 logger = get_logger('dashboard', to_console=True, to_network=False)
 

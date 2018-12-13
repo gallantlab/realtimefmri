@@ -1,15 +1,16 @@
 """Data collection code
 """
+import itertools
 import os
 import os.path as op
 import shutil
-import itertools
 from uuid import uuid4
+
 import pyinotify
 import redis
+
 from realtimefmri import config
 from realtimefmri.utils import get_logger
-
 
 logger = get_logger('collect_volumes', to_console=True, to_network=True)
 

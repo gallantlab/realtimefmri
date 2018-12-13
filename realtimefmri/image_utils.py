@@ -1,12 +1,13 @@
 import os
 import os.path as op
-import tempfile
 import shlex
-import numpy as np
+import tempfile
+
 import nibabel
+import numpy as np
+
 import cortex
 from realtimefmri import utils
-
 
 logger = utils.get_logger('image_utils', to_console=True)
 

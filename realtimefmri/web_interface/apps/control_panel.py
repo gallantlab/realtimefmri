@@ -1,26 +1,23 @@
+import logging
+import multiprocessing
 import os
 import os.path as op
 import shutil
-from uuid import uuid4
-import logging
-import multiprocessing
-import threading
 import signal
+import threading
 import time
+from uuid import uuid4
+
 import dash_core_components as dcc
 import dash_html_components as html
+import redis
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import redis
-from realtimefmri import collect_volumes
-from realtimefmri import collect_ttl
-from realtimefmri import collect
-from realtimefmri import preprocess
-from realtimefmri import config
-from realtimefmri import viewer
-from realtimefmri.web_interface.app import app
-from realtimefmri.utils import get_logger
 
+from realtimefmri import (collect, collect_ttl, collect_volumes, config,
+                          preprocess, viewer)
+from realtimefmri.utils import get_logger
+from realtimefmri.web_interface.app import app
 
 logger = get_logger('control_panel', to_console=True, to_network=True)
 

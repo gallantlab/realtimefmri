@@ -1,15 +1,15 @@
 import pickle
 from collections import defaultdict
+
 import dash_core_components as dcc
 import dash_html_components as html
+import redis
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import redis
-from realtimefmri import config
-from realtimefmri import preprocess
-from realtimefmri.web_interface.app import app
-from realtimefmri import pipeline_utils
+
+from realtimefmri import config, pipeline_utils, preprocess
 from realtimefmri.utils import get_logger
+from realtimefmri.web_interface.app import app
 
 session_id = 'admin'
 logger = get_logger('pipeline', to_console=True, to_network=True)

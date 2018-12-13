@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
+import argparse
+import importlib
 import os
 import os.path as op
-import struct
 import pickle
+import struct
 import time
-import importlib
-from uuid import uuid4
 import warnings
-import argparse
-import yaml
-import numpy as np
-import redis
-import nibabel as nib
-import cortex
+from uuid import uuid4
+
 import dash_core_components as dcc
 import dash_html_components as html
-from realtimefmri import image_utils
+import nibabel as nib
+import numpy as np
+import redis
+import yaml
+
+import cortex
+from realtimefmri import buffered_array, config, image_utils, pipeline_utils
 from realtimefmri.utils import get_logger
-from realtimefmri import config
-from realtimefmri import buffered_array
-from realtimefmri import pipeline_utils
 
 logger = get_logger('preprocess', to_console=True, to_network=True)
 r = redis.StrictRedis(config.REDIS_HOST)

@@ -1,6 +1,6 @@
 import numpy as np
-from realtimefmri import buffered_array
-from realtimefmri import preprocess
+
+from realtimefmri import buffered_array, preprocess
 
 
 class InvGammaParameters(object):

@@ -1,11 +1,12 @@
-import time
 import pickle
-import cortex
+import time
+
 import numpy as np
 import redis
+
+import cortex
 from realtimefmri import config
 from realtimefmri.utils import get_logger
-
 
 logger = get_logger('viewer', to_console=True, to_network=True)
 

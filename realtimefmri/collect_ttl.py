@@ -1,11 +1,11 @@
-import time
 import struct
-import serial
-import redis
-import evdev
+import time
 
-from realtimefmri import utils
-from realtimefmri import config
+import evdev
+import redis
+import serial
+
+from realtimefmri import config, utils
 
 
 class CollectTTL(object):

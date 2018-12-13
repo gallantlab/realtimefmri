@@ -1,13 +1,14 @@
-import os
-import subprocess
-import shlex
 import json
-import numpy as np
-import pyo64 as pyo
+import os
+import shlex
+import subprocess
 
+import numpy as np
+
+import pyo64 as pyo
+from realtimefmri.config import RECORDING_DIR
 from realtimefmri.stimulating import Stimulus
 from realtimefmri.utils import get_logger
-from realtimefmri.config import RECORDING_DIR
 
 logger = get_logger('stimulate.ion')
 

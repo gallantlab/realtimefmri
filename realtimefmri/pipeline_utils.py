@@ -1,8 +1,9 @@
 """Utilities for reading, writing, and managing pipelines"""
-import re
-import inspect
 import importlib
+import inspect
+import re
 from collections import OrderedDict
+
 import yaml
 
 
