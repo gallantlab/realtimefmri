@@ -3,9 +3,9 @@ global_parameters:
 
 pipeline:
   - name: debug
-    step: realtimefmri.stimulate.Debug
+    class_name: realtimefmri.stimulate.Debug
     topic: { raw_image_nii: data }
   - name: send_to_dashboard
-    step: realtimefmri.stimulate.SendToDashboard
-    kwargs: {name: volume, plot_type: mosaic}
+    class_name: realtimefmri.stimulate.SendToDashboard
+    kwargs: {name: volume, plot_type: image}
     topic: {volume: data}

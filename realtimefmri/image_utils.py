@@ -4,6 +4,7 @@ import tempfile
 import shlex
 import numpy as np
 import nibabel
+import cortex
 from realtimefmri import utils
 
 
@@ -130,3 +131,17 @@ def plot_volume(volume):
 
 def load_afni_xfm(path):
     return np.r_[np.loadtxt(path).reshape(3, 4), np.array([[0, 0, 0, 1]])]
+
+
+def load_mask(surface, transform, mask_type):
+    mask_path = op.join(cortex.database.default_filestore,
+                        surface, 'transforms', transform,
+                        'mask_' + mask_type + '.nii.gz')
+    return nibabel.load(mask_path)
+
+
+def load_reference(surface, transform):
+    ref_path = op.join(cortex.database.default_filestore,
+                       surface, 'transforms', transform,
+                       'reference.nii.gz')
+    return nibabel.load(ref_path)

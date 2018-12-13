@@ -7,22 +7,30 @@ from dash.exceptions import PreventUpdate
 import redis
 from realtimefmri import config
 from realtimefmri import preprocess
+from realtimefmri.web_interface.app import app
+from realtimefmri import pipeline_utils
 from realtimefmri.utils import get_logger
 
 session_id = 'admin'
-logger = get_logger('control_panel', to_console=True, to_network=True)
+logger = get_logger('pipeline', to_console=True, to_network=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
-def create_interfaces():
-    contents = []
-    for key in r.scan_iter(b'pipeline:*:name'):
-        step_id = key.split(b':')[1].decode('utf-8')
-        step_name = pickle.loads(r.get(key))
-        interface = preprocess.get_interface(step_name, step_id)
-        contents.append(interface)
+def create_interface():
+    class_name_key = list(r.scan_iter('pipeline:*:0:class_name'))[0]
+    pipeline_key = class_name_key.rsplit(b':', maxsplit=2)[0]
+    interface = preprocess.Pipeline.create_interface(pipeline_key)
+    return interface
 
-    return html.Div(contents, id='pipeline-interfaces')
+layout = html.Div([html.Button('x', id='refresh-interfaces'),
+                   html.Div(id='pipeline-interfaces')])
 
-layout = html.Div(create_interfaces(),
-                  style={'max-width': '600px'})
+
+@app.callback(Output('pipeline-interfaces', 'children'),
+              [Input('refresh-interfaces', 'n_clicks')])
+def refresh_interfaces(n):
+    if n is not None:
+        return create_interface()
+
+    else:
+        PreventUpdate()

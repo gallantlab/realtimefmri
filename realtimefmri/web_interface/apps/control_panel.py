@@ -83,7 +83,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                   style={'max-width': '600px'})
 
 r = redis.StrictRedis(config.REDIS_HOST)
-# r.flushall()
+r.flushall()
 
 
 class TaskProxy(threading.Thread):

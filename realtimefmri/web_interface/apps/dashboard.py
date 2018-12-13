@@ -47,7 +47,7 @@ layout = html.Div([html.Div([dcc.Dropdown(id='data-list', value='', multi=True)]
                             id='data-list-div'),
                    html.Div([dcc.Graph(id='graphs')],
                             id='graph-div'),
-                   dcc.Interval(id='interval-component', interval=500, n_intervals=0)],
+                   dcc.Interval(id='interval-component', interval=1000, n_intervals=0)],
                   id="container")
 
 r = redis.StrictRedis(config.REDIS_HOST)
@@ -57,10 +57,10 @@ r = redis.StrictRedis(config.REDIS_HOST)
               [Input('interval-component', 'n_intervals')])
 def update_data_list(n):
     data_list = []
-    for key in r.scan_iter(b'dashboard:*'):
+    for key in r.scan_iter(b'dashboard:data:*'):
         key = key.decode('utf-8')
-        if len(key.split(':')) == 2:
-            label = remove_prefix(key, 'dashboard:')
+        if len(key.split(':')) == 3:
+            label = remove_prefix(key, 'dashboard:data:')
             data_list.append({'label': label,
                               'value': key})
 
@@ -75,7 +75,7 @@ def update_selected_graphs(n, selected_values):
     if len(selected_values) == 0:
         return go.Scatter()
 
-    titles = [remove_prefix(k, 'dashboard:') for k in selected_values]
+    titles = [remove_prefix(k, 'dashboard:data:') for k in selected_values]
     fig = plotly.tools.make_subplots(rows=len(selected_values), cols=1,
                                      subplot_titles=titles, print_grid=False)
 
@@ -135,7 +135,7 @@ def update_selected_graphs(n, selected_values):
                 new_layout = {f'xaxis{axis_number}': {'range': [0, 1]},
                               f'yaxis{axis_number}': {'range': [0, 1]}}
                 new_layouts.append(new_layout)
-                titles.append(remove_prefix(key, 'dashboard:'))
+                titles.append(remove_prefix(key, 'dashboard:data:'))
 
             else:
                 warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))

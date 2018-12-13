@@ -5,7 +5,6 @@ Utility functions and configuration
 from __future__ import print_function
 import os.path as op
 from glob import glob
-import importlib
 import pickle
 import subprocess
 import struct
@@ -40,24 +39,6 @@ def run_command(cmd, raise_errors=True, **kwargs):
             raise RuntimeError(stderr)
         else:
             return stderr
-
-
-def load_class(absolute_class_name):
-    """Import a class from a string
-
-    Parameters
-    ----------
-    absolute : str
-        Absolute import name, i.e. realtimefmri.preprocess.Debug
-
-    Returns
-    -------
-    A class
-    """
-    module_name, class_name = absolute_class_name.rsplit('.', 1)
-
-    module = importlib.import_module(module_name)
-    return getattr(module, class_name)
 
 
 def parse_message(message):

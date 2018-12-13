@@ -1,12 +1,31 @@
 """Utilities for reading, writing, and managing pipelines"""
 import re
 import inspect
+import importlib
 from collections import OrderedDict
 import yaml
 
 
+def load_class(absolute_class_name):
+    """Import a class from a string
+
+    Parameters
+    ----------
+    absolute : str
+        Absolute import name, i.e. realtimefmri.preprocess.Debug
+
+    Returns
+    -------
+    A class
+    """
+    module_name, class_name = absolute_class_name.rsplit('.', maxsplit=1)
+
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
+
+
 def get_step_name(step):
-    """Get the full name of a step's python class
+    """Get the full name of a step's python class, e.g., realtimefmri.preprocess.ApplyMask
     """
     patt = re.compile(r"<class '(?P<class_name>[A-Za-z0-9\.\_]*)'>")
     class_name = patt.match(str(step)).groupdict()['class_name']

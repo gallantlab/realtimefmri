@@ -16,7 +16,7 @@ import cortex
 import dash_core_components as dcc
 import dash_html_components as html
 from realtimefmri import image_utils
-from realtimefmri.utils import get_logger, load_class
+from realtimefmri.utils import get_logger
 from realtimefmri import config
 from realtimefmri import buffered_array
 from realtimefmri import pipeline_utils
@@ -115,9 +115,10 @@ class Pipeline():
 
         self.recording_id = recording_id
         self.build(pipeline, static_pipeline, global_parameters)
+        self.register()
 
     def build(self, pipeline, static_pipeline, global_parameters):
-        """Build the pipeline from the pipeline parameters. Directly sets the class instance 
+        """Build the pipeline from the pipeline parameters. Directly sets the class instance
         attributes for `pipeline`, `static_pipeline`, and `global_parameters`
 
         Parameters
@@ -128,25 +129,25 @@ class Pipeline():
         """
         self.static_pipeline = []
         for step in static_pipeline:
-            logger.debug('Initializing %s' % step['name'])
+            logger.debug('Initializing %s', step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', {})
             for k, v in global_parameters.items():
                 kwargs[k] = kwargs.get(k, v)
 
-            cls = load_class(step['step'])
+            cls = pipeline_utils.load_class(step['class_name'])
             step['instance'] = cls(*args, **kwargs)
             self.static_pipeline.append(step)
 
         self.pipeline = []
         for step in pipeline:
-            logger.debug('initializing %s' % step['name'])
+            logger.debug('initializing %s', step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
             for k, v in global_parameters.items():
                 kwargs[k] = kwargs.get(k, v)
 
-            cls = load_class(step['step'])
+            cls = pipeline_utils.load_class(step['class_name'])
             step['instance'] = cls(*args, **kwargs)
             self.pipeline.append(step)
 
@@ -210,40 +211,31 @@ class Pipeline():
 
         return data_dict
 
+    @staticmethod
+    def create_interface(key):
+        contents = []
+        for class_name_key in r.scan_iter(key + b':*:class_name'):
+            class_name = pickle.loads(r.get(class_name_key))
+            step_index = int(class_name_key.split(b':')[2].decode('utf-8'))
+            step_class = pipeline_utils.load_class(class_name)
+            step_key = class_name_key.rsplit(b':', maxsplit=1)[0]
+            interface = step_class.interface(step_key)
+            contents.append([step_index, interface])
 
-def load_mask(surface, transform, mask_type):
-        mask_path = op.join(cortex.database.default_filestore,
-                            surface, 'transforms', transform,
-                            'mask_' + mask_type + '.nii.gz')
-        return nib.load(mask_path)
+        contents = sorted(contents, key=lambda x: x[0])
+        contents = [content for i, content in contents]
 
+        return contents
 
-def load_reference(surface, transform):
-        ref_path = op.join(cortex.database.default_filestore,
-                           surface, 'transforms', transform,
-                           'reference.nii.gz')
-        return nib.load(ref_path)
+    def register(self):
+        """Register the pipeline to the redis database
+        """
+        pipeline_key = f'pipeline:{id(self)}'
+        for step_index, step in enumerate(self.pipeline):
+            step_key = f'{pipeline_key}:{step_index}'
+            step['instance'].register(step_key)
 
-
-def get_interface(step_name, step_id):
-    """Get the dashboard interface for a given step name and id
-
-    Parameters
-    ----------
-    step_name : str
-        Full module name for the preprocessing step class, e.g., realtimefmri.preprocess.ApplyMask
-    step_id : str
-        Unique identifier that is registered in the redis database
-
-    Returns
-    -------
-    A dash_html_components.Div object with the preprocessing step interface
-    """
-    module_name, class_name = step_name.rsplit('.', maxsplit=1)
-    module = importlib.import_module(module_name)
-    cls = getattr(module, class_name)
-    interface = cls.interface(step_id)
-    return interface
+        self._key = pipeline_key
 
 
 class PreprocessingStep(object):
@@ -252,33 +244,46 @@ class PreprocessingStep(object):
     def __init__(self, *args, **kwargs):
         """
         """
-        self.register(**kwargs)
+        self._parameters = kwargs
 
-    def register(self, **kwargs):
-        key = f'pipeline:{id(self)}'
-        r.set(key + ':name', pickle.dumps(pipeline_utils.get_step_name(self.__class__)))
+    def register(self, key):
+        """Register the preprocessing step to the redis database
 
-        for k in kwargs:
-            r.set(key + f':{k}', pickle.dumps(kwargs[k]))
+        Parameters
+        ----------
+        key : str
+            A unique key for this step. Convention is pipeline:<pipeline_id>:<step_index>,
+            e.g., pipeline:105874924:0, pipeline:105874924:1, pipeline:105874924:2, etc.
+        """
+        r.set(key + ':class_name', pickle.dumps(pipeline_utils.get_step_name(self.__class__)))
+
+        for k, v in self._parameters.items():
+            r.set(key + f':{k}', pickle.dumps(v))
 
         self._key = key
 
     @staticmethod
-    def interface(step_id):
+    def interface(step_key):
         """Define an interface element for the control panel
         """
+        step_id = step_key.decode('utf-8').replace(':', '-')
+
         step = {}
-        for key in r.scan_iter('pipeline:' + step_id + ':*'):
-            _, param_id, param_name = key.split(b':')
+        for key in r.scan_iter(step_key + b':*'):
+            param_name = key.rsplit(b':', maxsplit=1)[1]
             val = r.get(key)
             step[param_name] = pickle.loads(val)
 
-        contents = [html.H3(step.pop(b'name'))]
+        name = step.pop(b'class_name')
+        contents = [html.H3(name)]
         for k, v in step.items():
+            k = k.decode('utf-8')
             contents.extend([html.Strong(k),
                              dcc.Input(value=v, id=f'pipeline-{step_id}-{k}')])
 
-        return html.Div(contents, id=f'pipeline-{step_id}')
+        interface = html.Div(contents, id=f'pipeline-{step_id}')
+        logger.debug(interface)
+        return interface
 
     def run(self):
         raise NotImplementedError

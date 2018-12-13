@@ -3,16 +3,16 @@ global_parameters:
 
 pipeline:
   - name: debug
-    step: realtimefmri.preprocess.Debug
+    class_name: realtimefmri.preprocess.Debug
     input: [ raw_image_nii ]
     output: [ nii_repr, nii_shape ]
 
   - name: nifti_to_volume
-    step: realtimefmri.preprocess.NiftiToVolume
+    class_name: realtimefmri.preprocess.NiftiToVolume
     input: [ raw_image_nii ]
     output: [ volume ]
 
   - name: send
-    step: realtimefmri.stimulate.SendToDashboard
+    class_name: realtimefmri.stimulate.SendToDashboard
     kwargs: { name: volume, plot_type: mosaic }
     input: [ volume ]

@@ -5,24 +5,24 @@ global_parameters:
 
 pipeline:
   - name: motion_correct
-    step: realtimefmri.preprocess.MotionCorrect
+    class_name: realtimefmri.preprocess.MotionCorrect
     input: [ raw_image_nii ]
     output: [ image_nifti_mc ]
 
   - name: save_nifti
-    step: realtimefmri.preprocess.SaveNifti
+    class_name: realtimefmri.preprocess.SaveNifti
     input:
       - image_nifti_mc
       - image_id
   
   - name: extract_gm_mask
-    step: realtimefmri.preprocess.ApplyMask
+    class_name: realtimefmri.preprocess.ApplyMask
     kwargs: { mask_type: thick }
     input: [ image_nifti_mc ]
     output: [ gm_activity ]
 
   - name: running_mean_std
-    step: realtimefmri.preprocess.RunningMeanStd
+    class_name: realtimefmri.preprocess.RunningMeanStd
     input:
       - gm_activity
       - image_id
@@ -31,7 +31,7 @@ pipeline:
       - gm_activity_std
 
   - name: gm_activity_zscore
-    step: realtimefmri.preprocess.VoxelZScore
+    class_name: realtimefmri.preprocess.VoxelZScore
     input:
       - gm_activity
       - gm_activity_mean
