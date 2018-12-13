@@ -7,26 +7,12 @@ import numpy as np
 import redis
 from realtimefmri import config
 from realtimefmri.utils import get_logger
-
+from realtimefmri.preprocess import PreprocessingStep
 
 logger = get_logger('stimulate', to_console=True, to_network=True)
 
 
-class Stimulus(object):
-    def __init__(self, **kwargs):
-        pass
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def run(self):
-        raise NotImplementedError
-
-
-class Debug(Stimulus):
+class Debug(PreprocessingStep):
     def __init__(self, **kwargs):
         super(Debug, self).__init__()
 
@@ -35,7 +21,7 @@ class Debug(Stimulus):
         return '{}'.format(len(data))
 
 
-class SendToDashboard(Stimulus):
+class SendToDashboard(PreprocessingStep):
     """Send data to the dashboard
 
     Parameters
@@ -53,8 +39,11 @@ class SendToDashboard(Stimulus):
     def __init__(self, name, plot_type='marker', host=config.REDIS_HOST, port=6379, **kwargs):
         super(SendToDashboard, self).__init__()
         r = redis.StrictRedis(host=host, port=port)
-        key_name = 'dashboard:' + name
+        key_name = 'dashboard:data:' + name
+        r.set(key_name, b'')
         r.set(key_name + ':type', plot_type)
+        r.set(key_name + ':update', b'true')
+
 
         self.redis = r
         self.key_name = key_name
@@ -64,7 +53,7 @@ class SendToDashboard(Stimulus):
         self.redis.set(self.key_name + ':update', b'true')
 
 
-class SendToPycortexViewer(Stimulus):
+class SendToPycortexViewer(PreprocessingStep):
     """Send data to the pycortex webgl viewer
 
     Parameters
@@ -83,7 +72,7 @@ class SendToPycortexViewer(Stimulus):
         self.redis.publish("viewer", pickle.dumps(data))
 
 
-class RoiBars(Stimulus):
+class RoiBars(PreprocessingStep):
     def __init__(self, **kwargs):
         super(RoiBars, self).__init__()
         raise NotImplementedError

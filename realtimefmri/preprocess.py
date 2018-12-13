@@ -4,6 +4,7 @@ import os.path as op
 import struct
 import pickle
 import time
+import importlib
 from uuid import uuid4
 import warnings
 import argparse
@@ -12,14 +13,16 @@ import numpy as np
 import redis
 import nibabel as nib
 import cortex
+import dash_core_components as dcc
+import dash_html_components as html
 from realtimefmri import image_utils
-from realtimefmri.utils import get_logger, load_class
+from realtimefmri.utils import get_logger
 from realtimefmri import config
 from realtimefmri import buffered_array
-
+from realtimefmri import pipeline_utils
 
 logger = get_logger('preprocess', to_console=True, to_network=True)
-
+r = redis.StrictRedis(config.REDIS_HOST)
 
 def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     """Highest-level class for running preprocessing
@@ -40,8 +43,6 @@ def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     verbose : bool
         Whether to log to the console
     """
-    redis_client = redis.StrictRedis(config.REDIS_HOST)
-
     config_path = op.join(config.PIPELINE_DIR, pipeline_name + '.yaml')
     with open(config_path, 'rb') as f:
         pipeline_config = yaml.load(f)
@@ -53,7 +54,7 @@ def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
 
     n_skip = pipeline.global_parameters.get('n_skip', 0)
 
-    volume_subscription = redis_client.pubsub()
+    volume_subscription = r.pubsub()
     volume_subscription.subscribe('timestamped_volume')
     for message in volume_subscription.listen():
         if message['type'] == 'message':
@@ -66,7 +67,7 @@ def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
                 data_dict = pipeline.process(data_dict)
 
 
-class Pipeline(object):
+class Pipeline():
     """Construct and run a preprocessing pipeline
 
     Load a preprocessing configuration file, intialize all of the steps, and
@@ -114,9 +115,10 @@ class Pipeline(object):
 
         self.recording_id = recording_id
         self.build(pipeline, static_pipeline, global_parameters)
+        self.register()
 
     def build(self, pipeline, static_pipeline, global_parameters):
-        """Build the pipeline from the pipeline parameters. Directly sets the class instance 
+        """Build the pipeline from the pipeline parameters. Directly sets the class instance
         attributes for `pipeline`, `static_pipeline`, and `global_parameters`
 
         Parameters
@@ -127,25 +129,25 @@ class Pipeline(object):
         """
         self.static_pipeline = []
         for step in static_pipeline:
-            logger.debug('Initializing %s' % step['name'])
+            logger.debug('Initializing %s', step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', {})
             for k, v in global_parameters.items():
                 kwargs[k] = kwargs.get(k, v)
 
-            cls = load_class(step['step'])
+            cls = pipeline_utils.load_class(step['class_name'])
             step['instance'] = cls(*args, **kwargs)
             self.static_pipeline.append(step)
 
         self.pipeline = []
         for step in pipeline:
-            logger.debug('initializing %s' % step['name'])
+            logger.debug('initializing %s', step['name'])
             args = step.get('args', ())
             kwargs = step.get('kwargs', dict())
             for k, v in global_parameters.items():
                 kwargs[k] = kwargs.get(k, v)
 
-            cls = load_class(step['step'])
+            cls = pipeline_utils.load_class(step['class_name'])
             step['instance'] = cls(*args, **kwargs)
             self.pipeline.append(step)
 
@@ -178,8 +180,8 @@ class Pipeline(object):
     def process(self, data_dict):
         """Run through the preprocessing steps
 
-        Iterate through all the preprocessing steps. For each step, extract the `input` keys from 
-        the `data_dict` ans pass them as ordered unnamed arguments to that step. The return value 
+        Iterate through all the preprocessing steps. For each step, extract the `input` keys from
+        the `data_dict` ans pass them as ordered unnamed arguments to that step. The return value
         is saved to the `data_dict` using the  `output` key.
 
         Parameters
@@ -194,12 +196,12 @@ class Pipeline(object):
         """
         image_number = struct.pack('i', data_dict['image_number'])
         for step in self.pipeline:
-            args = [data_dict[k] for k in step['input']]
+            inputs = [data_dict[k] for k in step['input']]
 
-            logger.info('running %s' % step['name'])
-            outp = step['instance'].run(*args)
+            logger.info('running %s', step['name'])
+            outp = step['instance'].run(*inputs)
 
-            logger.debug('finished %s' % step['name'])
+            logger.debug('finished %s', step['name'])
 
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
@@ -209,27 +211,82 @@ class Pipeline(object):
 
         return data_dict
 
+    @staticmethod
+    def create_interface(key):
+        contents = []
+        for class_name_key in r.scan_iter(key + b':*:class_name'):
+            class_name = pickle.loads(r.get(class_name_key))
+            step_index = int(class_name_key.split(b':')[2].decode('utf-8'))
+            step_class = pipeline_utils.load_class(class_name)
+            step_key = class_name_key.rsplit(b':', maxsplit=1)[0]
+            interface = step_class.interface(step_key)
+            contents.append([step_index, interface])
+
+        contents = sorted(contents, key=lambda x: x[0])
+        contents = [content for i, content in contents]
+
+        return contents
+
+    def register(self):
+        """Register the pipeline to the redis database
+        """
+        pipeline_key = f'pipeline:{id(self)}'
+        for step_index, step in enumerate(self.pipeline):
+            step_key = f'{pipeline_key}:{step_index}'
+            step['instance'].register(step_key)
+
+        self._key = pipeline_key
+
 
 class PreprocessingStep(object):
-    def __init__(self, **kwargs):
-        pass
+    """Preprocessing step
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        """
+        self._parameters = kwargs
+
+    def register(self, key):
+        """Register the preprocessing step to the redis database
+
+        Parameters
+        ----------
+        key : str
+            A unique key for this step. Convention is pipeline:<pipeline_id>:<step_index>,
+            e.g., pipeline:105874924:0, pipeline:105874924:1, pipeline:105874924:2, etc.
+        """
+        r.set(key + ':class_name', pickle.dumps(pipeline_utils.get_step_name(self.__class__)))
+
+        for k, v in self._parameters.items():
+            r.set(key + f':{k}', pickle.dumps(v))
+
+        self._key = key
+
+    @staticmethod
+    def interface(step_key):
+        """Define an interface element for the control panel
+        """
+        step_id = step_key.decode('utf-8').replace(':', '-')
+
+        step = {}
+        for key in r.scan_iter(step_key + b':*'):
+            param_name = key.rsplit(b':', maxsplit=1)[1]
+            val = r.get(key)
+            step[param_name] = pickle.loads(val)
+
+        name = step.pop(b'class_name')
+        contents = [html.H3(name)]
+        for k, v in step.items():
+            k = k.decode('utf-8')
+            contents.extend([html.Strong(k),
+                             dcc.Input(value=v, id=f'pipeline-{step_id}-{k}')])
+
+        interface = html.Div(contents, id=f'pipeline-{step_id}')
+        logger.debug(interface)
+        return interface
 
     def run(self):
         raise NotImplementedError
-
-
-def load_mask(surface, transform, mask_type):
-        mask_path = op.join(cortex.database.default_filestore,
-                            surface, 'transforms', transform,
-                            'mask_' + mask_type + '.nii.gz')
-        return nib.load(mask_path)
-
-
-def load_reference(surface, transform):
-        ref_path = op.join(cortex.database.default_filestore,
-                           surface, 'transforms', transform,
-                           'reference.nii.gz')
-        return nib.load(ref_path)
 
 
 class Debug(PreprocessingStep):
@@ -265,8 +322,9 @@ class SaveNifti(PreprocessingStep):
         Saves the input image to a file and iterates the counter.
     """
 
-    def __init__(self, recording_id=None, path_format='volume_{:04}.nii',
-                 **kwargs):
+    def __init__(self, recording_id=None, path_format='volume_{:04}.nii', **kwargs):
+        super(SaveNifti, self).__init__(recording_id, path_format, **kwargs)
+
         if recording_id is None:
             recording_id = str(uuid4())
         recording_dir = op.join(config.RECORDING_DIR, recording_id, 'nifti')
@@ -311,7 +369,8 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, surface, transform, twopass=False, **kwargs):
+    def __init__(self, surface, transform, twopass=False, *args, **kwargs):
+        super(MotionCorrect, self).__init__(surface, transform, twopass, *args, **kwargs)
         ref_path = op.join(cortex.database.default_filestore,
                            surface, 'transforms', transform,
                            'reference.nii.gz')
@@ -342,7 +401,8 @@ class NiftiToVolume(PreprocessingStep):
 
 
 class VolumeToMosaic(PreprocessingStep):
-    def __init__(self, dim=0, **kwargs):
+    def __init__(self, dim=0, *args, **kwargs):
+        super(VolumeToMosaic, self).__init__(*args, **kwargs)
         self.dim = dim
 
     def run(self, volume):
@@ -366,7 +426,9 @@ class ApplyMask(PreprocessingStep):
     mask : numpy.ndarray
         Boolean voxel mask
     """
-    def __init__(self, surface, transform, mask_type=None, **kwargs):
+    def __init__(self, surface, transform, mask_type=None, *args, **kwargs):
+        kwargs.update({'surface': surface, 'transform': transform, 'mask_type': mask_type})
+        super(ApplyMask, self).__init__(**kwargs)
         mask = cortex.db.get_mask(surface, transform, mask_type)
         self.mask = mask
 
@@ -388,7 +450,8 @@ class ArrayMean(PreprocessingStep):
     dimensions : tuple of int
         Dimensions along which to take the mean. None takes the mean of all values in the array
     """
-    def __init__(self, dimensions, **kwargs):
+    def __init__(self, dimensions, *args, **kwargs):
+        super(ArrayMean, self).__init__(**kwargs)
         self.dimensions = tuple(dimensions)
 
     def run(self, array):
@@ -437,6 +500,7 @@ class ApplySecondaryMask(PreprocessingStep):
         and secondary masks
     """
     def __init__(self, surface, transform, mask_type_1, mask_type_2, **kwargs):
+        super(ApplySecondaryMask, self).__init__(**kwargs)
         mask1 = cortex.db.get_mask(surface, transform, mask_type_1).T  # in xyz
         mask2 = cortex.db.get_mask(surface, transform, mask_type_2).T  # in xyz
         self.mask = image_utils.secondary_mask(mask1, mask2, order='F')
@@ -448,8 +512,8 @@ class ApplySecondaryMask(PreprocessingStep):
 
 
 class ActivityRatio(PreprocessingStep):
-    def __init__(self, **kwargs):
-        super(ActivityRatio, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(ActivityRatio, self).__init__(**kwargs)
 
     def run(self, x1, x2):
         if isinstance(x1, np.ndarray):
@@ -489,7 +553,8 @@ class RoiActivity(PreprocessingStep):
     run():
         Returns a list of floats of mean activity in the requested ROIs
     """
-    def __init__(self, surface, transform, pre_mask_name, roi_names, **kwargs):
+    def __init__(self, surface, transform, pre_mask_name, roi_names, *args, **kwargs):
+        super(RoiActivity, self).__init__(**kwargs)
 
         subj_dir = config.get_subject_directory(surface)
         pre_mask_path = op.join(subj_dir, pre_mask_name + '.nii')
@@ -540,7 +605,8 @@ class WMDetrend(PreprocessingStep):
         Returns detrended grey matter activity given raw gray and white matter
         activity
     """
-    def __init__(self, subject, model_name=None, **kwargs):
+    def __init__(self, subject, model_name=None, *args, **kwargs):
+        super(WMDetrend, self).__init__(*args, **kwargs)
         """
         """
         super(WMDetrend, self).__init__()
@@ -626,7 +692,8 @@ class RunningMeanStd(PreprocessingStep):
         Adds the input vector to the stored samples (discard the oldest sample)
         and compute and return the mean and standard deviation.
     """
-    def __init__(self, n=20, skip=5, **kwargs):
+    def __init__(self, n=20, skip=5, *args, **kwargs):
+        super(RunningMeanStd, self).__init__(**kwargs)
         self.n = n
         self.mean = None
         self.samples = None
@@ -660,25 +727,3 @@ class ZScore(PreprocessingStep):
             return np.zeros_like(array)
         else:
             return (array - mean) / std
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Preprocess data')
-    parser.add_argument('config',
-                        action='store',
-                        help='Name of configuration file')
-    parser.add_argument('recording_id', action='store',
-                        help='Recording name')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        default=False, dest='verbose')
-
-    args = parser.parse_args()
-
-    preproc = Preprocessor(args.config, recording_id=args.recording_id,
-                           verbose=args.verbose)
-    try:
-        preproc.run()
-    except KeyboardInterrupt:
-        print('shutting down preprocessing')
-        preproc.active = False
-        preproc.stop()

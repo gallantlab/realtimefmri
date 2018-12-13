@@ -3,43 +3,43 @@ global_parameters:
 
 pipeline:
   - name: debug
-    step: realtimefmri.preprocess.Debug
+    class_name: realtimefmri.preprocess.Debug
     input: [ raw_image_nii ]
     output: [ nii_repr, nii_shape ]
 
   - name: nifti_to_volume
-    step: realtimefmri.preprocess.NiftiToVolume
+    class_name: realtimefmri.preprocess.NiftiToVolume
     input: [ raw_image_nii ]
     output: [ volume ]
 
   - name: volume_to_mosaic
-    step: realtimefmri.preprocess.VolumeToMosaic
+    class_name: realtimefmri.preprocess.VolumeToMosaic
     input: [ volume ]
     output: [ volume_mosaic ]
 
   - name: send_mosaic
-    step: realtimefmri.stimulate.SendToDashboard
+    class_name: realtimefmri.stimulate.SendToDashboard
     kwargs: { name: volume_mosaic, plot_type: image }
     input: [ volume_mosaic ]
 
   - name: gm_mask
-    step: realtimefmri.preprocess.ApplyMask
+    class_name: realtimefmri.preprocess.ApplyMask
     kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
     input: [ volume ]
     output: [ gm_responses ]
 
   - name: array_mean
-    step: realtimefmri.preprocess.ArrayMean
+    class_name: realtimefmri.preprocess.ArrayMean
     kwargs: { dimensions: [0]}
     input: [ gm_responses ]
     output: [ gm_mean ]
 
   - name: send_gm
-    step: realtimefmri.stimulate.SendToDashboard
+    class_name: realtimefmri.stimulate.SendToDashboard
     kwargs: { name: gm_mean, plot_type: bar }
     input: [ gm_mean ]
 
   - name: flatmap
-    step: realtimefmri.stimulate.SendToPycortexViewer
+    class_name: realtimefmri.stimulate.SendToPycortexViewer
     kwargs: { name: flatmap }
     input: [ gm_responses ]
