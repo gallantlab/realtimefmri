@@ -8,11 +8,11 @@ import threading
 import time
 from uuid import uuid4
 
+import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import redis
 from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
 
 from realtimefmri import (collect, collect_ttl, collect_volumes, config,
                           preprocess, viewer)
@@ -80,7 +80,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                   style={'max-width': '600px'})
 
 r = redis.StrictRedis(config.REDIS_HOST)
-r.flushall()
+# r.flushall()
 
 
 class TaskProxy(threading.Thread):
@@ -129,7 +129,7 @@ def collect_ttl_status(n, session_id, ttl_source):
         return label
 
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('collect-volumes-status', 'children'),
@@ -155,7 +155,7 @@ def collect_volumes_status(n, session_id):
         return label
 
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('collect-status', 'children'),
@@ -185,7 +185,7 @@ def collect_status(n, session_id):
         return label
 
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('preprocess-status', 'children'),
@@ -220,7 +220,7 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         return label
 
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('viewer-status', 'children'),
@@ -249,7 +249,7 @@ def viewer_status(n, session_id, surface, transform, mask):
         return label
 
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('empty-div4', 'children'),
@@ -259,7 +259,7 @@ def simulate_ttl(n):
         logging.info('simulating ttl at {}'.format(time.time()))
         r.publish('ttl', 'message')
     else:
-        raise PreventUpdate()
+        raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('empty-div3', 'children'),
@@ -292,7 +292,7 @@ def simulate_volume(n, simulated_dataset, session_id):
         count += 1
         r.set(session_id + '_simulated_volume_count', count)
 
-    raise PreventUpdate()
+    raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('pycortex-transform', 'options'),
