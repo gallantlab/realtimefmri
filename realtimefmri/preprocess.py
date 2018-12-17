@@ -743,3 +743,35 @@ class ZScore(PreprocessingStep):
             return np.zeros_like(array)
         else:
             return (array - mean) / std
+
+
+class SklearnPredictor(PreprocessingStep):
+    """Run the `.predict` method of a scikit-learn predictor on incoming
+    activity. Returns the predicted output.
+
+    Parameters
+    ----------
+    surface : str
+        subject/surface ID
+    pickled_predictor : str
+        filename of the pickle file containing the trained classifier
+
+    Attributes
+    ----------
+    predictor : sklearn fitted learner
+
+    Methods
+    -------
+    run():
+        Returns the prediction
+    """
+
+    def __init__(self, surface, pickled_predictor, **kwargs):
+        subj_dir = config.get_subject_directory(surface)
+        pickled_path = op.join(subj_dir, pickled_predictor)
+        self.predictor = pickle.load(open(pickled_path, 'rb'))
+
+    def run(self, activity):
+        # whatever the input type, we need a row vector
+        activity = activity.ravel()[None]
+        return self.predictor.predict(activity)

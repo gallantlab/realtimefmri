@@ -1,0 +1,42 @@
+global_parameters:
+  n_skip: 0
+
+pipeline:
+  - name: debug
+    class_name: realtimefmri.preprocess.Debug
+    input: [ raw_image_nii ]
+    output: [ nii_repr, nii_shape ]
+
+  - name: motion_correct
+    class_name: realtimefmri.preprocess.MotionCorrect
+    kwargs: { surface: TZfs, transform: 20160719TZ_localizers, mask_type: thick }
+    input: [ raw_image_nii ]
+    output: [ image_nifti_mc ]
+
+  - name: nifti_to_volume
+    class_name: realtimefmri.preprocess.NiftiToVolume
+    input: [ image_nifti_mc ]
+    output: [ volume ]
+
+  - name: gm_mask
+    class_name: realtimefmri.preprocess.ApplyMask
+    kwargs: { surface: TZfs, transform: 20160719TZ_localizers, mask_type: thick }
+    input: [ volume ]
+    output: [ gm_responses ]
+
+  - name: incremental_mean_std
+    class_name: realtimefmri.preprocess.IncrementalMeanStd
+    input: [ gm_responses ]
+    output: [ gm_mean, gm_std ]
+
+  - name: zscore
+    class_name: realtimefmri.preprocess.ZScore
+    input: [ gm_responses, gm_mean, gm_std ]
+    output: [ gm_zscore ]
+
+  - name: decode
+    class_name: realtimefmri.preprocess.SklearnPredictor
+    kwargs: { surface: TZfs, pickled_predictor: TZ_motor_decoder_thick.pkl }
+    input: [ gm_zscore ]
+    output: [ predition ]
+
