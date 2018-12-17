@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numbers
 import pickle
 import warnings
@@ -11,7 +12,7 @@ import PIL
 import plotly
 import plotly.graph_objs as go
 import redis
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
 from realtimefmri import config
 from realtimefmri.utils import get_logger
@@ -61,20 +62,26 @@ def make_volume_slices(volume, x=None, y=None, z=None):
 
 
 def generate_update_graph():
+    """Return a callback function for updating a graph
+    """
     def update_graph(n, selected_values):
+        """Callback to update a graph given a list of data names
+
+        Parameters
+        ----------
+        n : int
+        selected_values: list of str
+        """
 
         if len(selected_values) == 0:
             raise dash.exceptions.PreventUpdate()
 
         titles = [remove_prefix(k, 'dashboard:data:') for k in selected_values]
-        fig = plotly.tools.make_subplots(rows=len(selected_values), cols=1,
-                                         subplot_titles=titles, print_grid=False)
-
-        new_layouts = []
+        traces = []
         images = []
+        layout_updates = []
 
-        for i, key in enumerate(selected_values):
-            axis_number = i + 1
+        for key in selected_values:
             dat = r.get(key)
             if dat:
                 data = pickle.loads(dat)
@@ -85,7 +92,7 @@ def generate_update_graph():
                         data = [data]
 
                     trace = go.Bar(y=data)
-                    fig.append_trace(trace, axis_number, 1)
+                    traces.append(trace)
 
                 elif plot_type == b'timeseries':
                     update = r.get(key + ':update')
@@ -99,7 +106,7 @@ def generate_update_graph():
 
                     for trace_index in range(data.shape[1]):
                         trace = go.Scatter(y=data[:, trace_index])
-                        fig.append_trace(trace, axis_number, 1)
+                        traces.append(trace)
 
                 elif plot_type == b'image':
                     if data.dtype != np.dtype('uint8'):
@@ -113,9 +120,9 @@ def generate_update_graph():
 
                     img = PIL.Image.fromarray(data)
 
-                    fig.append_trace(go.Scatter(), axis_number, 1)
+                    traces.append(go.Scatter())
                     image = {'source': img,
-                             'xref': f"x{axis_number}", 'yref': f"y{axis_number}",
+                             'xref': 'x', 'yref': 'y',
                              'x': 0, 'y': 1,
                              'sizex': 1, 'sizey': 1,
                              'sizing': "stretch",
@@ -123,9 +130,9 @@ def generate_update_graph():
                              'layer': "above"}
                     images.append(image)
 
-                    new_layout = {f'xaxis{axis_number}': {'range': [0, 1]},
-                                  f'yaxis{axis_number}': {'range': [0, 1]}}
-                    new_layouts.append(new_layout)
+                    layout = {f'xaxis': {'range': [0, 1]},
+                              f'yaxis': {'range': [0, 1]}}
+                    layout_updates.append(layout)
                     titles.append(remove_prefix(key, 'dashboard:data:'))
 
                 else:
@@ -133,13 +140,14 @@ def generate_update_graph():
             else:
                 raise dash.exceptions.PreventUpdate()
 
+        fig = go.Figure(traces)
         fig.layout.update({'autosize': True})
 
         if len(images) > 0:
             fig.layout.update({'images': images})
 
-        for new_layout in new_layouts:
-            fig.layout.update(new_layout)
+        for layout in layout_updates:
+            fig.layout.update(layout)
 
         return fig
 
@@ -150,35 +158,83 @@ def generate_refresh_selector():
     def refresh_selector(n):
         if n is not None:
             return get_data_options()
+
         else:
-            return dash.exceptions.PreventUpdate()
+            raise dash.exceptions.PreventUpdate()
 
     return refresh_selector
 
 
-n_graphs = 4
+def generate_add_graph(graph_index):
+    def add_graph(n_graphs):
+        if n_graphs == graph_index:
+            return {'display': 'inline-block'}
+
+        else:
+            raise dash.exceptions.PreventUpdate()
+
+    return add_graph
+
+
+def generate_add_selector(graph_index):
+    def add_selector(n_graphs):
+        if n_graphs == graph_index:
+            return {'display': 'inline-block'}
+
+        else:
+            raise dash.exceptions.PreventUpdate()
+
+    return add_selector
+
+
+max_n_graphs = 10
 
 selector_list = []
 graph_list = []
-for graph_index in range(n_graphs):
-    selector = dcc.Dropdown(id=f'data-selector{graph_index}',
-                            value=[], multi=True, options=[])
+for graph_index in range(1, max_n_graphs + 1):
+    selector = dcc.Dropdown(id=f'data-selector{graph_index}', value=[], options=[],
+                            multi=True, className='data-selector', style={'display': 'none'})
     selector_list.append(selector)
 
-    graph = dcc.Graph(id=f'graph{graph_index}')
+    graph = dcc.Graph(id=f'graph{graph_index}', className='graph', style={'display': 'none'})
     graph_list.append(graph)
 
 
-layout = [html.Button('Refresh data list', id='refresh-selector-button'),
+layout = [html.Button(u'↺', id='refresh-selector-button'),
+          html.Button('+', id='add-graph-button'),
           html.Div(selector_list, id='data-selector-div'),
           html.Div(graph_list, id='graph-div'),
+          html.Div('0', id='n-graphs', style={'display': 'none'}),
           dcc.Interval(id='interval-component', interval=1000, n_intervals=0)]
 
 
-for graph_index in range(n_graphs):
+@app.callback(Output('n-graphs', 'children'),
+              [Input('add-graph-button', 'n_clicks')],
+              [State('n-graphs', 'children')])
+def increment_graph_count(n, n_graphs):
+    if n is not None:
+        n_graphs = int(n_graphs)
+        n_graphs += 1
+        n_graphs = str(n_graphs)
+        return n_graphs
+
+    else:
+        raise dash.exceptions.PreventUpdate()
+
+
+for graph_index in range(1, max_n_graphs + 1):
+    graph_index = str(graph_index)
     app.callback(Output(f'data-selector{graph_index}', 'options'),
                  [Input('refresh-selector-button', 'n_clicks')])(generate_refresh_selector())
 
     app.callback(Output(f'graph{graph_index}', 'figure'),
                  [Input('interval-component', 'n_intervals'),
                   Input(f'data-selector{graph_index}', 'value')])(generate_update_graph())
+
+    # make new graph (reveal existing graph)
+    app.callback(Output(f'data-selector{graph_index}', 'style'),
+                 [Input('n-graphs', 'children')])(generate_add_graph(graph_index))
+
+    # make new graph (reveal existing graph)
+    app.callback(Output(f'graph{graph_index}', 'style'),
+                 [Input('n-graphs', 'children')])(generate_add_selector(graph_index))

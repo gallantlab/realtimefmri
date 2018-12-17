@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import multiprocessing
 import os
@@ -28,7 +29,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                        type='text', value='TEST')]),
 
                    # collect TTL
-                   html.Div([html.Button('x', id='collect-ttl-status',
+                   html.Div([html.Button(u'▶', id='collect-ttl-status',
                                          className='status-indicator'),
                              html.Span('Collect TTL', className='status-label'),
                              dcc.Dropdown(id='ttl-source', value='',
@@ -38,7 +39,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                              html.Button('Simulate TTL', id='simulate-ttl')]),
 
                    # collect volumes
-                   html.Div([html.Button('x', id='collect-volumes-status',
+                   html.Div([html.Button(u'▶', id='collect-volumes-status',
                                          className='status-indicator'),
                              html.Span('Collect volumes', className='status-label'),
                              html.Button('Simulate volume', id='simulate-volume'),
@@ -48,11 +49,11 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                           style={'display': 'inline-block', 'width': '200px'})]),
 
                    # collect
-                   html.Div([html.Button('x', id='collect-status', className='status-indicator'),
+                   html.Div([html.Button(u'▶', id='collect-status', className='status-indicator'),
                              html.Span('Collect', className='status-label')]),
 
                    # preprocess
-                   html.Div([html.Button('x', id='preprocess-status', 
+                   html.Div([html.Button(u'▶', id='preprocess-status',
                                          className='status-indicator'),
                              html.Span('Preprocess', className='status-label'),
                              dcc.Dropdown(id='preproc-config', value='',
@@ -60,7 +61,7 @@ layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display':
                                                    for p in config.get_pipelines('preproc')],
                                           style={'display': 'inline-block', 'width': '200px'})]),
                    # pycortex viewer
-                   html.Div([html.Button('x', id='viewer-status',
+                   html.Div([html.Button(u'▶', id='viewer-status',
                                          className='status-indicator'),
                              html.Span('Viewer', className='status-label'),
                              dcc.Dropdown(id='pycortex-surface', value='',
@@ -113,7 +114,7 @@ def collect_ttl_status(n, session_id, ttl_source):
     if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
-            label = 'o'
+            label = u'■'
             process = start_task(collect_ttl.collect_ttl, ttl_source)
             while not process.is_alive():
                 time.sleep(0.1)
@@ -121,7 +122,7 @@ def collect_ttl_status(n, session_id, ttl_source):
             r.set(session_id + '_collect_ttl_pid', process.pid)
         else:
             logger.info(f"Stopping TTL collector (pid {pid})")
-            label = 'x'
+            label = u'▶'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
             r.delete(session_id + '_collect_ttl_pid')
@@ -139,7 +140,7 @@ def collect_volumes_status(n, session_id):
     if n is not None:
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
-            label = 'o'
+            label = u'■'
             process = start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
@@ -147,7 +148,7 @@ def collect_volumes_status(n, session_id):
             r.set(session_id + '_collect_volumes_pid', process.pid)
         else:
             logger.info(f"Stopping volume collector (pid {pid})")
-            label = 'x'
+            label = u'▶'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
             r.delete(session_id + '_collect_volumes_pid')
@@ -165,7 +166,7 @@ def collect_status(n, session_id):
     if n is not None:
         pid = r.get(session_id + '_collect_pid')
         if pid is None:
-            label = 'o'
+            label = u'■'
             process = start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
@@ -173,7 +174,7 @@ def collect_status(n, session_id):
             r.set(session_id + '_collect_pid', process.pid)
         else:
             logger.info(f"Stopping collector viewer (pid {pid})")
-            label = 'x'
+            label = u'▶'
             pid = int(pid)
             try:
                 os.kill(pid, signal.SIGKILL)
@@ -199,7 +200,7 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
-            label = 'o'
+            label = u'■'
             process = start_task(preprocess.preprocess,
                                  recording_id, preproc_config, surface, transform)
             while not process.is_alive():
@@ -208,7 +209,7 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
             r.set(session_id + '_preprocess_pid', process.pid)
         else:
             logger.info(f"Stopping preprocessor (pid {pid})")
-            label = 'x'
+            label = u'▶'
             pid = int(pid)
             try:
                 os.kill(pid, signal.SIGKILL)
@@ -233,7 +234,7 @@ def viewer_status(n, session_id, surface, transform, mask):
     if n is not None:
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
-            label = 'o'
+            label = u'■'
             process = start_task(viewer.serve, surface, transform, mask, 0, 2000)
             while not process.is_alive():
                 time.sleep(0.1)
@@ -241,7 +242,7 @@ def viewer_status(n, session_id, surface, transform, mask):
             r.set(session_id + '_viewer_pid', process.pid)
         else:
             logger.info(f"Stopping pycortex viewer (pid {pid})")
-            label = 'x'
+            label = u'▶'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
             r.delete(session_id + '_viewer_pid')

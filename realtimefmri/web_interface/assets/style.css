@@ -18,19 +18,19 @@ button {
   margin: 0.2em;
 }
 
-#container {
+#page-content {
   display: inline-block;
   width: 90vw;
   min-width: 400px;
   height: 90vh;
-  min-height: 400px},
+  min-height: 400px;
+}
+
+#data-selector-div {
 
 }
 
-#graph-div {
-  height: 100%;
-}
-#graphs {
-  display: inline-block;
-  height: 100%
+.data-selector {
+  min-width: 100px;
+  width: 25%;
 }
