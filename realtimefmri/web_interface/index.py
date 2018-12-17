@@ -12,7 +12,9 @@ def serve_layout():
 
     return layout
 
+
 app.layout = serve_layout
+
 
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
