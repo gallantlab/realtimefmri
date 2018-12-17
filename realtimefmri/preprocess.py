@@ -23,6 +23,7 @@ from realtimefmri.utils import get_logger
 logger = get_logger('preprocess', to_console=True, to_network=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
+
 def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     """Highest-level class for running preprocessing
 
@@ -396,7 +397,7 @@ class MotionCorrect(PreprocessingStep):
 
 
 class NiftiToVolume(PreprocessingStep):
-    """Extract data volume from Nifti image. Translates image dimensions to be consistent with 
+    """Extract data volume from Nifti image. Translates image dimensions to be consistent with
     pycortex convention, e.g., volume shape is (30, 100, 100)
     """
     def run(self, nii):
@@ -509,7 +510,7 @@ class ApplySecondaryMask(PreprocessingStep):
     """
     def __init__(self, surface, transform, mask_type_1, mask_type_2, **kwargs):
         parameters = {'surface': surface, 'transform': transform,
-                      'mask_type_1': mask_type_1, 'mask_type_2': mask_type_2,}
+                      'mask_type_1': mask_type_1, 'mask_type_2': mask_type_2}
         parameters.update(kwargs)
         super(ApplySecondaryMask, self).__init__(**parameters)
         mask1 = cortex.db.get_mask(surface, transform, mask_type_1).T  # in xyz

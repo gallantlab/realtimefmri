@@ -111,7 +111,7 @@ class WeirdSound(SoundStimulus):
         self.lfo = pyo.Sine(freq=self._lfo_freq, mul=0.001, add=0.001)
         self.lfo.play()
 
-        freq = pyo.midiToHz(60)    
+        freq = pyo.midiToHz(60)
         self._freq = pyo.SigTo(value=[freq, freq + (0.01 * freq),
                                       freq * 2, freq * 2 + (0.01 * freq * 2)],
                                time=1.)
