@@ -38,5 +38,5 @@ pipeline:
     class_name: realtimefmri.preprocess.SklearnPredictor
     kwargs: { surface: TZfs, pickled_predictor: TZ_motor_decoder_thick.pkl }
     input: [ gm_zscore ]
-    output: [ predition ]
+    output: [ prediction ]
 
