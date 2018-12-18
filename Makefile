@@ -23,7 +23,7 @@ docker.shell: ## Open a shell into the app Docker container
 	docker-compose -f docker-compose.yml exec realtimefmri /bin/bash
 
 docker.up: ## Start the Docker containers
-	docker-compose -f docker-compose.yml up -d
+	docker-compose -f docker-compose.yml up
 
 docker.prune:
 	docker image prune -f && docker volume prune -f && docker network prune -f
