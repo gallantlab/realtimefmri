@@ -18,6 +18,8 @@ from dash.dependencies import Input, Output, State
 from realtimefmri import collect, collect_ttl, collect_volumes, config, preprocess, viewer
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface.app import app
+from realtimefmri.web_interface import utils
+
 
 logger = get_logger('control_panel', to_console=True, to_network=True)
 
@@ -83,28 +85,6 @@ r = redis.StrictRedis(config.REDIS_HOST)
 # r.flushall()
 
 
-class TaskProxy(threading.Thread):
-    def __init__(self, target, *args, **kwargs):
-        super().__init__()
-        self.target = target
-        self.args = args
-        self.kwargs = kwargs
-
-    def run(self):
-        p = multiprocessing.Process(target=self.target,
-                                    args=self.args, kwargs=self.kwargs)
-        self.target_process = p
-        p.start()
-        p.join()
-
-
-def start_task(target, *args, **kwargs):
-    t = TaskProxy(target, *args, **kwargs)
-    t.daemon = True
-    t.start()
-    return t.target_process
-
-
 @app.callback(Output('collect-ttl-status', 'children'),
               [Input('collect-ttl-status', 'n_clicks')],
               [State('session-id', 'children'),
@@ -114,7 +94,7 @@ def collect_ttl_status(n, session_id, ttl_source):
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
             label = u'■'
-            process = start_task(collect_ttl.collect_ttl, ttl_source)
+            process = utils.start_task(collect_ttl.collect_ttl, ttl_source)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started TTL collector (pid {process.pid})")
@@ -122,8 +102,7 @@ def collect_ttl_status(n, session_id, ttl_source):
         else:
             logger.info(f"Stopping TTL collector (pid {pid})")
             label = u'▶'
-            pid = int(pid)
-            os.kill(pid, signal.SIGKILL)
+            utils.kill_process(int(pid))
             r.delete(session_id + '_collect_ttl_pid')
 
         return label
@@ -140,7 +119,7 @@ def collect_volumes_status(n, session_id):
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
             label = u'■'
-            process = start_task(collect_volumes.collect_volumes)
+            process = utils.start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started volume collector (pid {process.pid})")
@@ -148,8 +127,7 @@ def collect_volumes_status(n, session_id):
         else:
             logger.info(f"Stopping volume collector (pid {pid})")
             label = u'▶'
-            pid = int(pid)
-            os.kill(pid, signal.SIGKILL)
+            utils.kill_process(int(pid))
             r.delete(session_id + '_collect_volumes_pid')
 
         return label
@@ -166,7 +144,7 @@ def collect_status(n, session_id):
         pid = r.get(session_id + '_collect_pid')
         if pid is None:
             label = u'■'
-            process = start_task(collect.collect)
+            process = utils.start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started collector viewer (pid {process.pid})")
@@ -174,13 +152,8 @@ def collect_status(n, session_id):
         else:
             logger.info(f"Stopping collector viewer (pid {pid})")
             label = u'▶'
-            pid = int(pid)
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            finally:
-                r.delete(session_id + '_collect_pid')
+            utils.kill_process(int(pid))
+            r.delete(session_id + '_collect_pid')
 
         return label
 
@@ -201,8 +174,8 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         if pid is None:
             label = u'■'
             global_parameters = {'surface': surface, 'transform': transform}
-            process = start_task(preprocess.preprocess,
-                                 recording_id, preproc_config, **global_parameters)
+            process = utils.start_task(preprocess.preprocess,
+                                       recording_id, preproc_config, **global_parameters)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started preprocessor (pid {process.pid})")
@@ -210,13 +183,8 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         else:
             logger.info(f"Stopping preprocessor (pid {pid})")
             label = u'▶'
-            pid = int(pid)
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            finally:
-                r.delete(session_id + '_preprocess_pid')
+            utils.kill_process(int(pid))
+            r.delete(session_id + '_preprocess_pid')
 
         return label
 
@@ -235,7 +203,7 @@ def viewer_status(n, session_id, surface, transform, mask):
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
             label = u'■'
-            process = start_task(viewer.serve, surface, transform, mask, 0, 2000)
+            process = utils.start_task(viewer.serve, surface, transform, mask, 0, 2000)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started pycortex viewer (pid {process.pid})")
