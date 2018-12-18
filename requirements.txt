@@ -7,7 +7,7 @@ pycortex
 dash
 dash_core_components
 dash_html_components
-dicom2nifti
+scikit-learn
 pyinotify
 pyserial
 evdev

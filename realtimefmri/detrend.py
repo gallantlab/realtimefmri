@@ -1,9 +1,10 @@
 import os.path as op
 import pickle
 
-from realtimefmri.config import get_subject_directory
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
+
+from realtimefmri.config import get_subject_directory
 
 
 class WhiteMatterDetrending(object):

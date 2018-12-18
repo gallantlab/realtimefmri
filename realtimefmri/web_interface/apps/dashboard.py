@@ -76,14 +76,17 @@ def generate_update_graph():
         if len(selected_values) == 0:
             raise dash.exceptions.PreventUpdate()
 
-        titles = [remove_prefix(k, 'dashboard:data:') for k in selected_values]
         traces = []
         images = []
         layout_updates = []
+        titles = []
 
         for key in selected_values:
             dat = r.get(key)
+            title = remove_prefix(key, 'dashboard:data:')
+            titles.append(title)
             if dat:
+                logger.debug('dashboard %s', len(dat))
                 data = pickle.loads(dat)
                 plot_type = r.get(key + ':type')
 
@@ -108,7 +111,7 @@ def generate_update_graph():
                         trace = go.Scatter(y=data[:, trace_index])
                         traces.append(trace)
 
-                elif plot_type == b'image':
+                elif plot_type == b'array_image':
                     if data.dtype != np.dtype('uint8'):
                         data = ((data - np.nanmin(data)) / np.nanmax(data))
                         data[np.isnan(data)] = 0.5
@@ -133,7 +136,25 @@ def generate_update_graph():
                     layout = {f'xaxis': {'range': [0, 1]},
                               f'yaxis': {'range': [0, 1]}}
                     layout_updates.append(layout)
-                    titles.append(remove_prefix(key, 'dashboard:data:'))
+
+                elif plot_type == b'static_image':
+                    logger.debug('dashboard %s', data)
+                    traces.append(go.Scatter())
+                    image = {'source': data,
+                             'xref': 'x', 'yref': 'y',
+                             'x': 0, 'y': 1,
+                             'sizex': 1, 'sizey': 1,
+                             'sizing': "stretch",
+                             'opacity': 1,
+                             'layer': "above"}
+                    images.append(image)
+
+                    layout = {'xaxis': {'range': [0, 1], 'showgrid': False, 'zeroline': False,
+                                        'showline': False, 'ticks': '', 'showticklabels': False},
+                              'yaxis': {'range': [0, 1], 'showgrid': False, 'zeroline': False,
+                                        'showline': False, 'ticks': '', 'showticklabels': False,
+                                        'scaleanchor': 'x', 'scaleratio': 1.}}
+                    layout_updates.append(layout)
 
                 else:
                     warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))
@@ -141,7 +162,7 @@ def generate_update_graph():
                 raise dash.exceptions.PreventUpdate()
 
         fig = go.Figure(traces)
-        fig.layout.update({'autosize': True})
+        fig.layout.update({'autosize': True, 'title': ', '.join(titles)})
 
         if len(images) > 0:
             fig.layout.update({'images': images})
