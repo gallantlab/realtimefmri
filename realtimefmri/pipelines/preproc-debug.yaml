@@ -14,5 +14,5 @@ pipeline:
 
   - name: send
     class_name: realtimefmri.stimulate.SendToDashboard
-    kwargs: { name: volume, plot_type: mosaic }
+    kwargs: { name: an_image, plot_type: static_image }
     input: [ volume ]

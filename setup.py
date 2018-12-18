@@ -20,6 +20,7 @@ def main():
                             "dash",
                             "dash_core_components",
                             "dash_html_components",
+                            "scikit-learn",
                             "pyinotify",
                             "pyserial",
                             "evdev",

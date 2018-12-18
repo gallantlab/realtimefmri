@@ -36,7 +36,27 @@ pipeline:
 
   - name: decode
     class_name: realtimefmri.preprocess.SklearnPredictor
-    kwargs: { surface: TZfs, pickled_predictor: TZ_motor_decoder_thick.pkl }
+    kwargs: { surface: TZ, pickled_predictor: TZ_motor_decoder_thick.pkl }
     input: [ gm_zscore ]
     output: [ prediction ]
 
+  - name: select_predicted_image
+    class_name: realtimefmri.preprocess.Dictionary
+    kwargs: { dictionary: { hand: static/img/motor_decoder/hand.png,
+                            foot: static/img/motor_decoder/foot.png,
+                            mouth: static/img/motor_decoder/mouth.png,
+                            saccade: static/img/motor_decoder/saccade.png,
+                            speak: static/img/motor_decoder/speak.png },
+              decode_key: utf-8 }
+    input: [ prediction ]
+    output: [ image_url ]
+
+  - name: send_prediction
+    class_name : realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: predicted_image, plot_type: static_image }
+    input: [ image_url ]
+
+  - name: flatmap
+    class_name: realtimefmri.stimulate.SendToPycortexViewer
+    kwargs: { name: flatmap }
+    input: [ gm_zscore ]

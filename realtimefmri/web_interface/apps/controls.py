@@ -200,8 +200,9 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
             label = u'■'
+            global_parameters = {'surface': surface, 'transform': transform}
             process = start_task(preprocess.preprocess,
-                                 recording_id, preproc_config, surface, transform)
+                                 recording_id, preproc_config, **global_parameters)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info(f"Started preprocessor (pid {process.pid})")

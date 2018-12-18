@@ -26,8 +26,8 @@ def initialize():
     if not op.exists(SCANNER_DIR):
         os.makedirs(SCANNER_DIR)
 
-    if not op.exists(DATABASE_DIR):
-        os.makedirs(DATABASE_DIR)
+    if not op.exists(DATASTORE_DIR):
+        os.makedirs(DATASTORE_DIR)
 
     if not op.exists(RECORDING_DIR):
         os.makedirs(RECORDING_DIR)
@@ -81,30 +81,35 @@ def get_pipelines(pipeline_type):
 
 
 def get_subject_directory(subject):
-    return op.join(DATABASE_DIR, subject)
+    return op.join(DATASTORE_DIR, subject)
 
 
 PACKAGE_DIR = op.abspath(op.join(realtimefmri.__file__, op.pardir))
-CONFIG_DIR = op.expanduser('~/.config/realtimefmri')
+
+if os.geteuid() == 0:
+    CONFIG_DIR = '/etc/realtimefmri'
+    DATA_DIR = '/usr/local/share/realtimefmri'
+else:
+    CONFIG_DIR = op.expanduser('~/.config/realtimefmri')
+    DATA_DIR = op.expanduser('~/.local/share/realtimefmri')
+
 initialize_config()
+
+PIPELINE_DIR = op.join(DATA_DIR, 'pipelines')
+SCANNER_DIR = op.join(DATA_DIR, 'scanner')
+DATASTORE_DIR = op.join(DATA_DIR, 'datastore')
+RECORDING_DIR = op.join(DATA_DIR, 'recordings')
+DATASET_DIR = op.join(DATA_DIR, 'datasets')
+initialize()
 
 config = ConfigParser()
 config.read(op.join(CONFIG_DIR, 'config.cfg'))
 
-DATA_DIR = op.expanduser(config.get('directories', 'data'))
-PIPELINE_DIR = op.expanduser(config.get('directories', 'pipelines'))
-SCANNER_DIR = op.expanduser(config.get('directories', 'scanner'))
-DATABASE_DIR = op.expanduser(config.get('directories', 'database'))
-RECORDING_DIR = op.expanduser(config.get('directories', 'recordings'))
-DATASET_DIR = op.expanduser(config.get('directories', 'datasets'))
-initialize()
-
 # addresses
-SYNC_ADDRESS = config.get('addresses', 'sync')
-VOLUME_ADDRESS = config.get('addresses', 'volume')
-PREPROC_ADDRESS = config.get('addresses', 'preproc')
-STIM_ADDRESS = config.get('addresses', 'stim')
 REDIS_HOST = config.get('addresses', 'redis_host')
+
+# web
+STATIC_PATH = config.get('web', 'static')
 
 # TTL
 TTL_KEYBOARD_DEV = config.get('sync', 'keyboard')

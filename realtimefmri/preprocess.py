@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import argparse
-import importlib
 import os
 import os.path as op
 import pickle
@@ -24,7 +22,7 @@ logger = get_logger('preprocess', to_console=True, to_network=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
-def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
+def preprocess(recording_id, pipeline_name, **global_parameters):
     """Highest-level class for running preprocessing
 
     This class loads the preprocessing pipeline from the configuration
@@ -47,8 +45,7 @@ def preprocess(recording_id, pipeline_name, surface, transform, **kwargs):
     with open(config_path, 'rb') as f:
         pipeline_config = yaml.load(f)
 
-    pipeline_config['global_parameters']['surface'] = surface
-    pipeline_config['global_parameters']['transform'] = transform
+    pipeline_config['global_parameters'].update(global_parameters)
 
     pipeline = Pipeline(**pipeline_config)
 
@@ -766,12 +763,44 @@ class SklearnPredictor(PreprocessingStep):
         Returns the prediction
     """
 
-    def __init__(self, surface, pickled_predictor, **kwargs):
+    def __init__(self, surface, pickled_predictor, nan_to_num=True, **kwargs):
+        parameters = {'surface': surface, 'pickled_predictor': pickled_predictor,
+                      'nan_to_num': nan_to_num}
+        parameters.update(kwargs)
+        super(SklearnPredictor, self).__init__(**parameters)
         subj_dir = config.get_subject_directory(surface)
         pickled_path = op.join(subj_dir, pickled_predictor)
         self.predictor = pickle.load(open(pickled_path, 'rb'))
+        self.nan_to_num = nan_to_num
 
     def run(self, activity):
         # whatever the input type, we need a row vector
         activity = activity.ravel()[None]
-        return self.predictor.predict(activity)
+        if self.nan_to_num:
+            activity = np.nan_to_num(activity)
+
+        prediction = self.predictor.predict(activity)[0]
+        return prediction
+
+
+class Dictionary(PreprocessingStep):
+    """A python-style dict as a preprocessing step
+
+    Parameters
+    ----------
+    dictionary : dict
+    """
+    def __init__(self, dictionary, decode_key=None, *args, **kwargs):
+        parameters = {'dictionary': dictionary, 'decode_key': decode_key}
+        kwargs.update(parameters)
+        super(Dictionary, self).__init__(**parameters)
+        self.dictionary = dictionary
+        self.decode_key = decode_key
+
+    def run(self, key):
+        if self.decode_key:
+            key = key.decode('utf-8')
+
+        value = self.dictionary[key]
+        logger.debug('Dictionary, key=%s, value=%s', key, value)
+        return value
