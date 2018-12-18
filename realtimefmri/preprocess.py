@@ -799,7 +799,7 @@ class Dictionary(PreprocessingStep):
 
     def run(self, key):
         if self.decode_key:
-            key = key.decode('utf-8')
+            key = key.decode(self.decode_key)
 
         value = self.dictionary[key]
         logger.debug('Dictionary, key=%s, value=%s', key, value)
