@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
-import multiprocessing
 import os
 import os.path as op
 import shutil
 import signal
-import threading
 import time
+from datetime import datetime
 from uuid import uuid4
 
 import dash
@@ -17,72 +16,63 @@ from dash.dependencies import Input, Output, State
 
 from realtimefmri import collect, collect_ttl, collect_volumes, config, preprocess, viewer
 from realtimefmri.utils import get_logger
-from realtimefmri.web_interface.app import app
 from realtimefmri.web_interface import utils
-
+from realtimefmri.web_interface.app import app
 
 logger = get_logger('control_panel', to_console=True, to_network=True)
 
+
+def create_control_button(label, button_id):
+    return html.Div([html.Button(u'▶', id=button_id, className='status-indicator'),
+                     html.Span(label, className='status-label')], className='control-panel-button')
+
+
 session_id = 'admin'
-layout = html.Div([html.Div(session_id, id='session-id'),  # , style={'display': 'none'}),
-                   html.Div([dcc.Input(id='recording-id',
-                                       placeholder='...enter recording id...',
-                                       type='text', value='TEST')]),
+layout = [
+    html.Div(session_id, id='session-id'),  # , style={'display': 'none'}),
+    html.Div([dcc.Input(id='recording-id',
+                        placeholder='Recording id...',
+                        type='text', value=datetime.strftime(datetime.now(), '%Y%m%d'))]),
 
-                   # collect TTL
-                   html.Div([html.Button(u'▶', id='collect-ttl-status',
-                                         className='status-indicator'),
-                             html.Span('Collect TTL', className='status-label'),
-                             dcc.Dropdown(id='ttl-source', value='',
-                                          options=[{'label': d, 'value': d}
-                                                   for d in ['redis', 'keyboard']],
-                                          style={'display': 'inline-block', 'width': '200px'}),
-                             html.Button('Simulate TTL', id='simulate-ttl')]),
+    html.Div(className='control-panel', children=[
+        create_control_button('Collect TTL', 'collect-ttl-status'),
+        create_control_button('Collect volumes', 'collect-volumes-status'),
+        create_control_button('Collect', 'collect-status'),
+        html.Hr(), html.Span('Simulation', style={'font-size': 'x-small'}),
+        dcc.Dropdown(id='ttl-source', className='control-panel-dropdown',
+                     placeholder='TTL source...', value='',
+                     options=[{'label': d, 'value': d} for d in ['redis', 'keyboard']]),
+        dcc.Dropdown(id='simulated-dataset', className='control-panel-dropdown',
+                     placeholder='Simulation dataset...', value='',
+                     options=[{'label': d, 'value': d} for d in config.get_datasets()]),
+        html.Button('TTL', id='simulate-ttl'), html.Button('DCM', id='simulate-volume')]),
 
-                   # collect volumes
-                   html.Div([html.Button(u'▶', id='collect-volumes-status',
-                                         className='status-indicator'),
-                             html.Span('Collect volumes', className='status-label'),
-                             html.Button('Simulate volume', id='simulate-volume'),
-                             dcc.Dropdown(id='simulated-dataset', value='',
-                                          options=[{'label': d, 'value': d}
-                                                   for d in config.get_datasets()],
-                                          style={'display': 'inline-block', 'width': '200px'})]),
+    # preprocess
+    html.Div(className='control-panel', children=[
+        create_control_button('Preprocess', 'preprocess-status'),
+        html.Hr(), html.Span('Options', style={'font-size': 'x-small'}),
+        dcc.Dropdown(id='preproc-config', className='control-panel-dropdown',
+                     placeholder='Configuration...', value='',
+                     options=[{'label': p, 'value': p} for p in config.get_pipelines('preproc')]),
+        dcc.Dropdown(id='pycortex-surface', className='control-panel-dropdown',
+                     placeholder='Surface...', value='',
+                     options=[{'label': d, 'value': d} for d in config.get_surfaces()]),
+        dcc.Dropdown(id='pycortex-transform', className='control-panel-dropdown',
+                     placeholder='Transform...', value=''),
+        dcc.Dropdown(id='pycortex-mask', className='control-panel-dropdown',
+                     placeholder='Mask...', value='')]),
 
-                   # collect
-                   html.Div([html.Button(u'▶', id='collect-status', className='status-indicator'),
-                             html.Span('Collect', className='status-label')]),
+    # pycortex viewer
+    html.Div(className='control-panel', children=[
+        create_control_button('Viewer', 'viewer-status')]),
 
-                   # preprocess
-                   html.Div([html.Button(u'▶', id='preprocess-status',
-                                         className='status-indicator'),
-                             html.Span('Preprocess', className='status-label'),
-                             dcc.Dropdown(id='preproc-config', value='',
-                                          options=[{'label': p, 'value': p}
-                                                   for p in config.get_pipelines('preproc')],
-                                          style={'display': 'inline-block', 'width': '200px'})]),
-                   # pycortex viewer
-                   html.Div([html.Button(u'▶', id='viewer-status',
-                                         className='status-indicator'),
-                             html.Span('Viewer', className='status-label'),
-                             dcc.Dropdown(id='pycortex-surface', value='',
-                                          options=[{'label': d, 'value': d}
-                                                   for d in config.get_surfaces()],
-                                          style={'display': 'inline-block', 'width': '200px'}),
-                             dcc.Dropdown(id='pycortex-transform',
-                                          style={'display': 'inline-block', 'width': '200px'}),
-                             dcc.Input(id='pycortex-mask', placeholder='',
-                                       type='text', value='',
-                                       style={'display': 'inline-block', 'width': '200px'})]),
-
-                   html.Div(id='empty-div1', children=[]),
-                   html.Div(id='empty-div2', children=[]),
-                   html.Div(id='empty-div3', children=[]),
-                   html.Div(id='empty-div4', children=[])],
-                  style={'max-width': '600px'})
+    html.Div(id='empty-div1', children=[]),
+    html.Div(id='empty-div2', children=[]),
+    html.Div(id='empty-div3', children=[]),
+    html.Div(id='empty-div4', children=[])
+]
 
 r = redis.StrictRedis(config.REDIS_HOST)
-# r.flushall()
 
 
 @app.callback(Output('collect-ttl-status', 'children'),
@@ -97,10 +87,10 @@ def collect_ttl_status(n, session_id, ttl_source):
             process = utils.start_task(collect_ttl.collect_ttl, ttl_source)
             while not process.is_alive():
                 time.sleep(0.1)
-            logger.info(f"Started TTL collector (pid {process.pid})")
+            logger.info("Started TTL collector (pid %d)", process.pid)
             r.set(session_id + '_collect_ttl_pid', process.pid)
         else:
-            logger.info(f"Stopping TTL collector (pid {pid})")
+            logger.info("Stopping TTL collector (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_ttl_pid')
@@ -122,10 +112,10 @@ def collect_volumes_status(n, session_id):
             process = utils.start_task(collect_volumes.collect_volumes)
             while not process.is_alive():
                 time.sleep(0.1)
-            logger.info(f"Started volume collector (pid {process.pid})")
+            logger.info("Started volume collector (pid %d)", process.pid)
             r.set(session_id + '_collect_volumes_pid', process.pid)
         else:
-            logger.info(f"Stopping volume collector (pid {pid})")
+            logger.info("Stopping volume collector (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_volumes_pid')
@@ -147,10 +137,10 @@ def collect_status(n, session_id):
             process = utils.start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
-            logger.info(f"Started collector viewer (pid {process.pid})")
+            logger.info("Started collector (pid %d)", process.pid)
             r.set(session_id + '_collect_pid', process.pid)
         else:
-            logger.info(f"Stopping collector viewer (pid {pid})")
+            logger.info("Stopping collector (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_pid')
@@ -178,10 +168,10 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
                                        recording_id, preproc_config, **global_parameters)
             while not process.is_alive():
                 time.sleep(0.1)
-            logger.info(f"Started preprocessor (pid {process.pid})")
+            logger.info("Started preprocessor (pid %d)", process.pid)
             r.set(session_id + '_preprocess_pid', process.pid)
         else:
-            logger.info(f"Stopping preprocessor (pid {pid})")
+            logger.info("Stopping preprocessor (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_preprocess_pid')
@@ -206,10 +196,10 @@ def viewer_status(n, session_id, surface, transform, mask):
             process = utils.start_task(viewer.serve, surface, transform, mask, 0, 2000)
             while not process.is_alive():
                 time.sleep(0.1)
-            logger.info(f"Started pycortex viewer (pid {process.pid})")
+            logger.info("Started pycortex viewer (pid %d)", process.pid)
             r.set(session_id + '_viewer_pid', process.pid)
         else:
-            logger.info(f"Stopping pycortex viewer (pid {pid})")
+            logger.info("Stopping pycortex viewer (pid %s)", pid)
             label = u'▶'
             pid = int(pid)
             os.kill(pid, signal.SIGKILL)
@@ -246,7 +236,7 @@ def simulate_volume(n, simulated_dataset, session_id):
             dest_directory = op.join(config.SCANNER_DIR, str(uuid4()))
             os.makedirs(dest_directory)
             time.sleep(0.5)
-            logger.info(f'Simulating volume {count} {dest_directory}')
+            logger.info('Simulating volume %d %s', count, dest_directory)
             paths = config.get_dataset_volume_paths(simulated_dataset)
             r.set(session_id + '_simulated_volume_directory', dest_directory)
 
@@ -256,7 +246,7 @@ def simulate_volume(n, simulated_dataset, session_id):
 
         path = paths[count % len(paths)]
         dest_path = op.join(dest_directory, f"IM{count:04}.dcm")
-        logger.info(f'Copying {path} to {dest_directory}')
+        logger.info('Copying %s to %s', path, dest_directory)
         shutil.copy(path, dest_path)
         count += 1
         r.set(session_id + '_simulated_volume_count', count)
@@ -267,4 +257,11 @@ def simulate_volume(n, simulated_dataset, session_id):
 @app.callback(Output('pycortex-transform', 'options'),
               [Input('pycortex-surface', 'value')])
 def populate_transforms(surface):
-    return [{'label': d, 'value': d} for d in config.get_transforms(surface)]
+    return [{'label': d, 'value': d} for d in config.get_available_transforms(surface)]
+
+
+@app.callback(Output('pycortex-mask', 'options'),
+              [Input('pycortex-transform', 'value')],
+              [State('pycortex-surface', 'value')])
+def populate_masks(transform, surface):
+    return [{'label': d, 'value': d} for d in config.get_available_masks(surface, transform)]

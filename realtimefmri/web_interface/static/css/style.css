@@ -1,14 +1,35 @@
-button {
-  width: 150px;
+#page-content {
+  display: block;
+  width: 95vw;
+  min-width: 600px;
+  height: 95vh;
+  min-height: 400px;
+}
+
+.control-panel {
+  display: inline-block;
+  float: left;
+  width: 28%;
+  border: 1px solid #aaa;
+  margin: 10px 10px 0px 0px;
+  padding: 10px;
+  border-radius: 5%;
+}
+
+.text-input {
+  display: inline-block;
+  min-width: 200px;
+  border-radius: 2%;
 }
 
 .status-indicator {
   height: 25px;
   width: 25px;
   background-color: white;
-  border-radius: 50%;
+  border-radius: 30%;
   display: inline-block;
   margin: 0.2em;
+  vertical-align: center;
 
 }
 
@@ -16,21 +37,18 @@ button {
   display: inline-block;
   width: 150px;
   margin: 0.2em;
-}
-
-#page-content {
-  display: inline-block;
-  width: 90vw;
-  min-width: 400px;
-  height: 90vh;
-  min-height: 400px;
+  vertical-align: center;
 }
 
 #data-selector-div {
 
 }
 
+.control-panel-dropdown {
+  min-width: 160px;
+}
+
 .data-selector {
-  min-width: 100px;
+  min-width: 200px;
   width: 25%;
 }

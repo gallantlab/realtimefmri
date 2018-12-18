@@ -40,7 +40,8 @@ def get_surfaces():
     return sorted(list(cortex.db.subjects.keys()))
 
 
-def get_transforms(surface):
+def get_available_transforms(surface):
+    """Get available pycortex transforms for a surface"""
     try:
         surf = getattr(cortex.db, surface)
         transforms = sorted(surf.transforms.xfms)
@@ -48,6 +49,20 @@ def get_transforms(surface):
         transforms = []
 
     return transforms
+
+
+def get_available_masks(surface, transform):
+    """Get available pycortex transforms for a surface"""
+    try:
+        surf = getattr(cortex.db, surface)
+        transf = surf.transforms[transform]
+        masks = transf.masks._masks.keys()
+        masks = sorted(list(masks))
+
+    except AttributeError:
+        masks = []
+
+    return masks
 
 
 def get_dataset(dataset):

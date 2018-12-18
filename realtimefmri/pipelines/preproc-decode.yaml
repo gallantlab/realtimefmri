@@ -9,7 +9,7 @@ pipeline:
 
   - name: motion_correct
     class_name: realtimefmri.preprocess.MotionCorrect
-    kwargs: { surface: TZfs, transform: 20160719TZ_localizers, mask_type: thick }
+    kwargs: { mask_type: thick }
     input: [ raw_image_nii ]
     output: [ image_nifti_mc ]
 
@@ -20,7 +20,7 @@ pipeline:
 
   - name: gm_mask
     class_name: realtimefmri.preprocess.ApplyMask
-    kwargs: { surface: TZfs, transform: 20160719TZ_localizers, mask_type: thick }
+    kwargs: { mask_type: thick }
     input: [ volume ]
     output: [ gm_responses ]
 
