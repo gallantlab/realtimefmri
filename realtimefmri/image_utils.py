@@ -59,7 +59,7 @@ def secondary_mask(mask1, mask2, order='C'):
     return masks[:, 1].astype(bool)
 
 
-def register(volume, reference, output_transform=False, twopass=False):
+def register(volume, reference, twopass=False, output_transform=False):
     """Register the input image to the reference image
 
     Parameters
@@ -128,6 +128,23 @@ def plot_volume(volume):
     _, ax = plt.subplots(nrows, ncols)
     for i in range(volume.shape[2]):
         _ = ax[divmod(i, ncols)].pcolormesh(volume[:, :, i], cmap='gray')
+
+
+def decompose_affine(affine):
+    """Decompose a affine matrix into pitch, roll, and yaw, x, y, z displacement components
+
+    References
+    ----------
+    .. [1] Planning Algorithms, Steven M. LaValle. 3.2.3 3D Transformations. Cambridge University
+           Press <http://planning.cs.uiuc.edu/node103.html>
+    """
+    alpha = np.arctan2(affine[1, 0], affine[0, 0])
+    beta = np.arctan2(-affine[2, 0], np.sqrt(affine[2, 1]**2 + affine[2, 2]**2))
+    gamma = np.arctan2(affine[2, 1], affine[2, 2])
+
+    x, y, z = affine[:3, -1]
+
+    return alpha, beta, gamma, x, y, z
 
 
 def load_afni_xfm(path):

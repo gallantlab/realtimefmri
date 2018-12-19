@@ -13,23 +13,20 @@ logger = get_logger('viewer', to_console=True, to_network=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
-class PyCortexViewer(object):
+class PyCortexViewer():
     bufferlen = 15
 
-    def __init__(self, surface, transform, mask_type='thick', vmin=-1., vmax=1.,
-                 **kwargs):
+    def __init__(self, surface, transform, mask_type='thick', vmin=-2., vmax=2.):
         if mask_type == '':
-            logger.info('No mask')
             data = np.zeros((self.bufferlen, 30, 100, 100), 'float32')
         else:
-            logger.info(f'{mask_type} mask')
             npts = cortex.db.get_mask(surface, transform, mask_type).sum()
             data = np.zeros((self.bufferlen, npts), 'float32')
 
         vol = cortex.Volume(data, surface, transform, vmin=vmin, vmax=vmax)
         logger.info('Starting pycortex viewer')
         view = cortex.webgl.show(vol, open_browser=True, autoclose=False, port=8051)
-        logger.info(f'Started pycortex viewer {surface}, {transform}, {mask_type}')
+        logger.info('Started pycortex viewer %s %s %s', surface, transform, mask_type)
 
         self.surface = surface
         self.transform = transform
@@ -68,7 +65,7 @@ class PyCortexViewer(object):
                 self.update_viewer(vol)
 
 
-def serve(surface, transform, mask_type, vmin, vmax):
+def serve(surface, transform, mask_type, vmin=-2, vmax=2):
     viewer = PyCortexViewer(surface, transform, mask_type, vmin, vmax)
     viewer.run()
 

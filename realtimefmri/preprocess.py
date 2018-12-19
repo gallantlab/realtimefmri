@@ -198,12 +198,13 @@ class Pipeline():
             logger.info('running %s', step['name'])
             outp = step['instance'].run(*inputs)
 
-            logger.debug('finished %s', step['name'])
+            logger.debug('Finished %s %s', step['name'], str(outp))
 
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
 
             d = dict(zip(step.get('output', []), outp))
+            logger.debug('Updating data dict with %s', str(d))
             data_dict.update(d)
 
         return data_dict
@@ -236,11 +237,7 @@ class Pipeline():
 
 
 class PreprocessingStep(object):
-    """Preprocessing step
-    """
     def __init__(self, *args, **kwargs):
-        """
-        """
         self._parameters = kwargs
 
     def register(self, key):
@@ -368,29 +365,40 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, surface, transform, twopass=False, *args, **kwargs):
-        parameters = {'surface': surface, 'transform': transform, 'twopass': twopass}
+    def __init__(self, surface, transform, twopass=False, output_transform=False, *args, **kwargs):
+        parameters = {'surface': surface, 'transform': transform, 'twopass': twopass,
+                      'output_transform': output_transform}
         parameters.update(kwargs)
         super(MotionCorrect, self).__init__(**parameters)
-        ref_path = op.join(cortex.database.default_filestore,
-                           surface, 'transforms', transform,
-                           'reference.nii.gz')
 
-        nii = nib.load(ref_path)
-        self.reference_affine = nii.affine
-        self.reference_path = ref_path
+        reference = cortex.db.get_xfm(surface, transform).reference
+
+        self.reference_affine = reference.affine
+        self.reference_path = reference.get_filename()
         self.twopass = twopass
-        print(ref_path)
+        self.output_transform = output_transform
 
     def run(self, input_volume):
         same_affine = np.allclose(input_volume.affine[:3, :3],
                                   self.reference_affine[:3, :3])
         if not same_affine:
-            print(input_volume.affine)
-            print(self.reference_affine)
+            logger.info(input_volume.affine)
+            logger.info(self.reference_affine)
             warnings.warn('Input and reference volumes have different affines.')
 
-        return image_utils.register(input_volume, self.reference_path, twopass=self.twopass)
+        return image_utils.register(input_volume, self.reference_path,
+                                    twopass=self.twopass, output_transform=self.output_transform)
+
+
+class Function(PreprocessingStep):
+    def __init__(self, function_name, *args, **kwargs):
+        parameters = {'function_name': function_name}
+        parameters.update(**kwargs)
+        super(Function, self).__init__(**parameters)
+        self.function = pipeline_utils.load_class(function_name)
+
+    def run(self, *args):
+        return self.function(*args)
 
 
 class NiftiToVolume(PreprocessingStep):

@@ -8,7 +8,7 @@ import yaml
 
 
 def load_class(absolute_class_name):
-    """Import a class from a string
+    """Import a class or function from a string
 
     Parameters
     ----------

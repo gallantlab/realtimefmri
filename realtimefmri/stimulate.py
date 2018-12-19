@@ -41,8 +41,8 @@ class SendToDashboard(PreprocessingStep):
         self.redis = r
         self.key_name = key_name
 
-    def run(self, data):
-        data = pickle.dumps(data)
+    def run(self, *args):
+        data = pickle.dumps(args)
         logger.debug('SendToDashboard key_name=%s len(data)=%d', self.key_name, len(data))
         self.redis.set(self.key_name, data)
         self.redis.set(self.key_name + ':update', b'true')

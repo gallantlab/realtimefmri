@@ -193,7 +193,7 @@ def viewer_status(n, session_id, surface, transform, mask):
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
             label = u'■'
-            process = utils.start_task(viewer.serve, surface, transform, mask, 0, 2000)
+            process = utils.start_task(viewer.serve, surface, transform, mask)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info("Started pycortex viewer (pid %d)", process.pid)

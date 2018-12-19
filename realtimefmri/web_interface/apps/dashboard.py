@@ -100,6 +100,7 @@ def generate_update_graph():
                 elif plot_type == b'timeseries':
                     update = r.get(key + ':update')
                     if update == b'true':
+                        logger.debug('Appending to timeseries %s', str(data))
                         graphs[key].append(data)
                         r.set(key + ':update', b'false')
 
@@ -107,11 +108,13 @@ def generate_update_graph():
                     if data.ndim == 1:
                         data = data.reshape(-1, 1)
 
+                    logger.debug('Timeseries shape %s', str(data.shape))
                     for trace_index in range(data.shape[1]):
-                        trace = go.Scatter(y=data[:, trace_index])
+                        trace = go.Scatter(y=data[:, trace_index], name=trace_index)
                         traces.append(trace)
 
                 elif plot_type == b'array_image':
+                    data = data[0]
                     if data.dtype != np.dtype('uint8'):
                         data = ((data - np.nanmin(data)) / np.nanmax(data))
                         data[np.isnan(data)] = 0.5
@@ -138,6 +141,7 @@ def generate_update_graph():
                     layout_updates.append(layout)
 
                 elif plot_type == b'static_image':
+                    data = data[0]
                     logger.debug('dashboard %s', data)
                     traces.append(go.Scatter())
                     image = {'source': data,

@@ -1,3 +1,7 @@
+html {
+  font-family: "Calibri";
+}
+
 #page-content {
   display: block;
   width: 95vw;
