@@ -132,4 +132,4 @@ TTL_SERIAL_DEV = config.get('sync', 'serial')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
