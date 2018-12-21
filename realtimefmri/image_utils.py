@@ -122,16 +122,6 @@ def mosaic_to_volume(mosaic, nrows=6, ncols=6):
     return volume
 
 
-def plot_volume(volume):
-    from matplotlib import pyplot as plt
-    nslices = volume.shape[2]
-    nrows = ncols = np.ceil(nslices**0.5).astype(int)
-
-    _, ax = plt.subplots(nrows, ncols)
-    for i in range(volume.shape[2]):
-        _ = ax[divmod(i, ncols)].pcolormesh(volume[:, :, i], cmap='gray')
-
-
 def decompose_affine(affine):
     """Decompose a affine matrix into pitch, roll, and yaw, x, y, z displacement components
 

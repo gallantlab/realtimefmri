@@ -13,7 +13,6 @@ def main():
           packages=find_packages(),
           install_requires=["numpy",
                             "redis",
-                            "matplotlib",
                             "nibabel",
                             "pydicom",
                             "pycortex",
