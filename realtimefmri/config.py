@@ -132,4 +132,5 @@ TTL_SERIAL_DEV = config.get('sync', 'serial')
 
 # LOGGING
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-LOG_LEVEL = logging.INFO
+log_level_name = os.getenv('REALTIMEFMRI_LOG_LEVEL', 'INFO')
+LOG_LEVEL = logging.getLevelName(log_level_name)

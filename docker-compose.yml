@@ -6,11 +6,17 @@ services:
       context: .
       dockerfile: Dockerfile.realtimefmri
     command: web_interface
+    depends_on:
+      - redis
+      - samba
     devices:
       - "${EVENT_DEVICE}:/dev/input/event3"
+    environment:
+      - REALTIMEFMRI_LOG_LEVEL=${LOG_LEVEL}
     ports:
       - "127.0.0.1:8050:8050"
       - "127.0.0.1:8051:8051"
+    restart: always
     volumes:
       - "${PYCORTEX_STORE}:/usr/local/share/pycortex/db"
       - "${PIPELINE_PATH}:/usr/local/share/realtimefmri/pipelines"
@@ -18,10 +24,6 @@ services:
       - "${TEST_DATASET_PATH}:/usr/local/share/realtimefmri/datasets"
       - "${STATIC_PATH}:/public/static"
       - scanner:/usr/local/share/realtimefmri/scanner
-    restart: always
-    depends_on:
-      - redis
-      - samba
 
   redis:
     image: redis
@@ -34,9 +36,9 @@ services:
     ports:
       - "0.0.0.0:139:139"
       - "0.0.0.0:445:445"
+    restart: always
     volumes:
       - scanner:/mnt/scanner
-    restart: always
 
 volumes:
   scanner:
