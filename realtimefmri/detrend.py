@@ -7,15 +7,13 @@ from sklearn.linear_model import LinearRegression
 from realtimefmri.config import get_subject_directory
 
 
-class WhiteMatterDetrending(object):
+class WhiteMatterDetrending():
     def __init__(self, n_wm_pcs=10):
         self.n_wm_pcs = n_wm_pcs
         self.model = None
         self.pca = None
 
     def train(self, gm, wm, n_wm_pcs=10):
-        n_trials, _ = wm.shape
-
         pca = PCA(n_components=n_wm_pcs)
         wm_pcs = pca.fit_transform(wm)
 

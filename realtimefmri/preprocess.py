@@ -2,7 +2,6 @@
 import os
 import os.path as op
 import pickle
-import struct
 import time
 import warnings
 from uuid import uuid4
@@ -106,49 +105,82 @@ class Pipeline():
     process(data_dict)
         Run the data in ```data_dict``` through each of the preprocessing steps
     """
-    def __init__(self, pipeline, global_parameters={}, static_pipeline={}, recording_id=None):
+    def __init__(self, pipeline, static_pipeline=None, global_parameters=None, recording_id=None):
         if recording_id is None:
             recording_id = 'recording_{}'.format(time.strftime('%Y%m%d_%H%M'))
 
         self.recording_id = recording_id
-        self.build(pipeline, static_pipeline, global_parameters)
+        self.global_parameters = global_parameters
+        self.static_pipeline = None  # set in self.build
+        self.pipeline = None  # set in self.build
+
+        self.build(pipeline, static_pipeline)
         self.register()
 
-    def build(self, pipeline, static_pipeline, global_parameters):
+    def _build_static_pipeline(self, static_pipeline_steps):
+        """Build the static pipeline
+
+        Parameters
+        ----------
+        static_pipeline : list of dict or None
+            List of dictionaries that configure initialization steps. These are run
+            once at the outset of the program.
+        global_parameters : dict or None
+        """
+        if static_pipeline_steps:
+            static_pipeline = []
+            for step in static_pipeline_steps:
+                logger.debug('Initializing %s', step['name'])
+                args = step.get('args', ())
+                kwargs = step.get('kwargs', {})
+
+                if self.global_parameters:
+                    for k, v in self.global_parameters.items():
+                        kwargs[k] = kwargs.get(k, v)
+
+                cls = pipeline_utils.load_class(step['class_name'])
+                step['instance'] = cls(*args, **kwargs)
+                static_pipeline.append(step)
+
+        else:
+            static_pipeline = []
+
+        self.static_pipeline = static_pipeline
+
+    def _build_pipeline(self, pipeline_steps):
+        """Build the pipeline from pipeline parameters
+
+        Parameters
+        ----------
+        pipeline : list of dicts
+        """
+        pipeline = []
+        for step in pipeline_steps:
+            logger.debug('Initializing %s', step['name'])
+            args = step.get('args', ())
+            kwargs = step.get('kwargs', dict())
+
+            if self.global_parameters:
+                for k, v in self.global_parameters.items():
+                    kwargs[k] = kwargs.get(k, v)
+
+            cls = pipeline_utils.load_class(step['class_name'])
+            step['instance'] = cls(*args, **kwargs)
+            pipeline.append(step)
+
+        self.pipeline = pipeline
+
+    def build(self, pipeline, static_pipeline):
         """Build the pipeline from the pipeline parameters. Directly sets the class instance
-        attributes for `pipeline`, `static_pipeline`, and `global_parameters`
+        attributes for `pipeline` and `static_pipeline`
 
         Parameters
         ----------
         pipeline : list of dicts
         static_pipeline : list of dicts
-        global_parameters : dict
         """
-        self.static_pipeline = []
-        for step in static_pipeline:
-            logger.debug('Initializing %s', step['name'])
-            args = step.get('args', ())
-            kwargs = step.get('kwargs', {})
-            for k, v in global_parameters.items():
-                kwargs[k] = kwargs.get(k, v)
-
-            cls = pipeline_utils.load_class(step['class_name'])
-            step['instance'] = cls(*args, **kwargs)
-            self.static_pipeline.append(step)
-
-        self.pipeline = []
-        for step in pipeline:
-            logger.debug('initializing %s', step['name'])
-            args = step.get('args', ())
-            kwargs = step.get('kwargs', dict())
-            for k, v in global_parameters.items():
-                kwargs[k] = kwargs.get(k, v)
-
-            cls = pipeline_utils.load_class(step['class_name'])
-            step['instance'] = cls(*args, **kwargs)
-            self.pipeline.append(step)
-
-        self.global_parameters = global_parameters
+        self._build_static_pipeline(static_pipeline)
+        self._build_pipeline(pipeline)
 
     @classmethod
     def load_from_saved_pipelines(cls, pipeline_name, **kwargs):
@@ -169,9 +201,9 @@ class Pipeline():
     @classmethod
     def load_from_config(cls, config_path, **kwargs):
         with open(config_path, 'rb') as f:
-            config = yaml.load(f)
+            conf = yaml.load(f)
 
-        kwargs.update(config)
+        kwargs.update(conf)
         return cls(**kwargs)
 
     def process(self, data_dict):
@@ -191,11 +223,10 @@ class Pipeline():
         -------
         A dictionary of all processing results
         """
-        image_number = struct.pack('i', data_dict['image_number'])
         for step in self.pipeline:
             inputs = [data_dict[k] for k in step['input']]
 
-            logger.info('running %s', step['name'])
+            logger.info('Running %s', step['name'])
             outp = step['instance'].run(*inputs)
 
             logger.debug('Finished %s %s', step['name'], str(outp))
@@ -229,6 +260,7 @@ class Pipeline():
         """Register the pipeline to the redis database
         """
         pipeline_key = f'pipeline:{id(self)}'
+        logger.debug('Registering pipeline %s', pipeline_key)
         for step_index, step in enumerate(self.pipeline):
             step_key = f'{pipeline_key}:{step_index}'
             step['instance'].register(step_key)
@@ -236,7 +268,7 @@ class Pipeline():
         self._key = pipeline_key
 
 
-class PreprocessingStep(object):
+class PreprocessingStep():
     def __init__(self, *args, **kwargs):
         self._parameters = kwargs
 
@@ -249,7 +281,9 @@ class PreprocessingStep(object):
             A unique key for this step. Convention is pipeline:<pipeline_id>:<step_index>,
             e.g., pipeline:105874924:0, pipeline:105874924:1, pipeline:105874924:2, etc.
         """
-        r.set(key + ':class_name', pickle.dumps(pipeline_utils.get_step_name(self.__class__)))
+        step_name = pipeline_utils.get_step_name(self.__class__)
+        r.set(key + ':class_name', pickle.dumps(step_name))
+        logger.debug('Registering step %s', step_name)
 
         for k, v in self._parameters.items():
             r.set(key + f':{k}', pickle.dumps(v))
@@ -279,7 +313,7 @@ class PreprocessingStep(object):
         logger.debug(interface)
         return interface
 
-    def run(self):
+    def run(self, *args):
         raise NotImplementedError
 
 
@@ -316,7 +350,7 @@ class SaveNifti(PreprocessingStep):
         Saves the input image to a file and iterates the counter.
     """
 
-    def __init__(self, recording_id=None, path_format='volume_{:04}.nii', **kwargs):
+    def __init__(self, *args, recording_id=None, path_format='volume_{:04}.nii', **kwargs):
         parameters = {'recording_id': recording_id, 'path_format': path_format}
         parameters.update(kwargs)
         super(SaveNifti, self).__init__(**parameters)
@@ -365,7 +399,7 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, surface, transform, twopass=False, output_transform=False, *args, **kwargs):
+    def __init__(self, surface, transform, *args, twopass=False, output_transform=False, **kwargs):
         parameters = {'surface': surface, 'transform': transform, 'twopass': twopass,
                       'output_transform': output_transform}
         parameters.update(kwargs)
@@ -393,7 +427,7 @@ class MotionCorrect(PreprocessingStep):
 class Function(PreprocessingStep):
     def __init__(self, function_name, *args, **kwargs):
         parameters = {'function_name': function_name}
-        parameters.update(**kwargs)
+        parameters.update(kwargs)
         super(Function, self).__init__(**parameters)
         self.function = pipeline_utils.load_class(function_name)
 
@@ -410,7 +444,7 @@ class NiftiToVolume(PreprocessingStep):
 
 
 class VolumeToMosaic(PreprocessingStep):
-    def __init__(self, dim=0, *args, **kwargs):
+    def __init__(self, *args, dim=0, **kwargs):
         parameters = {'dim': dim}
         parameters.update(kwargs)
         super(VolumeToMosaic, self).__init__(**parameters)
@@ -437,7 +471,7 @@ class ApplyMask(PreprocessingStep):
     mask : numpy.ndarray
         Boolean voxel mask
     """
-    def __init__(self, surface, transform, mask_type=None, *args, **kwargs):
+    def __init__(self, surface, transform, *args, mask_type=None, **kwargs):
         parameters = {'surface': surface, 'transform': transform, 'mask_type': mask_type}
         parameters.update(kwargs)
         super(ApplyMask, self).__init__(**parameters)
@@ -625,7 +659,7 @@ class WMDetrend(PreprocessingStep):
         Returns detrended grey matter activity given raw gray and white matter
         activity
     """
-    def __init__(self, subject, model_name=None, *args, **kwargs):
+    def __init__(self, subject, *args, model_name=None, **kwargs):
         parameters = {'subject': subject, 'model_name': model_name}
         parameters.update(kwargs)
         super(WMDetrend, self).__init__(**parameters)
@@ -711,7 +745,7 @@ class RunningMeanStd(PreprocessingStep):
         Adds the input vector to the stored samples (discard the oldest sample)
         and compute and return the mean and standard deviation.
     """
-    def __init__(self, n=20, n_skip=5, *args, **kwargs):
+    def __init__(self, *args, n=20, n_skip=5, **kwargs):
         parameters = {'n': n, 'n_skip': n_skip}
         parameters.update(kwargs)
         super(RunningMeanStd, self).__init__(**parameters)
@@ -745,9 +779,11 @@ class ZScore(PreprocessingStep):
     """
     def run(self, array, mean, std):
         if mean is None:
-            return np.zeros_like(array)
+            zscored_array = np.zeros_like(array)
         else:
-            return (array - mean) / std
+            zscored_array = (array - mean) / std
+
+        return zscored_array
 
 
 class SklearnPredictor(PreprocessingStep):
@@ -771,7 +807,7 @@ class SklearnPredictor(PreprocessingStep):
         Returns the prediction
     """
 
-    def __init__(self, surface, pickled_predictor, nan_to_num=True, **kwargs):
+    def __init__(self, surface, pickled_predictor, *args, nan_to_num=True, **kwargs):
         parameters = {'surface': surface, 'pickled_predictor': pickled_predictor,
                       'nan_to_num': nan_to_num}
         parameters.update(kwargs)
@@ -798,7 +834,7 @@ class Dictionary(PreprocessingStep):
     ----------
     dictionary : dict
     """
-    def __init__(self, dictionary, decode_key=None, *args, **kwargs):
+    def __init__(self, dictionary, *args, decode_key=None, **kwargs):
         parameters = {'dictionary': dictionary, 'decode_key': decode_key}
         kwargs.update(parameters)
         super(Dictionary, self).__init__(**parameters)

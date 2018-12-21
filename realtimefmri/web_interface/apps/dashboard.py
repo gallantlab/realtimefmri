@@ -9,7 +9,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 import numpy as np
 import PIL
-import plotly
 import plotly.graph_objs as go
 import redis
 from dash.dependencies import Input, Output, State
@@ -237,14 +236,15 @@ layout = [html.Button(u'↺', id='refresh-selector-button'),
               [Input('add-graph-button', 'n_clicks')],
               [State('n-graphs', 'children')])
 def increment_graph_count(n, n_graphs):
-    if n is not None:
+    if n is None:
+        raise dash.exceptions.PreventUpdate()
+
+    else:
         n_graphs = int(n_graphs)
         n_graphs += 1
         n_graphs = str(n_graphs)
-        return n_graphs
 
-    else:
-        raise dash.exceptions.PreventUpdate()
+        return n_graphs
 
 
 for graph_index in range(1, max_n_graphs + 1):

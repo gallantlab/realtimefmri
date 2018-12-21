@@ -69,13 +69,7 @@ class SendToPycortexViewer(PreprocessingStep):
         self.redis.publish("viewer", pickle.dumps(data))
 
 
-class RoiBars(PreprocessingStep):
-    def __init__(self, **kwargs):
-        super(RoiBars, self).__init__()
-        raise NotImplementedError
-
-
-class AudioRecorder(object):
+class AudioRecorder():
     """Record the microphone and save to file
 
     Record from the microphone and save as a ``.wav`` file inside of the
@@ -103,7 +97,6 @@ class AudioRecorder(object):
         Stop the recording
     """
     def __init__(self, jack_port, file_name, recording_id, **kwargs):
-        super(AudioRecorder, self).__init__()
         rec_path = os.path.join(config.RECORDING_DIR, recording_id, file_name + '.wav')
         if not os.path.exists(os.path.dirname(rec_path)):
             os.makedirs(os.path.dirname(rec_path))

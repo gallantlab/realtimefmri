@@ -1,13 +1,9 @@
-import pickle
-from collections import defaultdict
-
 import dash
-import dash_core_components as dcc
 import dash_html_components as html
 import redis
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 
-from realtimefmri import config, pipeline_utils, preprocess
+from realtimefmri import config, preprocess
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface.app import app
 
@@ -32,8 +28,8 @@ layout = html.Div([html.Button('Refresh interface', id='refresh-interface'),
 @app.callback(Output('pipeline-interface', 'children'),
               [Input('refresh-interface', 'n_clicks')])
 def refresh_interface(n):
-    if n is not None:
-        return create_interface()
+    if n is None:
+        raise dash.exceptions.PreventUpdate()
 
     else:
-        dash.exceptions.PreventUpdate()
+        return create_interface()

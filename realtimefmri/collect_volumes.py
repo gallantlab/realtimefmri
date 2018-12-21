@@ -20,7 +20,7 @@ def collect_volumes():
     handler = DirectoryMonitor()
     notifier = pyinotify.Notifier(watch_manager, handler)
     mask = pyinotify.IN_CLOSE_WRITE
-    logger.info('Watching {}'.format(config.SCANNER_DIR))
+    logger.info('Watching %s', config.SCANNER_DIR)
     watch_manager.add_watch(config.SCANNER_DIR, mask, auto_add=True)
 
     notifier.loop()
@@ -32,7 +32,7 @@ class DirectoryMonitor(pyinotify.ProcessEvent):
         self.extension = extension
 
     def process_IN_CLOSE_WRITE(self, event):
-        logger.info('Volume {}'.format(event.pathname))
+        logger.info('Volume %s' ,event.pathname)
         if (not op.isdir(event.pathname)) and (op.splitext(event.pathname)[1] == self.extension):
             self.redis_client.publish('volume', event.pathname)
 

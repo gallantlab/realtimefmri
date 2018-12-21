@@ -8,7 +8,7 @@ import serial
 from realtimefmri import config, utils
 
 
-class CollectTTL(object):
+class CollectTTL():
     """Detect and record pulses from the scanner. Can record to a local log
     file or transmit to a network destination.
     """
@@ -25,7 +25,7 @@ class CollectTTL(object):
             collect_ttl = self._collect_ttl_redis
         else:
             raise NotImplementedError("TTL source {} not implemented.".format(source))
-        logger.info(f'Receiving TTL from {source}')
+        logger.info('Receiving TTL from %s', source)
 
         self.active = True
         self.verbose = verbose
@@ -40,10 +40,12 @@ class CollectTTL(object):
                 events = keyboard.read()
                 for event in events:
                     event = evdev.categorize(event)
-                    if (isinstance(event, evdev.KeyEvent) and
-                       (event.keycode == 'KEY_5') and  # 5 key
-                       (event.keystate == event.key_down)):
+                    detected_ttl = (isinstance(event, evdev.KeyEvent) and
+                                    (event.keycode == 'KEY_5') and  # 5 key
+                                    (event.keystate == event.key_down))
+                    if detected_ttl:
                         yield time.time()
+
             except BlockingIOError:
                 time.sleep(0.1)
 
@@ -70,7 +72,7 @@ class CollectTTL(object):
     def collect(self):
         for t in self.collect_ttl():
             if self.verbose:
-                self.logger.info('Received TTL at time {}'.format(t))
+                self.logger.info('Received TTL at time %s', str(t))
             self.redis_client.lpush('timestamp', struct.pack('d', t))
 
 

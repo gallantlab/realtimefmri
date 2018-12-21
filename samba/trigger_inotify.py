@@ -1,12 +1,12 @@
 #!/usr/bin/python
+import logging
 import os
 import os.path as op
 import pwd
 import re
 import subprocess
-from collections import defaultdict
 import time
-import logging
+from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('trigger_inotify')
@@ -41,7 +41,7 @@ def trigger_inotify(root_directory=None, parent_directory=None, extension='*'):
             pass
 
 
-class MonitorSambaDirectory(object):
+class MonitorSambaDirectory():
     """
     Monitor the file contents of a directory mounted with samba share
 
@@ -158,7 +158,7 @@ class MonitorSambaDirectory(object):
             time.sleep(0.1)
 
 
-class SambaStatus(object):
+class SambaStatus():
     """Class to access information output by the `smbstatus` command.
 
     Parameters

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from realtimefmri import collect, collect_ttl, collect_volumes, config, preprocess, web_interface
+from realtimefmri import collect, collect_ttl, collect_volumes, preprocess, web_interface
 
 
 def parse_arguments():

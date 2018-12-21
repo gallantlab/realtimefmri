@@ -77,9 +77,8 @@ r = redis.StrictRedis(config.REDIS_HOST)
 
 @app.callback(Output('collect-ttl-status', 'children'),
               [Input('collect-ttl-status', 'n_clicks')],
-              [State('session-id', 'children'),
-               State('ttl-source', 'value')])
-def collect_ttl_status(n, session_id, ttl_source):
+              [State('ttl-source', 'value')])
+def collect_ttl_status(n, ttl_source):
     if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
         if pid is None:
@@ -102,9 +101,8 @@ def collect_ttl_status(n, session_id, ttl_source):
 
 
 @app.callback(Output('collect-volumes-status', 'children'),
-              [Input('collect-volumes-status', 'n_clicks')],
-              [State('session-id', 'children')])
-def collect_volumes_status(n, session_id):
+              [Input('collect-volumes-status', 'n_clicks')])
+def collect_volumes_status(n):
     if n is not None:
         pid = r.get(session_id + '_collect_volumes_pid')
         if pid is None:
@@ -127,9 +125,8 @@ def collect_volumes_status(n, session_id):
 
 
 @app.callback(Output('collect-status', 'children'),
-              [Input('collect-status', 'n_clicks')],
-              [State('session-id', 'children')])
-def collect_status(n, session_id):
+              [Input('collect-status', 'n_clicks')])
+def collect_status(n):
     if n is not None:
         pid = r.get(session_id + '_collect_pid')
         if pid is None:
@@ -153,12 +150,11 @@ def collect_status(n, session_id):
 
 @app.callback(Output('preprocess-status', 'children'),
               [Input('preprocess-status', 'n_clicks')],
-              [State('session-id', 'children'),
-               State('recording-id', 'value'),
+              [State('recording-id', 'value'),
                State('preproc-config', 'value'),
                State('pycortex-surface', 'value'),
                State('pycortex-transform', 'value')])
-def preprocess_status(n, session_id, recording_id, preproc_config, surface, transform):
+def preprocess_status(n, recording_id, preproc_config, surface, transform):
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
@@ -184,11 +180,10 @@ def preprocess_status(n, session_id, recording_id, preproc_config, surface, tran
 
 @app.callback(Output('viewer-status', 'children'),
               [Input('viewer-status', 'n_clicks')],
-              [State('session-id', 'children'),
-               State('pycortex-surface', 'value'),
+              [State('pycortex-surface', 'value'),
                State('pycortex-transform', 'value'),
                State('pycortex-mask', 'value')])
-def viewer_status(n, session_id, surface, transform, mask):
+def viewer_status(n, surface, transform, mask):
     if n is not None:
         pid = r.get(session_id + '_viewer_pid')
         if pid is None:
@@ -215,7 +210,7 @@ def viewer_status(n, session_id, surface, transform, mask):
               [Input('simulate-ttl', 'n_clicks')])
 def simulate_ttl(n):
     if n is not None:
-        logging.info('simulating ttl at {}'.format(time.time()))
+        logging.info('Simulating ttl at %s', str(time.time()))
         r.publish('ttl', 'message')
     else:
         raise dash.exceptions.PreventUpdate()
@@ -223,9 +218,8 @@ def simulate_ttl(n):
 
 @app.callback(Output('empty-div3', 'children'),
               [Input('simulate-volume', 'n_clicks')],
-              [State('simulated-dataset', 'value'),
-               State('session-id', 'children')])
-def simulate_volume(n, simulated_dataset, session_id):
+              [State('simulated-dataset', 'value')])
+def simulate_volume(n, simulated_dataset):
     if n is not None:
         paths = config.get_dataset_volume_paths(simulated_dataset)
 

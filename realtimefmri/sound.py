@@ -7,7 +7,6 @@ import numpy as np
 
 import pyo64 as pyo
 from realtimefmri.config import RECORDING_DIR
-from realtimefmri.stimulating import Stimulus
 from realtimefmri.utils import get_logger
 
 logger = get_logger('stimulate.ion')
@@ -16,7 +15,7 @@ server = pyo.Server(audio='jack').boot()
 server.start()
 
 
-class SoundStimulus(Stimulus):
+class SoundStimulus():
     def __init__(self, **kwargs):
         super(SoundStimulus, self).__init__()
         recording_id = kwargs.get('recording_id')
@@ -84,7 +83,7 @@ class BrainJukebox(SoundStimulus):
 
     def start(self):
         super(BrainJukebox, self).start()
-        [p.out() for p in self.players]
+        _ = [p.out() for p in self.players]
 
     def _parse_input(self, inp):
         return json.loads(inp)
@@ -99,7 +98,7 @@ class BrainJukebox(SoundStimulus):
 
     def stop(self):
         super(BrainJukebox, self).stop()
-        [p.stop() for p in self.players]
+        _ = [p.stop() for p in self.players]
 
 
 class WeirdSound(SoundStimulus):

@@ -20,16 +20,18 @@ app.layout = serve_layout
               [Input('url', 'pathname')])
 def display_page(pathname):
     if pathname == '/controls':
-        return controls.layout
+        content = controls.layout
 
     elif pathname == '/dashboard':
-        return dashboard.layout
+        content = dashboard.layout
 
     elif pathname == '/pipeline':
-        return pipeline.layout
+        content = pipeline.layout
 
     else:
-        return '404'
+        content = '404'
+
+    return content
 
 
 def serve():

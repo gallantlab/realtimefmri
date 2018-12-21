@@ -75,7 +75,8 @@ def register(volume, reference, twopass=False, output_transform=False):
     if isinstance(reference, str):
         reference_path = reference
     else:
-        reference_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
+        reference_path = utils.get_temporary_path(directory=temp_directory.name,
+                                                  extension='.nii.gz')
         nibabel.save(reference, reference_path)
 
     if isinstance(volume, str):
@@ -84,7 +85,8 @@ def register(volume, reference, twopass=False, output_transform=False):
         volume_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii.gz')
         nibabel.save(volume, volume_path)
 
-    registered_volume_path = utils.get_temporary_path(directory=temp_directory.name, extension='.nii')
+    registered_volume_path = utils.get_temporary_path(directory=temp_directory.name,
+                                                      extension='.nii')
     cmd = shlex.split('3dvolreg -base {} -prefix {}'.format(reference_path,
                                                             registered_volume_path))
     if output_transform:
@@ -98,7 +100,7 @@ def register(volume, reference, twopass=False, output_transform=False):
     env = os.environ.copy()
     env['AFNI_NIFTI_TYPE_WARN'] = 'NO'
     error_message = utils.run_command(cmd, raise_errors=False, env=env)
-    if (error_message is not None):
+    if error_message is not None:
         logger.debug(error_message)
 
     registered_volume = nibabel.load(registered_volume_path)

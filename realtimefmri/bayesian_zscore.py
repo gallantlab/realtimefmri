@@ -3,7 +3,7 @@ import numpy as np
 from realtimefmri import buffered_array, preprocess
 
 
-class InvGammaParameters(object):
+class InvGammaParameters():
     def __init__(self, alpha=None, beta=None, variance=None):
         self.alpha = alpha
         self.beta = beta
@@ -20,8 +20,8 @@ class InvGammaParameters(object):
 
 
 class BayesianZScore(preprocess.PreprocessingStep):
-    def __init__(self, prior_means, prior_variances,
-                 mean_belief, variance_alpha, update_prior=True):
+    def __init__(self, prior_means, prior_variances, mean_belief, variance_alpha,
+                 *args, update_prior=True, **kwargs):
         """Preprocessing module that z-scores data using mean and variance estimated
         using Bayesian methods
 
@@ -41,6 +41,10 @@ class BayesianZScore(preprocess.PreprocessingStep):
             Flag indicating whether to update the prior with the posterior after each
             input value
         """
+        parameters = {'update_prior': update_prior}
+        parameters.update(kwargs)
+        super(BayesianZScore, self).__init__(**parameters)
+
         inverse_gamma = InvGammaParameters(None, None, prior_variances)
         inverse_gamma.alpha = variance_alpha
         inverse_gamma.beta = inverse_gamma.get_beta()
@@ -50,6 +54,7 @@ class BayesianZScore(preprocess.PreprocessingStep):
         self.mean_belief = mean_belief
         self.inverse_gamma = inverse_gamma
         self.update_prior = update_prior
+        self.data = None  # set in first call to self.run
 
     def run(self, inp):
         """Run the z-scoring on one time point and update the prior

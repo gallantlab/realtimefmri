@@ -29,8 +29,7 @@ def keyboard(device_file):
         events = yield from device.async_read()
         for event in events:
             event = evdev.categorize(event)
-            if (isinstance(event, evdev.KeyEvent) and
-               (event.keystate == event.key_down)):
+            if (isinstance(event, evdev.KeyEvent) and (event.keystate == event.key_down)):
                 print("{}\t{}".format(device.fn, device.name))
 
 

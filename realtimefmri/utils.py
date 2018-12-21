@@ -33,7 +33,7 @@ def run_command(cmd, raise_errors=True, **kwargs):
     False
     """
     process = subprocess.Popen(cmd, stderr=subprocess.PIPE, **kwargs)
-    stdout, stderr = process.communicate()
+    _, stderr = process.communicate()
 
     if (stderr is not None) and (len(stderr) > 0):
         stderr = stderr.decode('utf-8')
@@ -144,12 +144,14 @@ def get_logger(name, to_console=False, to_file=False, to_network=False,
         has = any([isinstance(h, logging.StreamHandler)
                    for h in logger.handlers])
         if has:
-            return True
+            output = True
         elif ((logger.parent is not None) and
               (not isinstance(logger.parent, logging.RootLogger))):
-            return has_stream_handler(logger.parent)
+            output = has_stream_handler(logger.parent)
         else:
-            return False
+            output = False
+
+        return output
 
     def has_file_handler(logger, fname):
         '''Checks if this logger or any of its parents has a file handler.

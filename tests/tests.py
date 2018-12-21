@@ -1,17 +1,17 @@
-import os
-from glob import iglob
-import unittest
 import logging
-import numpy as np
+import os
+import unittest
+from glob import iglob
 
+import numpy as np
+from nibabel import load as nbload
+from nibabel import save as nbsave
 from nibabel.nifti1 import Nifti1Image
-from nibabel import load as nbload, save as nbsave
 
 from realtimefmri.collecting import MonitorDirectory
-from realtimefmri.preprocessing import (MotionCorrect, RawToNifti, WMDetrend, VoxelZScore,
-                                        RunningMeanStd, ApplyMask)
+from realtimefmri.config import LOG_FORMAT, TEST_DATA_DIR
 from realtimefmri.image_utils import load_afni_xfm
-from realtimefmri.config import TEST_DATA_DIR, LOG_FORMAT
+from realtimefmri.preprocessing import ApplyMask, MotionCorrect, RawToNifti, RunningMeanStd, VoxelZScore, WMDetrend
 
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 

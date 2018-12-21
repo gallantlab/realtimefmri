@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class BufferedArray(object):
+class BufferedArray():
     def __init__(self, size, dtype='float32', buffer_size=1000):
         """An array that grows with the syntax of a list and the efficiency of an ndarray
 

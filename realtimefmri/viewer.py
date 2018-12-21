@@ -68,7 +68,3 @@ class PyCortexViewer():
 def serve(surface, transform, mask_type, vmin=-2, vmax=2):
     viewer = PyCortexViewer(surface, transform, mask_type, vmin, vmax)
     viewer.run()
-
-
-if __name__ == "__main__":
-    serve()
