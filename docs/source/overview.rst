@@ -26,14 +26,15 @@ The volumes appear on a shared network drive as soon as the reconstruction proce
 _`Preprocessing`
 ----------------
 
-The data arriving from the scanner are DICOM images of raw voxel values. A few stages of preprocessing are needed to make them usable. The overall structure of preprocessing is simple: the ``Preprocess`` object sits on the ``zmq`` port and waits for image data to arrive. When it does it is passed through a series of preprocessing steps specified in the :ref:`preprocessing configuration file <pipelines>`. Each step adds its output to a dictionary of data holding references to all of the data objects that need to be passed between steps or sent on to the stimulation code. You can specify which of these data objects will be published to a ``zmq PUB`` socket, to which other code (such as the stimulation code) can subscribe.
+The data arriving from the scanner are DICOM images of raw voxel values. A few stages of preprocessing are needed to make them usable. The overall structure of preprocessing is simple: the ``Preprocess`` object waits for image data to arrive. When it does it is passed through a series of preprocessing steps specified in the :ref:`preprocessing configuration file <pipelines>`. Each step adds its output to a dictionary of data holding references to all of the data objects that need to be passed between steps or sent to the dashboard or pycortex viewer for visualization.
 
 
 _`Dashboard`
 ------------
+The ``realtimefmri.stimulate.SendToDashboard`` pipeline step makes the data available for visualization in the dashboard. Several different plot types are available: bar plots, timeseries, images of array values. You can make many figures and configure which data are plotted in which figure.
 
 
 _`Stimulus presentation`
 ------------------------
 
-Things really get interesting when you making stimuli that depend on data gathered in real-time. All you need to do is build some software that manages a ``zmq SUB`` socket subscribed to one of the topics published by the preprocessing code. This can be implemented in any language that has has a `zmq` library, which is pretty much any language. Included in this package is a simple `pycortex <https://github.com/gallantlab/pycortex>`_ real-time brain activity visualizer.
+Things really get interesting when you making stimuli that depend on data gathered in real-time. All you need to do is build some software that reads from the redis database.

@@ -1,97 +1,51 @@
 .. _network:
 
+Acquiring DICOM images in real-time
+===================================
+
+To run a real-time experiment you need to be able to access the volumes as they are acquired. This involves connecting the real-time computer to the scanner console, and configuring the scanner to write out DICOM files in real-time.
+
+These steps should all be performed **before registing the patient for scanning** or DICOM files will not be created in real-time.
+
 Connecting to the scanner network
-=================================
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To run a real-time experiment you need to be able to access the volumes as they are acquired. This starts with connecting to the BIC network.
+1. Connect the **real-time computer** to the router switch on top of the **scanner console** with an ethernet cable.
+2. Take note of the real-time computer's IP address, which should be ``192.168.1.<some number>``.
 
-Network layout
---------------
-The BIC consists of several computers operating on a local network:
- * **Scanner computer** controlling the scanner itself. This is attached to the magnet and is not for you to fiddle with.
- * **Reconstruction computer**. Makies an image from all those measurements the scanner collects. Also not for you.
- * **Scanner console**. The computer the scanner operator interacts with to run a scan. All of the tweaks take place on this computer.
+Mounting the network shared drive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You will be adding a fourth computer to the mix, the **real-time computer**, which will run the code in this package. This is accomplished by connecting it via ethernet to the router switch on top of the **scanner console**. This allows the **scanner console** to write images into a folder that is shared with the **real-time computer**.
+The real-time computer hosts a network shared folder using the `SAMBA <https://www.samba.org/>`_ protocol. We will use the built-in Windows tool to mount the shared folder over the network.
 
+1. Press Ctrl+Esc to open the Windows start menu, click "Computer" or "Windows Explorer."
+2. Click "Tools > Map network drive", and enter ``Y:`` and ``\\<real-time computer's IP address>\rtfmri``
+3. Check "use different credentials" and click "OK."
+4. Enter ``rtfmri`` for the user name and enter the samba password and click "OK."
 
-Setting up Samba share for the first time
------------------------------------------
-
-First, configure Samba to share a directory with the **real-time computer**. This only needs to be done once. Install ``samba`` package:
-
-.. code-block:: bash
-    
-    sudo apt-get update
-    sudo apt-get install samba
-
-
-Samba manages its own passwords (i.e., they are not the same as your Linux passwords), so create a new samba password for your user with:
-
-.. code-block:: bash
-
-    sudo smbpasswd -a glab
-
-The current password is available on the `wiki <http://www/wiki/Real-time_fMRI>`_ (only accessible from within the Gallant lab network).
-
-During real-time scans, the ``realtimefmri collect`` command monitors ``/home/glab/.local/share/realtimefmri/scanner`` for incoming DICOM files. The directory needs to be shared with the **scanner console**. Configure the samba share by appending this section to the ``/etc/samba/smb.conf``:
-
-.. code-block:: bash
-
-    [realtimefmri]
-    path = /home/glab/.local/share/realtimefmri/scanner
-    valid users = glab
-    read only = no
-
-
-You will need to restart the samba service for the changes to take effect.
-
-.. code-block:: bash
-
-    sudo service smbd restart
-
-
-Using Samba share
------------------
-
-Each time you use the real-time system, you will need to mount the previously-configured shared folder from the **scanner console**. This involves two steps.
-
-1. Network mounting the shared folder using Windows
-2. Configuring the scanner to write out DICOM files to that folder in real-time
-
-Much of what we learned about our real-time setup comes from another real-time project `FIRMM <http://firmm.readthedocs.io/en/latest/>`_. We copy some of their documentation here.
-
-
-Network mounting the shared folder using Windows
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-We will use the built in Windows tools to mount the shared folder over the network
-
-1. Press Ctrl+Esc to open the Windows start menu, click "Computer" or "Windows Explorer"
-2. Click "Tools > Map network drive", and enter ``Y:`` and ``\\[REAL-TIME COMPUTER IP]\??``
-3. Make sure "use different credentials" is checked, click "OK"
-4. Enter ``[REAL-TIME COMPUTER IP]\glab`` for the user name and enter the samba password and click "OK"
-
-This process links scanner console ``Y://`` to real-time computer ``/home/glab/.local/share/realtimefmri/scanner``. These are now effectively the same folder.
-You can test this connection by writing a file to the directory on one computer and making sure it appears in the corresponding directory on the other computer.
+This links the directory ``Y:`` on the scanner console to the ``/mnt/scanner`` on the ``realtimefmri_samba`` container running on the real-time computer. You can test this connection by writing a file to the directory on one computer and making sure it appears in the corresponding directory on the other computer.
 
 
 Configuring the scanner to write out DICOM files to that folder in real-time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Siemens scanners come with a useful if not-that-well-documented tool called ``ideacmdtool``. Configure ``ideacmdtool`` on the scanner console using the `instructions <http://firmm.readthedocs.io/en/latest/README_ideacmdtool/>`_ in the FIRMM documentation. First, you will need to activate the "advanced user" mode on the scanner console. The username and password are available on the `wiki <http://www/wiki/Real-time_fMRI>`_.
+Siemens scanners come with a useful program called ``ideacmdtool`` that can configure the scanner to write out DICOM files as they are collected. Unfortunately it is not that well documented -- thanks to the `FIRMM <http://firmm.readthedocs.io/en/latest/>`_ and `Dynamically Adaptive Imaging <http://imaging.mrc-cbu.cam.ac.uk/basewiki/DynamicallyAdaptiveImaging>`_ projects for explaining how to configure it.
 
-1. Press Ctrl-Esc to open the Windows start menu.
-2. Click "Command Prompt" or "Run" and enter ``cmd`` to start the command prompt.
-3. Enter ``ideacmdtool``.
-4. Enter ``4`` (Online export defaults) and set the following values:
+1. Press Ctrl-Esc to open the Windows start menu. Click on "Advanced user" to activate Advanced User mode. Talk to scanner administrators to get the authentication details.
+2. Press Ctrl-Esc and click "Command Prompt" or click "Run" and enter ``cmd`` in the dialog to launch the command prompt.
+3. Enter ``ideacmdtool`` in the command prompt to start the ``ideacmdtool`` program.
 
-.. code-block:: bash
+Configure the default settings:
 
-    target port = -1
-    target path = y:
-    SendBuffered OFF
-    SendIMA OFF
+4. Enter ``4`` to go to the "Online export defaults" menu
+5. Enter ``1`` and set "Target port" to ``-1``
+6. Enter ``3`` and set "Target path" to ``y:``
+7. Enter ``5`` to set ``SendBuffered`` to ``OFF``
+8. Enter ``q`` to go back to the main ``ideacmdtool`` menu
 
-5. Enter ``q`` (back to main ``ideacmdtool`` menu)
-6. Enter ``q`` (exit ``ideacmdtool``)
+Configure the session settings:
+
+9. Enter ``5`` to go to the "Switches" menu
+10. Enter ``8`` to set ``SendIMA`` to ``ON``
+11. Enter ``q`` to go back to the main ``ideacmdtool`` menu
+12. Enter ``q`` to exit ``ideacmdtool``

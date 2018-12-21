@@ -13,9 +13,9 @@ Contents
 
     overview
     installation
-    network
+    scanning
     pipelines
-    together
+    network
     logging
 
 API

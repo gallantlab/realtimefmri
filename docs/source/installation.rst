@@ -1,39 +1,42 @@
 Installation
 ============
 
-Checkout the code from github and install using ``pip``.
+Install `docker <https://docs.docker.com/install/>`_ and `docker compose <https://docs.docker.com/compose/>`_.
+
+1. Check out the code from github.
 
 .. code-block:: bash
     
     git clone https://github.com/gallantlab/realtimefmri.git
-    pip install realtimefmri
+    cd realtimefmri
 
 
-Using ``docker-compose``
-------------------------
+2. Modify the ``.env`` file with the appropriate paths and device number. In particular, set the following variables to point to:
 
-We recommend using `docker <https://docs.docker.com/install/>`_ and `docker-compose <https://docs.docker.com/compose/install/>`_ to run ``realtimefmri``.
-
-Configuration
-~~~~~~~~~~~~~
-Modify the ``.env`` file with the appropriate paths and device number. In particular, set the following variables to point to
-
-- ``PYCORTEX_STORE``: path to pycortex store containing subject surfaces and transforms
-- ``PIPELINE_PATH``: path where pipelines are stored
-- ``TEST_DATASET_PATH``: path where the test dataset is stored
+- ``PYCORTEX_STORE``: directory containing pycortex data, e.g., subject surfaces and transforms
 - ``EVENT_DEVICE``: keyboard input device
+- ``PIPELINE_PATH``: directory containing pipelines configuration files
+- ``TEST_DATASET_PATH``: directory containing test dataset
+- ``DATASTORE_PATH``: directory containing auxiliary data such as pre-trained decoders
+- ``STATIC_PATH``: directory containing static assets for the web interface
 
-Running ``docker-compose``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-From the path containing the ``docker-compose.yml`` file, run the following command:
-
-.. code-block:: bash
-   
-   docker-compose up -d
-
-It will pull the ``redis`` docker image, build the ``realtimefmri`` image, and start both containers. To stop them, run
+3. Build the docker images.
 
 .. code-block:: bash
    
-   docker-compose down
+   make docker.build
+
+
+After you have built the docker containers, you can run ``realtimefmri`` by opening a terminal, navigating the root directory of this repository, and running:
+
+
+.. code-block:: bash
+   
+   make docker.up
+
+
+To stop the program, run:
+
+.. code-block:: bash
+   
+   make docker.down

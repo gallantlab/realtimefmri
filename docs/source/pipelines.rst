@@ -1,13 +1,14 @@
 .. _pipelines:
 
-Configuring a real-time pipeline
-================================
+Pipelines
+=========
 
-The flexibility of this package comes from your ability to configure custom preprocessing and stimulation pipelines. To run a real-time experiment, you'll need to configure these. Pipelines are specified using :mod:`yaml` files stored in the ``pipelines`` directory.
+The flexibility of this package comes from your ability to configure custom preprocessing pipelines. To run a real-time experiment, you'll need to configure these. Pipelines are specified using :mod:`yaml` files stored in the ``pipelines`` directory.
 
 
-Preprocessing pipeline
-----------------------
+Configuring a real-time preprocessing pipeline
+----------------------------------------------
+
 A pipeline must be able to pass data between the different steps. This is accomplished using a dictionary of objects, the ``data_dict``. Each step receives its input from the ``data_dict`` and adds its output to the ``data_dict`` for subsequent steps to use.
 
 The basic format of a preprocessing pipeline configuration file is:
@@ -15,8 +16,8 @@ The basic format of a preprocessing pipeline configuration file is:
 .. code-block:: yaml
 
   # arguments sent to all preprocessing steps (steps will ignore keywords that
-  # they do not use, so put anything that you want to reuse across many steps.
-  # subject name and transform name are common)
+  # they do not use, so put anything that you want to re-use across many steps.
+  # pycortex subject and transform names are used often)
   global_defaults:
     subject: S1
     xfm_name: 20150101S1_transform
@@ -24,8 +25,8 @@ The basic format of a preprocessing pipeline configuration file is:
   # a list of steps in the pipeline
   pipeline:
     - name: name_of_step
-      # string python object (one that subclasses PreprocessingStep)
-      instance: realtimefmri.preprocess.StepClass
+      # the name of a python class that subclasses PreprocessingStep
+      class_name: realtimefmri.preprocess.StepClass
 
       # keyword arguments used to initialize the step
       kwargs:
@@ -40,118 +41,100 @@ The basic format of a preprocessing pipeline configuration file is:
       output:
         - output_key
 
-      # data are sent over a PUB-SUB socket. this structure uses a topic to 
-      # address data to the right subscribers. indicate a topic here that can
-      # be received by the stimulation script
-      send:
-        - publish_to_topic
 
 
-Stimulation pipeline
---------------------
-Stimulation pipeline is configured similarly to preprocessing pipeline, except inputs are specified by mapping the topic names (that were published to in the preprocessing script) to variable names used by the stimulation steps internally.
-  
-.. code-block:: yaml
-
-  global_defaults:
-    subject: &SUBJECT S1
-
-  # components that do not receive input from preprocessing and simply run as
-  # soon as the pipeline commences
-  initialization:
-    - name: a_name 
-      instance: realtimefmri.stimulate.SomeClass
-      kwargs:
-        keyword_argument_1: hi_there
-        keyword_argument_2: 123
-
-  # these components receive inputs sent over from the preprocessing pipeline
-  pipeline:
-    - name: responsive_stimulus
-      instance: realtimefmri.stimulate.AnotherClass
-      # key: topic that the preprocessing script published to
-      # value: the name the data gets inside of the stimulation .run() class
-      topic: { publish_to_topic: variable_name }
-      kwargs:
-        some_kwargs: *SUBJECT
-        another_kwargs: 234234
-
-
-Complete example
+Example pipeline
 ----------------
 
-Here's an example of a complete pipeline configuration. It converts the raw binary to nifti, motion corrects, saves a copy of the motion corrected nifti, extracts the gray matter voxels, computes their mean and standard deviations, computes their z-score, and sends that result off to the stimulation code. Pay attention to the ``input`` and ``output`` keys. Those are the keys to
-the ``data_dict`` that show you how the data is transformed as it passes
-through the pipeline.
-
-Here is the preprocessing configuration.
+Here's an example of a complete pipeline configuration. It converts the raw DICOM to nifti, motion corrects, extracts the motion parameters from the motion correction affine, extracts the gray matter voxels, computes their mean and standard deviations, computes their z-score, decodes using a pre-trained decoder, sends an image of the decoded category to the dashboard, sends the motion parameters to the dashboard, and sends the gray matter activity to the pycortex viewer.
 
 .. code-block:: yaml
 
-  global_defaults:
-    subject: &SUBJECT S1
-    xfm_name: &XFMNAME 20150101S1_transform
-    nskip: 5
+  global_parameters:
+    n_skip: 0
 
   pipeline:
-    - name: motion_correct
-      instance: realtimefmri.preprocess.MotionCorrect
+    - name: debug
+      class_name: realtimefmri.preprocess.Debug
       input: [ raw_image_nii ]
-      output: [ image_nii_mc ]
+      output: [ nii_repr, nii_shape ]
+
+    - name: motion_correct
+      class_name: realtimefmri.preprocess.MotionCorrect
+      kwargs: { output_transform: True }
+      input: [ raw_image_nii ]
+      output: [ nii_mc, affine_mc ]
+
+    - name: decompose_affine
+      class_name: realtimefmri.preprocess.Function
+      kwargs : { function_name: realtimefmri.image_utils.decompose_affine }
+      input: [ affine_mc ]
+      output: [ pitch, roll, yaw, x_displacement, y_displacement, z_displacement ]
 
     - name: nifti_to_volume
-      step: realtimefmri.preprocess.NiftiToVolume
-      input: [ image_nii_mc ]
+      class_name: realtimefmri.preprocess.NiftiToVolume
+      input: [ nii_mc ]
       output: [ volume ]
 
-    - name: extract_gm_mask
-      instance: realtimefmri.preprocess.ApplyMask
+    - name: gm_mask
+      class_name: realtimefmri.preprocess.ApplyMask
       kwargs: { mask_type: thick }
       input: [ volume ]
-      output: [ gm_activity ]
+      output: [ gm_responses ]
 
-    - name: running_mean_std
-      instance: realtimefmri.preprocess.OnlineMoments
-      input: [ gm_activity ]
-      output:
-        - gm_activity_mean
-        - gm_activity_std
+    - name: incremental_mean_std
+      class_name: realtimefmri.preprocess.IncrementalMeanStd
+      input: [ gm_responses ]
+      output: [ gm_mean, gm_std ]
 
-    - name: gm_activity_zscore
-      instance: realtimefmri.preprocess.VoxelZScore
-      input:
-        - gm_activity
-        - gm_activity_mean
-        - gm_activity_std
-      output: [ gm_activity_zscore ]
-      send: [ gm_activity_zscore ]
+    - name: zscore
+      class_name: realtimefmri.preprocess.ZScore
+      input: [ gm_responses, gm_mean, gm_std ]
+      output: [ gm_zscore ]
 
-And the stimulation configuration. This example launches a ``pycortex`` viewer that will display brain activity in real-time. As you can see, it only has access to the 
-topics that the preprocessing pipeline publishes, i.e., ``gm_activity_zscore``.
+    - name: decode
+      class_name: realtimefmri.preprocess.SklearnPredictor
+      kwargs: { surface: TZ, pickled_predictor: TZ_motor_decoder_thick.pkl }
+      input: [ gm_zscore ]
+      output: [ prediction ]
 
-.. code-block:: yaml
+    - name: select_predicted_image
+      class_name: realtimefmri.preprocess.Dictionary
+      kwargs: { dictionary: { hand: static/img/motor_decoder/hand.png,
+                              foot: static/img/motor_decoder/foot.png,
+                              mouth: static/img/motor_decoder/mouth.png,
+                              saccade: static/img/motor_decoder/saccade.png,
+                              speak: static/img/motor_decoder/speak.png },
+                decode_key: utf-8 }
+      input: [ prediction ]
+      output: [ image_url ]
 
-  global_defaults:
-    subject: &SUBJECT S1
+    - name: send_motion_parameters
+      class_name : realtimefmri.stimulate.SendToDashboard
+      kwargs: { name: motion_parameters, plot_type: timeseries }
+      input: [ pitch, roll, yaw ]
 
-  initialization:
-    - name: record_microphone_input 
-      instance: realtimefmri.stimulate.AudioRecorder
-      kwargs:
-        jack_port: "system:capture_1"
-        file_name: microphone
+    - name: send_motion_parameters_x
+      class_name : realtimefmri.stimulate.SendToDashboard
+      kwargs: { name: x_disp, plot_type: timeseries }
+      input: [ x_displacement ]
 
-  pipeline:
-    - name: pycortex_viewer
-      instance: realtimefmri.stimulate.PyCortexViewer
-      topic: { gm_activity_zscore: data }
-      kwargs:
-        subject: *SUBJECT
-        xfm_name: 20150101S1_transform
-        mask_type: thick
-        vmin: -0.01
-        vmax: 0.01
+    - name: send_motion_parameters_y
+      class_name : realtimefmri.stimulate.SendToDashboard
+      kwargs: { name: y_disp, plot_type: timeseries }
+      input: [ y_displacement ]
 
-    - name: debug
-      instance: realtimefmri.stimulate.Debug
-      topic: { gm_activity_zscore: data }
+    - name: send_motion_parameters_z
+      class_name : realtimefmri.stimulate.SendToDashboard
+      kwargs: { name: z_disp, plot_type: timeseries }
+      input: [ z_displacement ]
+
+    - name: send_prediction
+      class_name : realtimefmri.stimulate.SendToDashboard
+      kwargs: { name: predicted_image, plot_type: static_image }
+      input: [ image_url ]
+
+    - name: flatmap
+      class_name: realtimefmri.stimulate.SendToPycortexViewer
+      kwargs: { name: flatmap }
+      input: [ gm_zscore ]
