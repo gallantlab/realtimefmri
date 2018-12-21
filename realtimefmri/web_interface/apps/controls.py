@@ -196,8 +196,7 @@ def viewer_status(n, surface, transform, mask):
         else:
             logger.info("Stopping pycortex viewer (pid %s)", pid)
             label = u'▶'
-            pid = int(pid)
-            os.kill(pid, signal.SIGKILL)
+            utils.kill_process(int(pid))
             r.delete(session_id + '_viewer_pid')
 
         return label
