@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM python:3.7-stretch
 
 ENV DEBIAN_FRONTEND=noninteractive
 

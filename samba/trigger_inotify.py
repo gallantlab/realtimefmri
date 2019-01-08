@@ -168,8 +168,8 @@ class SambaStatus():
     """
     def __init__(self, directory):
         self.directory = directory
-        self.open_file_parser = re.compile(b"\d*\s*\d*\s*[A-Z_]*\s*0x\d*\s*[A-Z]*\s*[A-Z]*\s*"
-                                           b"%s\s*(?P<path>.*\.dcm).*" % directory)
+        self.open_file_parser = re.compile("\d*\s*\d*\s*[A-Z_]*\s*0x\d*\s*[A-Z]*\s*[A-Z]*\s*"
+                                           "%s\s*(?P<path>.*\.dcm).*" % directory)
 
     def get_open_files(self):
         """Get a list of files that are currently opened by samba clients
