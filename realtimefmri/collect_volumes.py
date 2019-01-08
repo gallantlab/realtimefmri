@@ -32,7 +32,7 @@ class DirectoryMonitor(pyinotify.ProcessEvent):
         self.extension = extension
 
     def process_IN_CLOSE_WRITE(self, event):
-        logger.info('Volume %s' ,event.pathname)
+        logger.info('Volume %s', event.pathname)
         if (not op.isdir(event.pathname)) and (op.splitext(event.pathname)[1] == self.extension):
             self.redis_client.publish('volume', event.pathname)
 
