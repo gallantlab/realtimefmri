@@ -3,7 +3,6 @@ import logging
 import os
 import os.path as op
 import shutil
-import signal
 import time
 from datetime import datetime
 from uuid import uuid4
