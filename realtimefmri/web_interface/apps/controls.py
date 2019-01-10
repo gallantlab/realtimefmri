@@ -13,7 +13,7 @@ import dash_html_components as html
 import redis
 from dash.dependencies import Input, Output, State
 
-from realtimefmri import collect, collect_ttl, collect_volumes, config, preprocess, viewer
+from realtimefmri import collect, collect_ttl, config, preprocess, viewer
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface import utils
 from realtimefmri.web_interface.app import app

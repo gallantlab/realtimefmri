@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from realtimefmri import collect, collect_ttl, collect_volumes, preprocess, web_interface
+from realtimefmri import collect, collect_ttl, preprocess, web_interface
 
 
 def parse_arguments():
@@ -14,9 +14,6 @@ def parse_arguments():
     ttl.set_defaults(command_name='collect_ttl')
     ttl.add_argument('source', action='store', default='keyboard',
                      help='''TTL source. keyboard, serial, redis, or simulate''')
-
-    vol = subcommand.add_parser('collect_volumes', help="""Monitor for arrival of volumes""")
-    vol.set_defaults(command_name='collect_volumes')
 
     coll = subcommand.add_parser('collect',
                                  help="""Collect and synchronize""")
@@ -54,9 +51,6 @@ def main():
     args = parse_arguments()
     if args.subcommand == 'collect_ttl':
         collect_ttl.collect_ttl(source=args.source)
-
-    elif args.subcommand == 'collect_volumes':
-        collect_volumes.collect_volumes()
 
     elif args.subcommand == 'collect':
         collect.collect(args.verbose)
