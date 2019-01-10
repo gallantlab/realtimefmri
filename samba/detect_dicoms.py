@@ -18,11 +18,11 @@ logger.info("Running as user %s", user)
 
 
 def detect_dicoms(root_directory=None, extension='*'):
-    """Continuously monitor a samba mounted directory for new files and trigger inotify actions.
+    """Continuously monitor a samba mounted directory for new files and publish new paths.
 
     File creation on samba network shares do not trigger the same inotify events as regular files.
     This function monitors a samba shared directory for new files. When a new file is detected,
-    open and close it to result in inotify events being triggered.
+    ensure it is closed, then publish the name over redis.
 
     Parameters
     ----------
