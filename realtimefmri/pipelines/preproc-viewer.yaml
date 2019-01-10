@@ -9,7 +9,7 @@ pipeline:
 
   - name: motion_correct
     class_name: realtimefmri.preprocess.MotionCorrect
-    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
+    kwargs: {}
     input: [ raw_image_nii ]
     output: [ image_nifti_mc ]
 
@@ -20,11 +20,21 @@ pipeline:
 
   - name: gm_mask
     class_name: realtimefmri.preprocess.ApplyMask
-    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
+    kwargs: {}
     input: [ volume ]
     output: [ gm_responses ]
+
+  - name: incremental_mean_std
+    class_name: realtimefmri.preprocess.IncrementalMeanStd
+    input: [ gm_responses ]
+    output: [ gm_mean, gm_std ]
+
+  - name: zscore
+    class_name: realtimefmri.preprocess.ZScore
+    input: [ gm_responses, gm_mean, gm_std ]
+    output: [ gm_zscore ]
 
   - name: flatmap
     class_name: realtimefmri.stimulate.SendToPycortexViewer
     kwargs: { name: flatmap }
-    input: [ gm_responses ]
+    input: [ gm_zscore ]

@@ -28,14 +28,13 @@ def create_control_button(label, button_id):
 
 session_id = 'admin'
 layout = [
-    html.Div(session_id, id='session-id'),  # , style={'display': 'none'}),
-    html.Div([dcc.Input(id='recording-id',
-                        placeholder='Recording id...',
-                        type='text', value=datetime.strftime(datetime.now(), '%Y%m%d'))]),
-
+    html.Div([html.Div(session_id, id='session-id'),
+              dcc.Input(id='recording-id', placeholder='Recording id...',
+                        type='text', value=datetime.strftime(datetime.now(), '%Y%m%d')),
+              html.Button(u'🗑', id='flush-db')],
+             id='top-bar'),
     html.Div(className='control-panel', children=[
         create_control_button('Collect TTL', 'collect-ttl-status'),
-        create_control_button('Collect volumes', 'collect-volumes-status'),
         create_control_button('Collect', 'collect-status'),
         html.Hr(), html.Span('Simulation', style={'font-size': 'x-small'}),
         dcc.Dropdown(id='ttl-source', className='control-panel-dropdown',
@@ -67,11 +66,19 @@ layout = [
 
     html.Div(id='empty-div1', children=[]),
     html.Div(id='empty-div2', children=[]),
-    html.Div(id='empty-div3', children=[]),
-    html.Div(id='empty-div4', children=[])
+    html.Div(id='empty-div3', children=[])
 ]
 
 r = redis.StrictRedis(config.REDIS_HOST)
+
+
+@app.callback(Output('empty-div1', 'children'),
+              [Input('flush-db', 'n_clicks')])
+def flush_db(n):
+    if n is not None:
+        r.flushdb()
+
+    raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('collect-ttl-status', 'children'),
@@ -92,30 +99,6 @@ def collect_ttl_status(n, ttl_source):
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_ttl_pid')
-
-        return label
-
-    else:
-        raise dash.exceptions.PreventUpdate()
-
-
-@app.callback(Output('collect-volumes-status', 'children'),
-              [Input('collect-volumes-status', 'n_clicks')])
-def collect_volumes_status(n):
-    if n is not None:
-        pid = r.get(session_id + '_collect_volumes_pid')
-        if pid is None:
-            label = u'■'
-            process = utils.start_task(collect_volumes.collect_volumes)
-            while not process.is_alive():
-                time.sleep(0.1)
-            logger.info("Started volume collector (pid %d)", process.pid)
-            r.set(session_id + '_collect_volumes_pid', process.pid)
-        else:
-            logger.info("Stopping volume collector (pid %s)", pid)
-            label = u'▶'
-            utils.kill_process(int(pid))
-            r.delete(session_id + '_collect_volumes_pid')
 
         return label
 
@@ -152,13 +135,14 @@ def collect_status(n):
               [State('recording-id', 'value'),
                State('preproc-config', 'value'),
                State('pycortex-surface', 'value'),
-               State('pycortex-transform', 'value')])
-def preprocess_status(n, recording_id, preproc_config, surface, transform):
+               State('pycortex-transform', 'value'),
+               State('pycortex-mask', 'value')])
+def preprocess_status(n, recording_id, preproc_config, surface, transform, mask):
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
         if pid is None:
             label = u'■'
-            global_parameters = {'surface': surface, 'transform': transform}
+            global_parameters = {'surface': surface, 'transform': transform, 'mask_type': mask}
             process = utils.start_task(preprocess.preprocess,
                                        recording_id, preproc_config, **global_parameters)
             while not process.is_alive():
@@ -204,7 +188,7 @@ def viewer_status(n, surface, transform, mask):
         raise dash.exceptions.PreventUpdate()
 
 
-@app.callback(Output('empty-div4', 'children'),
+@app.callback(Output('empty-div2', 'children'),
               [Input('simulate-ttl', 'n_clicks')])
 def simulate_ttl(n):
     if n is not None:
@@ -224,12 +208,10 @@ def simulate_volume(n, simulated_dataset):
         count = r.get(session_id + '_simulated_volume_count')
         if count is None:
             count = 0
-
-            dest_directory = op.join(config.SCANNER_DIR, str(uuid4()))
-            os.makedirs(dest_directory)
+            dest_directory = str(uuid4())
+            os.makedirs(op.join(config.SCANNER_DIR, dest_directory))
             time.sleep(0.5)
             logger.info('Simulating volume %d %s', count, dest_directory)
-            paths = config.get_dataset_volume_paths(simulated_dataset)
             r.set(session_id + '_simulated_volume_directory', dest_directory)
 
         else:
@@ -237,8 +219,8 @@ def simulate_volume(n, simulated_dataset):
             dest_directory = r.get(session_id + '_simulated_volume_directory').decode('utf-8')
 
         path = paths[count % len(paths)]
-        dest_path = op.join(dest_directory, f"IM{count:04}.dcm")
-        logger.info('Copying %s to %s', path, dest_directory)
+        dest_path = op.join(config.SCANNER_DIR, dest_directory, f"IM{count:04}.dcm")
+        logger.info('Copying %s to %s', path, dest_path)
         shutil.copy(path, dest_path)
         count += 1
         r.set(session_id + '_simulated_volume_count', count)

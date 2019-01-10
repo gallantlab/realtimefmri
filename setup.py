@@ -26,7 +26,7 @@ def main():
                             "PyYAML"],
           entry_points={'console_scripts':
                         ['realtimefmri = realtimefmri.__main__:main']},
-          package_data={'realtimefmri': ['config.cfg', 'pipelines/*-debug.yaml']})
+          package_data={'realtimefmri': ['config.cfg', 'pipelines/preproc-default.yaml']})
 
 
 if __name__ == '__main__':
