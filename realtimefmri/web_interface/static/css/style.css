@@ -10,6 +10,20 @@ html {
   min-height: 400px;
 }
 
+#recording-id {
+  display: inline-block;
+  margin-right: 0.2em;
+}
+
+#session-id {
+  display: inline-block;
+  margin-right: 0.2em;
+}
+
+#flush-db {
+  display: inline-block;
+}
+
 .control-panel {
   display: inline-block;
   float: left;

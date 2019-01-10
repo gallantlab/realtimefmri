@@ -22,6 +22,7 @@ def collect(verbose=True):
     for image_number, message in enumerate(volume_subscriber.listen()):
         if message['type'] == 'message':
             new_volume_path = message['data'].decode('utf-8')
+            new_volume_path = op.join(config.SCANNER_DIR, new_volume_path)
             logger.info('New volume %s', new_volume_path)
             timestamp = redis_client.rpop('timestamp')
             timestamp = struct.unpack('d', timestamp)[0]

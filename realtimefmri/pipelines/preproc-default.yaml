@@ -2,25 +2,26 @@ global_parameters:
   n_skip: 0
 
 pipeline:
-  - name: debug
-    class_name: realtimefmri.preprocess.Debug
-    input: [ raw_image_nii ]
-    output: [ nii_repr, nii_shape ]
-
   - name: motion_correct
     class_name: realtimefmri.preprocess.MotionCorrect
-    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
+    kwargs: { output_transform: True }
     input: [ raw_image_nii ]
-    output: [ image_nifti_mc ]
+    output: [ nii_mc, affine_mc ]
+
+  - name: decompose_affine
+    class_name: realtimefmri.preprocess.Function
+    kwargs : { function_name: realtimefmri.image_utils.decompose_affine }
+    input: [ affine_mc ]
+    output: [ pitch, roll, yaw, x_displacement, y_displacement, z_displacement ]
 
   - name: nifti_to_volume
     class_name: realtimefmri.preprocess.NiftiToVolume
-    input: [ image_nifti_mc ]
+    input: [ nii_mc ]
     output: [ volume ]
 
   - name: gm_mask
     class_name: realtimefmri.preprocess.ApplyMask
-    kwargs: { surface: RGfs, transform: 20170705RG_movies, mask_type: thick }
+    kwargs: {}
     input: [ volume ]
     output: [ gm_responses ]
 
@@ -44,16 +45,25 @@ pipeline:
     kwargs: { name: mosaic, plot_type: array_image }
     input: [ volume_mosaic ]
 
-  - name: array_mean
-    class_name: realtimefmri.preprocess.ArrayMean
-    kwargs: { dimensions: [0]}
-    input: [ gm_responses ]
-    output: [ gm_grand_mean ]
+  - name: send_motion_parameters
+    class_name : realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: motion_parameters, plot_type: timeseries }
+    input: [ pitch, roll, yaw ]
 
-  - name: send_gm
-    class_name: realtimefmri.stimulate.SendToDashboard
-    kwargs: { name: gm_mean, plot_type: timeseries }
-    input: [ gm_grand_mean ]
+  - name: send_motion_parameters_x
+    class_name : realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: x_disp, plot_type: timeseries }
+    input: [ x_displacement ]
+
+  - name: send_motion_parameters_y
+    class_name : realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: y_disp, plot_type: timeseries }
+    input: [ y_displacement ]
+
+  - name: send_motion_parameters_z
+    class_name : realtimefmri.stimulate.SendToDashboard
+    kwargs: { name: z_disp, plot_type: timeseries }
+    input: [ z_displacement ]
 
   - name: flatmap
     class_name: realtimefmri.stimulate.SendToPycortexViewer

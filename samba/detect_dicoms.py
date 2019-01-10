@@ -8,37 +8,39 @@ import subprocess
 import time
 from collections import defaultdict
 
+import redis
+
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('trigger_inotify')
+logger = logging.getLogger('detect_dicoms')
 
 user = pwd.getpwuid(os.getuid()).pw_name
-logger.info("Running as user {}".format(user))
+logger.info("Running as user %s", user)
 
 
-def trigger_inotify(root_directory=None, parent_directory=None, extension='*'):
-    """Continuously monitor a samba mounted directory for new files and trigger inotify actions.
+def detect_dicoms(root_directory=None, extension='*'):
+    """Continuously monitor a samba mounted directory for new files and publish new paths.
 
-    File creation on samba network shares do not trigger the same inotify events as regular files. 
-    This function monitors a samba shared directory for new files. When a new file is detected, 
-    open and close it to result in inotify events being triggered.
+    File creation on samba network shares do not trigger the same inotify events as regular files.
+    This function monitors a samba shared directory for new files. When a new file is detected,
+    ensure it is closed, then publish the name over redis.
 
     Parameters
     ----------
     directory : str
         Directory to monitor for new files
-    parent_directory : str
-        If provided, monitor the first new directory created in this parent directory
     extension : str
         Only detect new files with this extension
     """
-    logger.info('Monitoring %s' % root_directory)
+    logger.info('Monitoring %s', root_directory)
 
     monitor = MonitorSambaDirectory(root_directory, extension=extension)
 
+    r = redis.StrictRedis('redis')
+
     for new_path in monitor.yield_new_paths():
-        logger.info('Volume %s' % new_path)
-        with open(new_path, 'rb') as f:
-            pass
+        new_path = new_path.replace(root_directory, '', 1).lstrip('/')
+        logger.info('Volume %s', new_path)
+        r.publish('volume', new_path)
 
 
 class MonitorSambaDirectory():
@@ -121,20 +123,20 @@ class MonitorSambaDirectory():
                                                               self.is_valid_directory)
             if len(added_directories) > 0:
                 for directory in added_directories:
-                    logging.info('Adding directory {}'.format(directory))
+                    logging.info('Adding directory %s', directory)
                     self.last_modtimes[directory] = 0
                     self.directories.add(directory)
 
             if len(removed_directories) > 0:
                 for directory in removed_directories:
-                    logging.info('Removing directory {}'.format(directory))
+                    logging.info('Removing directory %s', directory)
                     del self.last_modtimes[directory]
                     self.directories.remove(directory)
 
             for directory in self.directories:
                 current_modtime = op.getmtime(op.join(self.root_directory, directory))
                 if current_modtime > self.last_modtimes[directory]:
-                    logging.info('Detected change in {}'.format(directory))
+                    logging.info('Detected change in %s', directory)
 
                     (added_paths,
                      removed_paths) = self.get_changed_contents(directory,
@@ -145,14 +147,14 @@ class MonitorSambaDirectory():
                     if len(added_paths) > 0:
                         for path in added_paths:
                             path = op.basename(path)
-                            logging.info('Adding {} from {}'.format(path, directory))
+                            logging.info('Adding %s from %s', path, directory)
                             self.directory_contents[directory].add(path)
                             yield op.join(self.root_directory, directory, path)
 
                     if len(removed_paths) > 0:
                         for path in removed_paths:
                             path = op.basename(path)
-                            logging.info('Removing {} from {}'.format(path, directory))
+                            logging.info('Removing %s from %s', path, directory)
                             self.directory_contents[directory].remove(path)
 
             time.sleep(0.1)
@@ -191,4 +193,4 @@ class SambaStatus():
 
 
 if __name__ == "__main__":
-    trigger_inotify(root_directory='/mnt/scanner', extension='.dcm')
+    detect_dicoms(root_directory='/mnt/scanner', extension='.dcm')
