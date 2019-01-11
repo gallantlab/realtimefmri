@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from realtimefmri.web_interface.app import app
-from realtimefmri.web_interface.apps import controls, dashboard, pipeline
+from realtimefmri.web_interface.apps import controls, dashboard, videos, pipeline
 
 
 def serve_layout():
@@ -27,6 +27,9 @@ def display_page(pathname):
 
     elif pathname == '/pipeline':
         content = pipeline.layout
+
+    elif pathname == '/videos':
+        content = videos.layout
 
     else:
         content = '404'
