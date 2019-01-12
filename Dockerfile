@@ -12,30 +12,28 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --upgrade pipenv setuptools
+
+WORKDIR /app/realtimefmri
+
+COPY Makefile /app/realtimefmri
+COPY Pipfile /app/realtimefmri
+COPY Pipfile.lock /app/realtimefmri
+
+ENV PIPENV_DONT_USE_PYENV 1
+ENV PIPENV_SYSTEM 1
+
+RUN make requirements
 
 # pycortex
-RUN pip3 install numpy scipy numexpr Cython
 RUN pip3 install pycortex
 RUN python3 -c "import cortex"
 COPY data/pycortex-options.cfg /root/.config/pycortex/options.cfg
 
-# realtimefmri
-RUN mkdir -p /code/realtimefmri/realtimefmri
-WORKDIR /code/realtimefmri
-
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-
-COPY setup.py .
-COPY realtimefmri ./realtimefmri
-
-RUN pip3 install .
-# RUN pip3 install git+https://github.com/gallantlab/realtimefmri.git
-RUN python3 -c "import realtimefmri"
-
 ENV PATH="$PATH:/usr/lib/afni/bin"
 
 EXPOSE 8050
-EXPOSE 8051
 
-ENTRYPOINT ["realtimefmri"]
+COPY docker-entrypoint.sh /app/realtimefmri
+
+ENTRYPOINT ["/app/realtimefmri/docker-entrypoint.sh"]

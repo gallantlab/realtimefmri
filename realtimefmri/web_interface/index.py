@@ -35,7 +35,7 @@ def display_page(pathname):
 
 
 def serve():
-    app.run_server(host="0.0.0.0", debug=False)
+    app.run_server(host="0.0.0.0", debug=True)
 
 
 if __name__ == '__main__':
