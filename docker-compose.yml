@@ -4,7 +4,7 @@ services:
   realtimefmri:
     build:
       context: .
-      dockerfile: Dockerfile.realtimefmri
+      dockerfile: Dockerfile
     command: web_interface
     depends_on:
       - redis
