@@ -4,7 +4,7 @@ services:
   realtimefmri:
     build:
       context: .
-      dockerfile: Dockerfile.realtimefmri
+      dockerfile: Dockerfile
     command: web_interface
     depends_on:
       - redis
@@ -24,6 +24,7 @@ services:
       - "${TEST_DATASET_PATH}:/usr/local/share/realtimefmri/datasets"
       - "${STATIC_PATH}:/public/static"
       - scanner:/usr/local/share/realtimefmri/scanner
+      - .:/app/realtimefmri
 
   redis:
     image: redis

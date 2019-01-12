@@ -3,7 +3,6 @@ from setuptools import find_packages, setup
 
 
 def main():
-
     """Main setup function"""
     setup(name='realtimefmri',
           version='0.1.2',
@@ -20,7 +19,6 @@ def main():
                             "dash_core_components",
                             "dash_html_components",
                             "scikit-learn",
-                            "pyinotify",
                             "pyserial",
                             "evdev",
                             "PyYAML"],
