@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
+import pickle
+import time
 from collections import defaultdict
 
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.graph_objs as go
 import redis
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 
 from realtimefmri import config
 from realtimefmri.utils import get_logger
@@ -16,4 +16,18 @@ logger = get_logger('dashboard', to_console=True, to_network=False)
 graphs = defaultdict(list)
 r = redis.StrictRedis(config.REDIS_HOST)
 
-layout = [html.Video(src='static/videos/TheScientist.mov')]
+layout = [html.Video(id='video', autoPlay=True),
+          dcc.Interval(id='interval-component', interval=500, n_intervals=0)]
+
+
+@app.callback(Output('video', 'src'),
+              [Input('interval-component', 'n_intervals')])
+def update_video(n):
+    src = r.get('video:src')
+    if src:
+        src = src.decode('utf-8')
+        logger.info('Starting video %s', src)
+        r.set('video:start', pickle.dumps(time.time))
+    else:
+        src = ''
+    return src
