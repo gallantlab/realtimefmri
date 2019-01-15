@@ -69,6 +69,18 @@ class SendToPycortexViewer(PreprocessingStep):
         self.redis.publish("viewer", pickle.dumps(data))
 
 
+class PublishToRedis(PreprocessingStep):
+    def __init__(self, name, topic, host=config.REDIS_HOST, port=6379, *args, **kwargs):
+        parameters = {'name': name}
+        parameters.update(kwargs)
+        super(PublishToRedis, self).__init__(**parameters)
+        self.redis = redis.StrictRedis(host=host, port=port)
+        self.topic = topic
+
+    def run(self, data):
+        self.redis.publish(self.topic, pickle.dumps(data))
+
+
 class AudioRecorder():
     """Record the microphone and save to file
 
