@@ -926,10 +926,9 @@ class SendToPycortexViewer(PreprocessingStep):
         parameters = {'name': name}
         parameters.update(kwargs)
         super(SendToPycortexViewer, self).__init__(**parameters)
-        self.redis = redis.StrictRedis(host=host, port=port)
 
     def run(self, data):
-        self.redis.publish("viewer", pickle.dumps(data))
+        r.publish("viewer", pickle.dumps(data))
 
 
 class StoreToRedis(PreprocessingStep):

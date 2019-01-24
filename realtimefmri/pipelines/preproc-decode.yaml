@@ -58,31 +58,31 @@ pipeline:
     output: [ image_url ]
 
   - name: send_motion_parameters
-    class_name : realtimefmri.stimulate.SendToDashboard
+    class_name : realtimefmri.preprocess.SendToDashboard
     kwargs: { name: motion_parameters, plot_type: timeseries }
     input: [ pitch, roll, yaw ]
 
   - name: send_motion_parameters_x
-    class_name : realtimefmri.stimulate.SendToDashboard
+    class_name : realtimefmri.preprocess.SendToDashboard
     kwargs: { name: x_disp, plot_type: timeseries }
     input: [ x_displacement ]
 
   - name: send_motion_parameters_y
-    class_name : realtimefmri.stimulate.SendToDashboard
+    class_name : realtimefmri.preprocess.SendToDashboard
     kwargs: { name: y_disp, plot_type: timeseries }
     input: [ y_displacement ]
 
   - name: send_motion_parameters_z
-    class_name : realtimefmri.stimulate.SendToDashboard
+    class_name : realtimefmri.preprocess.SendToDashboard
     kwargs: { name: z_disp, plot_type: timeseries }
     input: [ z_displacement ]
 
   - name: send_prediction
-    class_name : realtimefmri.stimulate.SendToDashboard
+    class_name : realtimefmri.preprocess.SendToDashboard
     kwargs: { name: predicted_image, plot_type: static_image }
     input: [ image_url ]
 
   - name: flatmap
-    class_name: realtimefmri.stimulate.SendToPycortexViewer
+    class_name: realtimefmri.preprocess.SendToPycortexViewer
     kwargs: { name: flatmap }
     input: [ gm_zscore ]

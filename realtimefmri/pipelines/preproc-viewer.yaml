@@ -35,6 +35,6 @@ pipeline:
     output: [ gm_zscore ]
 
   - name: flatmap
-    class_name: realtimefmri.stimulate.SendToPycortexViewer
+    class_name: realtimefmri.preprocess.SendToPycortexViewer
     kwargs: { name: flatmap }
     input: [ gm_zscore ]
