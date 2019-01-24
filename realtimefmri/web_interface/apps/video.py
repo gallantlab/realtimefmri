@@ -12,7 +12,7 @@ from realtimefmri import config
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface.app import app
 
-logger = get_logger('dashboard', to_console=True, to_network=False)
+logger = get_logger(__name__, to_console=True, to_network=False)
 graphs = defaultdict(list)
 r = redis.StrictRedis(config.REDIS_HOST)
 
@@ -26,8 +26,6 @@ def update_video(n):
     src = r.get('video:src')
     if src:
         src = src.decode('utf-8')
-        logger.info('Starting video %s', src)
-        r.set('video:start', pickle.dumps(time.time))
     else:
         src = ''
     return src

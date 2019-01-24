@@ -17,6 +17,9 @@ class BufferedArray():
         self._current_size = 0
 
     def append(self, row):
+        if self._current_size + 1 >= self._array.shape[0]:
+            raise IndexError(f"Buffer size of {self._array.shape[0]} exceeded")
+
         self._array[self._current_size] = row
         self._current_size += 1
 
