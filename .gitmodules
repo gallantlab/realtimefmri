@@ -1,0 +1,3 @@
+[submodule "realtimefmri/experiments/static/jsPsych"]
+	path = realtimefmri/experiments/static/jsPsych
+	url = git@github.com:jspsych/jsPsych.git
