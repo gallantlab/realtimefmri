@@ -2,11 +2,11 @@
 <html>
     <head>
         <title>My experiment</title>
-        <script src="static/jsPsych/jspsych.js"></script>
-        <script src="static/jsPsych/plugins/jspsych-html-keyboard-response.js"></script>
-        <script src="static/jsPsych/plugins/jspsych-image-keyboard-response.js"></script>
-        <script src="static/jsPsych/plugins/jspsych-animation.js"></script>
-        <link href="static/jsPsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+        <script src="jsPsych/jspsych.js"></script>
+        <script src="jsPsych/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jsPsych/plugins/jspsych-image-keyboard-response.js"></script>
+        <script src="jsPsych/plugins/jspsych-animation.js"></script>
+        <link href="jsPsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
     </head>
     <body></body>
     <script>
@@ -53,8 +53,8 @@
       return trial;
     }
 
-    timeline.push(make_trial("static/test.jpeg"));
-    timeline.push(make_trial("static/test.jpeg"));
+    timeline.push(make_trial("img/test.jpeg"));
+    timeline.push(make_trial("img/test.jpeg"));
 
     jsPsych.init({
         timeline: timeline,
