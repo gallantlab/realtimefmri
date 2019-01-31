@@ -1,8 +1,11 @@
 import dash
 import flask
+import os.path as op
 import pickle
 import redis
-import time
+
+from flask import render_template
+from pathlib import Path
 
 from realtimefmri import config
 from realtimefmri.utils import get_logger
@@ -21,9 +24,20 @@ app.config.suppress_callback_exceptions = True
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
-@app.server.route('/experiment')
-def serve_experiment():
-    return flask.send_from_directory(config.STATIC_PATH, 'experiments/reaction_time.html')
+@app.server.route('/experiments/')
+def serve_experiments():
+    experiment_names = []
+    for exp in (Path(config.STATIC_PATH) / 'experiment').glob('*.html'):
+        experiment_names.append(exp.stem)
+
+    experiment_names = sorted(experiment_names)
+
+    return render_template('experiments.html', experiment_names=experiment_names)
+
+
+@app.server.route('/experiment/<experiment_name>')
+def serve_experiment(experiment_name):
+    return flask.send_from_directory(config.STATIC_PATH, f'experiment/{experiment_name}.html')
 
 
 @app.server.route('/redis/<key>')
