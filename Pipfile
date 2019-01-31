@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+asyncio_redis = "~=0.15.1"
 Cython = "~=0.29.2"
 dash = "~=0.35.1"
 dash_core_components = "~=0.42.1"
@@ -16,7 +17,7 @@ numexpr = "~=2.6.9"
 psycopg2-binary = "~=2.7"
 pydicom = "~=1.2.1"
 pyserial = "~=3.4"
-PyYAML = "~=3.13"
+PyYAML = "~=4.2b1"
 redis = "~=3.0.1"
 scikit-learn = "~=0.20.2"
 

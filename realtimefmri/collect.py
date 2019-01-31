@@ -8,6 +8,9 @@ from realtimefmri import config, image_utils
 from realtimefmri.utils import get_logger
 
 
+r = redis.StrictRedis(config.REDIS_HOST)
+
+
 def collect(verbose=True):
     """Continuously monitor for incoming volumes, merge with TTL timestamps, and send to
     preprocessor
@@ -19,8 +22,10 @@ def collect(verbose=True):
     volume_subscriber = redis_client.pubsub()
     volume_subscriber.subscribe('volume')
 
-    for image_number, message in enumerate(volume_subscriber.listen()):
+    image_number = 0
+    for message in volume_subscriber.listen():
         if message['type'] == 'message':
+
             new_volume_path = message['data'].decode('utf-8')
             new_volume_path = op.join(config.SCANNER_DIR, new_volume_path)
             logger.info('New volume %s', new_volume_path)
@@ -33,3 +38,6 @@ def collect(verbose=True):
 
             logger.debug('%s %s', op.basename(new_volume_path), str(nii.shape))
             redis_client.publish('timestamped_volume', pickle.dumps(timestamped_volume))
+
+            r.set('image_number', pickle.dumps(image_number))
+            image_number += 1

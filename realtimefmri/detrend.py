@@ -1,27 +1,27 @@
 import os.path as op
 import pickle
 
-from sklearn.decomposition import PCA
-from sklearn.linear_model import LinearRegression
+from sklearn import decomposition, linear_model
 
 from realtimefmri.config import get_subject_directory
 
 
-class WhiteMatterDetrending():
-    def __init__(self, n_wm_pcs=10):
-        self.n_wm_pcs = n_wm_pcs
+class WhiteMatterDetrend():
+    def __init__(self, n_pcs=10):
+        self.n_pcs = n_pcs
         self.model = None
         self.pca = None
 
-    def train(self, gm, wm, n_wm_pcs=10):
-        pca = PCA(n_components=n_wm_pcs)
-        wm_pcs = pca.fit_transform(wm)
+    def fit(self, gm, wm, n_pcs=10):
+        pca = decomposition.PCA(n_components=n_pcs)
+        pcs = pca.fit_transform(wm)
 
-        model = LinearRegression()
-        model.fit(wm_pcs, gm)
+        model = linear_model.LinearRegression()
+        model.fit(pcs, gm)
 
         self.model = model
         self.pca = pca
+        return self
 
     def detrend(self, gm, wm):
         trend = self.model.predict(self.pca.transform(wm))

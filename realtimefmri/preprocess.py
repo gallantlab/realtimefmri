@@ -12,6 +12,7 @@ import nibabel as nib
 import numpy as np
 import redis
 import yaml
+from sklearn import linear_model
 
 import cortex
 from realtimefmri import buffered_array, config, image_utils, pipeline_utils
@@ -59,8 +60,12 @@ def preprocess(recording_id, pipeline_name, **global_parameters):
                 timestamped_volume = pickle.loads(data)
                 logger.info('Received image %d', timestamped_volume['image_number'])
                 data_dict = {'image_number': timestamped_volume['image_number'],
+                             'raw_image_time': timestamped_volume['time'],
                              'raw_image_nii': timestamped_volume['volume']}
+                t1 = time.time()
                 data_dict = pipeline.process(data_dict)
+                t2 = time.time()
+                logger.debug('Pipeline ran in %.4f seconds', t2 - t1)
 
 
 class Pipeline():
@@ -135,8 +140,9 @@ class Pipeline():
                 kwargs = step.get('kwargs', {})
 
                 if self.global_parameters:
-                    for k, v in self.global_parameters.items():
-                        kwargs[k] = kwargs.get(k, v)
+                    for key in self.global_parameters.keys():
+                        if key not in kwargs:
+                            kwargs[key] = self.global_parameters[key]
 
                 cls = pipeline_utils.load_class(step['class_name'])
                 step['instance'] = cls(*args, **kwargs)
@@ -227,9 +233,10 @@ class Pipeline():
             inputs = [data_dict[k] for k in step['input']]
 
             logger.info('Running %s', step['name'])
+            t1 = time.time()
             outp = step['instance'].run(*inputs)
-
-            logger.debug('Finished %s %s', step['name'], str(outp))
+            t2 = time.time()
+            logger.debug('Step %s %s ran in %.4f seconds', step['name'], str(outp), t2 - t1)
 
             if not isinstance(outp, (list, tuple)):
                 outp = [outp]
@@ -303,15 +310,25 @@ class PreprocessingStep():
             step[param_name] = pickle.loads(val)
 
         name = step.pop(b'class_name')
-        contents = [html.H3(name)]
+        contents = [html.H3(step_key.decode('utf-8')), html.H3(name)]
         for k, v in step.items():
             k = k.decode('utf-8')
             contents.extend([html.Strong(k),
-                             dcc.Input(value=v, id=f'pipeline-{step_id}-{k}')])
+                             dcc.Input(value=v, id=f'{step_id}-{k}')])
 
-        interface = html.Div(contents, id=f'pipeline-{step_id}')
+        interface = html.Div(contents, id=f'{step_id}')
         logger.debug(interface)
         return interface
+
+    def reset(self):
+        pass
+
+    def update_state(self):
+        for k in self._parameters.keys():
+            v = r.get(self._key + f':{k}')
+            v = pickle.loads(v)
+            logger.debug(f'Setting {k} to {v}')
+            setattr(self, k, v)
 
     def run(self, *args):
         raise NotImplementedError
@@ -698,6 +715,7 @@ class IncrementalMeanStd(PreprocessingStep):
         -------
         The input array z-scored using the posterior mean and variance
         """
+        self.update_state()
         if not hasattr(self, 'data'):
             self.array_shape = array.shape
             self.data = buffered_array.BufferedArray(array.size, dtype=array.dtype)
@@ -786,6 +804,40 @@ class ZScore(PreprocessingStep):
         return zscored_array
 
 
+class AggregateTimestampedVolumes(PreprocessingStep):
+    def __init__(self, *args, active=True, buffer_size=1000, **kwargs):
+        parameters = {'active': active, 'buffer_size': buffer_size}
+        parameters.update(kwargs)
+        super(AggregateTimestampedVolumes, self).__init__(**parameters)
+
+        self.active = active
+        self.buffer_size = buffer_size
+
+    def reset(self):
+        pass
+
+    def run(self, t, array):
+        self.update_state()
+
+        if not hasattr(self, 'array'):
+            n_samples = array.size
+            self.times = buffered_array.BufferedArray(size=1, buffer_size=self.buffer_size)
+            self.array = buffered_array.BufferedArray(size=n_samples, buffer_size=self.buffer_size)
+            self.n_samples = n_samples
+
+        if self.active:
+            self.times.append([t])
+            self.array.append(array)
+            times = self.times.get_array()
+            array = self.array.get_array()
+
+        else:
+            times = []
+            array = []
+
+        return times, array
+
+
 class SklearnPredictor(PreprocessingStep):
     """Run the `.predict` method of a scikit-learn predictor on incoming
     activity. Returns the predicted output.
@@ -818,13 +870,115 @@ class SklearnPredictor(PreprocessingStep):
         self.nan_to_num = nan_to_num
 
     def run(self, activity):
-        # whatever the input type, we need a row vector
         activity = activity.ravel()[None]
         if self.nan_to_num:
             activity = np.nan_to_num(activity)
 
         prediction = self.predictor.predict(activity)[0]
         return prediction
+
+
+class SendToDashboard(PreprocessingStep):
+    """Send data to the dashboard
+
+    Parameters
+    ----------
+    name : str
+    plot_type : str
+        Type of plot
+
+    Attributes
+    ----------
+    redis : redis connection
+    key_name : str
+        Name of the key in the redis database
+    """
+    def __init__(self, name, plot_type='marker', **kwargs):
+        parameters = {'name': name, 'plot_type': plot_type}
+        parameters.update(kwargs)
+        super(SendToDashboard, self).__init__(**parameters)
+        key_name = 'dashboard:data:' + name
+        r.set(key_name, b'')
+        r.set(key_name + ':type', plot_type)
+        r.set(key_name + ':update', b'true')
+
+        self.redis = r
+        self.key_name = key_name
+
+    def run(self, *args):
+        data = pickle.dumps(args)
+        logger.debug('SendToDashboard key_name=%s len(data)=%d', self.key_name, len(data))
+        self.redis.set(self.key_name, data)
+        self.redis.set(self.key_name + ':update', b'true')
+
+
+class SendToPycortexViewer(PreprocessingStep):
+    """Send data to the pycortex webgl viewer
+
+    Parameters
+    ----------
+    name : str
+
+    Attributes
+    ----------
+    redis : redis connection
+    """
+    def __init__(self, name, host=config.REDIS_HOST, port=6379, *args, **kwargs):
+        parameters = {'name': name}
+        parameters.update(kwargs)
+        super(SendToPycortexViewer, self).__init__(**parameters)
+
+    def run(self, data):
+        r.publish("viewer", pickle.dumps(data))
+
+
+class StoreToRedis(PreprocessingStep):
+    """Store to redis database
+
+    Parameters
+    ----------
+    key : str
+
+    Attributes
+    ----------
+    index : int
+        Incrementing index
+    active : bool
+    """
+    def __init__(self, key, *args, active=True, **kwargs):
+        parameters = {'key': key, 'active': active}
+        parameters.update(kwargs)
+        super(StoreToRedis, self).__init__(**parameters)
+        self.key = key
+        self.index = 0
+        self.active = active
+
+    def run(self, *args):
+        self.update_state()
+
+        if self.active:
+            key = f'{self.key}:{self.index}'
+            r.set(key, pickle.dumps(args))
+            self.index += 1
+
+            return key
+
+
+class PublishToRedis(PreprocessingStep):
+    """Publish using redis pubsub channel
+
+    Parameters
+    ----------
+    topic : str
+    """
+    def __init__(self, topic, *args, **kwargs):
+        parameters = {'topic': topic}
+        parameters.update(kwargs)
+        super(PublishToRedis, self).__init__(**parameters)
+        self.topic = topic
+
+    def run(self, data):
+        r.publish(self.topic, pickle.dumps(data))
 
 
 class Dictionary(PreprocessingStep):

@@ -8,6 +8,7 @@ import logging
 import logging.handlers
 import os.path as op
 import pickle
+import redis
 import struct
 import subprocess
 import tempfile
@@ -17,7 +18,32 @@ import numpy as np
 from nibabel import Nifti1Image
 from nibabel import load as nibload
 
-from realtimefmri.config import LOG_FORMAT, LOG_LEVEL, RECORDING_DIR
+from realtimefmri import config
+
+
+r = redis.StrictRedis(config.REDIS_HOST)
+
+
+def load_timestamped_array_from_redis(key_prefix):
+    """Load a timestamped array from the redis database
+
+    Parameters
+    ----------
+    key_prefix : str
+
+    Returns
+    -------
+    An array of times and an array of data
+    """
+    data = []
+    for key in r.scan_iter(key_prefix + ':*'):
+        dat = pickle.loads(r.get(key))
+        data.append(dat)
+
+    data = sorted(data, key=lambda x: x[0])
+    times, data = zip(*data)
+
+    return np.array(times), np.array(data)
 
 
 def run_command(cmd, raise_errors=True, **kwargs):
@@ -54,7 +80,7 @@ def parse_message(message):
 def load_run(recording_id):
     """Load data from a real-time run into a nifti volumes
     """
-    file_paths = glob(op.join(RECORDING_DIR, recording_id, '*.nii'))
+    file_paths = glob(op.join(config.RECORDING_DIR, recording_id, '*.nii'))
     file_paths = sorted(file_paths)
     volume = None
     for i, file_path in enumerate(file_paths):
@@ -98,7 +124,7 @@ def confirm(prompt, choices=('y', 'n')):
 
 
 def get_logger(name, to_console=False, to_file=False, to_network=False,
-               level=LOG_LEVEL, formatting=LOG_FORMAT):
+               level=config.LOG_LEVEL, formatting=config.LOG_FORMAT):
     '''
     Returns a logger to some desired destinations. Checks to see if the logger
     or any of its parents already have the requested destinations to avoid

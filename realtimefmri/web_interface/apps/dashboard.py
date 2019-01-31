@@ -29,7 +29,7 @@ def get_data_options():
     data_options = []
     for key in r.scan_iter(pipeline_key + b':*:class_name'):
         class_name = pickle.loads(r.get(key))
-        if class_name == 'realtimefmri.stimulate.SendToDashboard':
+        if class_name == 'realtimefmri.preprocess.SendToDashboard':
             data_name_key = key.replace(b':class_name', b':name')
             data_name = pickle.loads(r.get(data_name_key))
             data_options.append({'label': data_name,
