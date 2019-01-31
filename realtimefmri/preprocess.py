@@ -140,8 +140,9 @@ class Pipeline():
                 kwargs = step.get('kwargs', {})
 
                 if self.global_parameters:
-                    for k, v in self.global_parameters.items():
-                        kwargs[k] = kwargs.get(k, v)
+                    for key in self.global_parameters.keys():
+                        if key not in kwargs:
+                            kwargs[key] = self.global_parameters[key]
 
                 cls = pipeline_utils.load_class(step['class_name'])
                 step['instance'] = cls(*args, **kwargs)

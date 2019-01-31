@@ -28,6 +28,9 @@ def create_control_button(label, button_id):
 
 
 session_id = 'admin'
+ttl_sources = ['redis', 'keyboard']
+datasets = config.get_datasets()
+
 layout = [
     dcc.Interval(id='interval-component', interval=1000, n_intervals=0),
     html.Div([html.Div(session_id, id='session-id'),
@@ -40,14 +43,15 @@ layout = [
     html.Div(className='control-panel', children=[
         create_control_button('Collect TTL', 'collect-ttl-status'),
         create_control_button('Collect', 'collect-status'),
-        html.Div([html.Span('TR count: '), html.Span('', id='tr-count')]),
+        html.Div([html.Span('TR count: ', style={'font-size': 'x-small'}),
+                  html.Span('', id='tr-count', style={'font-size': 'x-small'})]),
         html.Hr(), html.Span('Simulation', style={'font-size': 'x-small'}),
         dcc.Dropdown(id='ttl-source', className='control-panel-dropdown',
-                     placeholder='TTL source...', value='',
-                     options=[{'label': d, 'value': d} for d in ['redis', 'keyboard']]),
+                     placeholder='TTL source...', value=ttl_sources[0],
+                     options=[{'label': d, 'value': d} for d in ttl_sources]),
         dcc.Dropdown(id='simulated-dataset', className='control-panel-dropdown',
-                     placeholder='Simulation dataset...', value='',
-                     options=[{'label': d, 'value': d} for d in config.get_datasets()]),
+                     placeholder='Simulation dataset...', value=datasets[0],
+                     options=[{'label': d, 'value': d} for d in datasets]),
         html.Button('TTL', id='simulate-ttl'), html.Button('DCM', id='simulate-volume')]),
 
     # preprocess
