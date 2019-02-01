@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pickle
 import redis
@@ -60,14 +61,14 @@ def serve_models(methods='GET'):
     return b'Models:\n' + b'\n'.join(model_names)
 
 
-@app.server.route('/models/<model_name>')
+@app.server.route('/model/<model_name>')
 def serve_model(model_name, methods=['GET']):
     key_prefix = 'db:model:' + model_name
     keys = list(r.scan_iter(key_prefix + ':*'))
     return f'{len(keys)} time points for {key_prefix}'
 
 
-@app.server.route('/models/<model_name>/fit', methods=['GET', 'POST'])
+@app.server.route('/model/<model_name>/fit', methods=['GET', 'POST'])
 def serve_fit_model(model_name):
     query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
     detrend_type = query.get('detrend_type', None)
@@ -76,7 +77,6 @@ def serve_fit_model(model_name):
     response_times, responses = utils.load_timestamped_array_from_redis('db:responses')
 
     if detrend_type == ['whitematter']:
-        logger.warning('%s %d', detrend_type, len(response_times))
         _, wm_responses = utils.load_timestamped_array_from_redis('db:wm_responses')
         detrender = detrend.WhiteMatterDetrend(n_pcs=10)
         _ = detrender.fit(responses, wm_responses)
@@ -90,17 +90,17 @@ def serve_fit_model(model_name):
     X = np.random.randn(len(y), 10).astype('float32')
 
     if model_type == ['ridge']:
-        logger.warning('Fitting model %s', model_name)
         model = linear_model.LinearRegression()
         _ = model.fit(X, y)
-        logger.warning('Saving model %s', model_name)
         r.set(f'db:model:{model_name}', pickle.dumps(model))
 
     return f'Fitting {model_name} {responses.shape}'
 
 
-@app.server.route('/models/<model_name>/predict', methods=['GET'])
+@app.server.route('/model/<model_name>/predict', methods=['GET'])
 def serve_predict_model(model_name):
+    """Generate predictions from a model
+    """
     query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
     model_type = query.get('model_type', None)
 
@@ -113,6 +113,65 @@ def serve_predict_model(model_name):
     y_hat = model.predict(X)
 
     return f'Predicting {model_name} {len(y_hat)}'
+
+
+@app.server.route('/experiment/trial/append/optimal_stimuli', methods=['GET'])
+def serve_append_optimal_stimulus_trial():
+    """Predict the optimal (and minimal) stimuli
+
+    parameters:
+      - name: model_name
+        in: query
+        type: string
+        required: true
+        description: Name of a pre-trained model
+      - name: n_optimal
+        in: query
+        type: integer
+        description: Number of optimal stimuli to return
+      - name: n_minimal
+        in: query
+        type: integer
+        description: Number of minimal stimuli to return
+      - name: n_random
+        in: query
+        type: integer
+        description: Number of random stimuli to return
+    """
+    query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
+    model_name = query.get('model_name', None)
+    if model_name is None:
+        return 'Must provide model_name in query string.'
+
+    n_optimal = query.get('n_optimal', 3)
+    n_minimal = query.get('n_minimal', 3)
+    n_random = query.get('n_random', 3)
+
+    X = np.random.randn(5, 10).astype('float32')
+    model = r.get(f'db:model:{model_name[0]}')
+    model = pickle.loads(model)
+    y_hat = model.predict(X)
+
+    optimal_indices = y_hat.argpartition(-n_optimal)[-n_optimal:]
+    minimal_indices = y_hat.argpartition(n_minimal)[:n_minimal]
+
+    for i in range(4):
+        trial = {'type': 'video',
+                 'sources': [f'/static/videos/{i}.mp4'],
+                 'width': 400, 'height': 400, 'autoplay': True}
+        r.lpush('experiment:trials', pickle.dumps(trial))
+
+    return f'Predicting {model_name} {len(y_hat)}'
+
+
+@app.server.route('/experiment/trial/next', methods=['POST'])
+def serve_next_trial():
+    trial = r.rpop('experiment:trials')
+    if trial is None:
+        return 'No trials remaining'
+
+    trial = pickle.loads(trial)
+    return json.dumps(trial)
 
 
 @app.server.route('/experiment/log/<topic>', methods=['POST'])
