@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="/static/experiment/">
+    <title>My experiment</title>
+    <script src="jsPsych/jspsych.js"></script>
+    <script src="jsPsych/plugins/jspsych-html-keyboard-response.js"></script>
+    <script src="jsPsych/plugins/jspsych-image-keyboard-response.js"></script>
+    <script src="jsPsych/plugins/jspsych-animation.js"></script>
+    <link href="jsPsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+  </head>
+  <body></body>
+  <script>
+
+  /* XXX: perhaps we need to randomly sample stimulus and trial duration
+     to avoid trigger locking of each stimulus? */
+  var STIMULUS_DURATION = 2000;
+  var TRIAL_DURATION = 3000;
+  // create timeline variable
+  var timeline = [];
+  var previous_trial_onset = 0;
+
+  // "trigger" trial -- waiting for 5 to start the experiment
+  var wait_trigger = {
+    type: 'html-keyboard-response',
+    stimulus: 'Waiting for trigger...',
+    choices: ['5'],
+    on_finish: function(data) {
+      previous_trial_onset = data.time_elapsed;
+    }
+  }
+  timeline.push(wait_trigger);
+
+  var ok = {
+    type: 'html-keyboard-response',
+    stimulus: 'OK'
+  }
+  // timeline.push(ok);
+
+  // let's make a function that creates a new trial variable
+  function make_trial(img_fn) {
+    var trial = {
+    type: 'image-keyboard-response',
+    stimulus: img_fn,
+    choices: ['5'],
+    stimulus_duration: STIMULUS_DURATION,
+    trial_duration: TRIAL_DURATION,
+    response_ends_trial: false,
+    on_finish: function(data) {
+      data.duration = data.time_elapsed - previous_trial_onset;
+      previous_trial_onset = data.time_elapsed;
+    }
+    }
+    return trial;
+  }
+
+  timeline.push(make_trial("img/test.jpeg"));
+  timeline.push(make_trial("img/test.jpeg"));
+
+  jsPsych.init({
+    timeline: timeline,
+    on_finish: function() {
+      jsPsych.data.displayData();
+    }
+  })
+
+  </script>
+</html>

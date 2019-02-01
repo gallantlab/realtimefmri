@@ -31,7 +31,7 @@ def display_page(pathname):
     elif pathname == '/':
         content = [html.A('controls', href='/controls'), html.Br(),
                    html.A('dashboard', href='/dashboard'), html.Br(),
-                   html.A('experiment', href='/experiment'), html.Br(),
+                   html.A('experiments', href='/experiments'), html.Br(),
                    html.A('pipeline', href='/pipeline'), html.Br(),
                    html.A('viewer', href='http://localhost:8051')]
     else:
