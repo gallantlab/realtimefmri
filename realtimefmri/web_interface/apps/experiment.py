@@ -115,7 +115,7 @@ def serve_predict_model(model_name):
     return f'Predicting {model_name} {len(y_hat)}'
 
 
-@app.server.route('/experiment/trial/append/optimal_stimuli', methods=['GET'])
+@app.server.route('/experiment/trial/append/optimal_stimuli', methods=['POST'])
 def serve_append_optimal_stimulus_trial():
     """Predict the optimal (and minimal) stimuli
 
@@ -155,9 +155,9 @@ def serve_append_optimal_stimulus_trial():
     optimal_indices = y_hat.argpartition(-n_optimal)[-n_optimal:]
     minimal_indices = y_hat.argpartition(n_minimal)[:n_minimal]
 
-    for i in range(4):
+    for i in range(1, 5):
         trial = {'type': 'video',
-                 'sources': [f'/static/videos/{i}.mp4'],
+                 'sources': [f'/static/videos/{i:02}.mp4'],
                  'width': 400, 'height': 400, 'autoplay': True}
         r.lpush('experiment:trials', pickle.dumps(trial))
 
