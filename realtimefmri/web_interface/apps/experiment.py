@@ -1,13 +1,12 @@
 import json
-import numpy as np
 import pickle
-import redis
 import time
-import urllib
-
-from flask import request
 from pathlib import Path
+
+import numpy as np
 import scipy.stats
+import redis
+from flask import request
 from sklearn import linear_model
 
 from realtimefmri import config, detrend, utils
@@ -70,9 +69,8 @@ def serve_model(model_name, methods=['GET']):
 
 @app.server.route('/model/<model_name>/fit', methods=['GET', 'POST'])
 def serve_fit_model(model_name):
-    query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
-    detrend_type = query.get('detrend_type', None)
-    model_type = query.get('model_type', None)
+    detrend_type = request.args.get('detrend_type', None)
+    model_type = request.args.get('model_type', None)
 
     response_times, responses = utils.load_timestamped_array_from_redis('db:responses')
 
@@ -89,7 +87,7 @@ def serve_fit_model(model_name):
     y = scipy.stats.zscore(responses, axis=0)
     X = np.random.randn(len(y), 10).astype('float32')
 
-    if model_type == ['ridge']:
+    if model_type == 'ridge':
         model = linear_model.LinearRegression()
         _ = model.fit(X, y)
         r.set(f'db:model:{model_name}', pickle.dumps(model))
@@ -101,8 +99,7 @@ def serve_fit_model(model_name):
 def serve_predict_model(model_name):
     """Generate predictions from a model
     """
-    query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
-    model_type = query.get('model_type', None)
+    model_type = request.args.get('model_type', None)
 
     # # get feature times
     # feature_times, features = load_features('motion_energy')
@@ -113,6 +110,36 @@ def serve_predict_model(model_name):
     y_hat = model.predict(X)
 
     return f'Predicting {model_name} {len(y_hat)}'
+
+
+@app.server.route('/experiment/trial/append/random', methods=['POST'])
+def serve_append_random_stimulus_trial():
+    """Predict the optimal (and minimal) stimuli
+
+    parameters:
+      - name: model_name
+        in: query
+        type: string
+        required: true
+        description: Name of a pre-trained model
+      - name: n
+        in: query
+        type: integer
+        description: Number of random stimuli to append
+    """
+    n = request.args.get('n', None)
+    if n is None:
+        n = 2
+    else:
+        n = int(n[0])
+
+    for i in range(n):
+        trial = {'type': 'video',
+                 'sources': [f'/static/videos/{i + 1:02}.mp4'],
+                 'width': 400, 'height': 400, 'autoplay': True}
+        r.lpush('experiment:trials', pickle.dumps(trial))
+
+    return f'Appending {n} random trials'
 
 
 @app.server.route('/experiment/trial/append/optimal_stimuli', methods=['POST'])
@@ -128,27 +155,28 @@ def serve_append_optimal_stimulus_trial():
       - name: n_optimal
         in: query
         type: integer
-        description: Number of optimal stimuli to return
+        description: Number of optimal stimuli to append
       - name: n_minimal
         in: query
         type: integer
-        description: Number of minimal stimuli to return
+        description: Number of minimal stimuli to append
       - name: n_random
         in: query
         type: integer
-        description: Number of random stimuli to return
+        description: Number of random stimuli to append
     """
-    query = urllib.parse.parse_qs(request.query_string.decode('utf-8').lstrip('?'))
-    model_name = query.get('model_name', None)
+    model_name = request.args.get('model_name')
     if model_name is None:
         return 'Must provide model_name in query string.'
 
-    n_optimal = query.get('n_optimal', 3)
-    n_minimal = query.get('n_minimal', 3)
-    n_random = query.get('n_random', 3)
+    n_optimal = request.args.get('n_optimal', 3)
+    n_minimal = request.args.get('n_minimal', 3)
+    n_random = request.args.get('n_random', 3)
 
     X = np.random.randn(5, 10).astype('float32')
-    model = r.get(f'db:model:{model_name[0]}')
+    logger.warning(model_name)
+    model = r.get(f'db:model:{model_name}')
+    logger.warning(model_name)
     model = pickle.loads(model)
     y_hat = model.predict(X)
 
