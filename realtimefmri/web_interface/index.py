@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from realtimefmri.web_interface.app import app
-from realtimefmri.web_interface.apps import controls, dashboard, experiment, pipeline
+from realtimefmri.web_interface.apps import controls, dashboard, experiment, model, pipeline
 
 
 def serve_layout():
