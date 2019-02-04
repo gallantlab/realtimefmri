@@ -19,9 +19,10 @@ services:
     restart: always
     volumes:
       - "${PYCORTEX_STORE}:/usr/local/share/pycortex/db"
-      - "${PIPELINE_PATH}:/usr/local/share/realtimefmri/pipelines"
-      - "${DATASTORE_PATH}:/usr/local/share/realtimefmri/datastore"
-      - "${TEST_DATASET_PATH}:/usr/local/share/realtimefmri/datasets"
+      - "${PIPELINE_DIR}:/usr/local/share/realtimefmri/pipelines"
+      - "${EXPERIMENT_DIR}:/usr/local/share/realtimefmri/experiments"
+      - "${DATASTORE_DIR}:/usr/local/share/realtimefmri/datastore"
+      - "${TEST_DATASET_DIR}:/usr/local/share/realtimefmri/datasets"
       - "${STATIC_PATH}:/public/static"
       - scanner:/usr/local/share/realtimefmri/scanner
       - .:/app/realtimefmri

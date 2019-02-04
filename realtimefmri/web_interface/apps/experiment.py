@@ -1,10 +1,11 @@
 import json
 import pickle
 import time
+from pathlib import Path
 
 import numpy as np
 import redis
-from flask import request
+from flask import render_template, request, send_from_directory
 
 from realtimefmri import config, utils
 from realtimefmri.web_interface.app import app
@@ -12,6 +13,18 @@ from realtimefmri.web_interface.app import app
 
 logger = utils.get_logger(__name__)
 r = redis.StrictRedis(config.REDIS_HOST)
+
+
+@app.server.route('/experiment/run/<path:path>')
+def serve_run_experiment(path):
+    return send_from_directory(config.EXPERIMENT_DIR, path + '.html')
+
+
+@app.server.route('/experiments')
+def serve_experiments():
+    experiments = Path(config.EXPERIMENT_DIR).glob('*.html')
+    experiment_names = [e.stem for e in experiments]
+    return render_template('experiments.html', experiment_names=experiment_names)
 
 
 @app.server.route('/experiment/trial/append/random', methods=['POST'])

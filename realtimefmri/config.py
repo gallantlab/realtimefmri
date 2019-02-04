@@ -111,6 +111,7 @@ else:
 initialize_config()
 
 PIPELINE_DIR = op.join(DATA_DIR, 'pipelines')
+EXPERIMENT_DIR = op.join(DATA_DIR, 'experiments')
 SCANNER_DIR = op.join(DATA_DIR, 'scanner')
 DATASTORE_DIR = op.join(DATA_DIR, 'datastore')
 RECORDING_DIR = op.join(DATA_DIR, 'recordings')
