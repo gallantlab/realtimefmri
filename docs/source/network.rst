@@ -40,7 +40,7 @@ Configure the default settings:
 4. Enter ``4`` to go to the "Online export defaults" menu
 5. Enter ``1`` and set "Target port" to ``-1``
 6. Enter ``3`` and set "Target path" to ``y:``
-7. Enter ``5`` to set ``SendBuffered`` to ``OFF``
+7. Enter ``8`` to set ``SendBuffered`` to ``OFF``
 8. Enter ``q`` to go back to the main ``ideacmdtool`` menu
 
 Configure the session settings:
