@@ -9,6 +9,7 @@ from flask import render_template, request, send_from_directory
 
 from realtimefmri import config, utils
 from realtimefmri.web_interface.app import app
+from realtimefmri.web_interface.apps.model import detrend_responses
 
 
 logger = utils.get_logger(__name__)
@@ -61,36 +62,41 @@ def serve_append_top_n():
         in: query
         type: string
         required: true
-        description: Name of a pre-trained model
+        description: Name of a pre-trained model. Must exist in the database as a pickled Python
+            class with a ``predict_proba`` method that outputs a score for each class and a
+            ``class_names`` attribute containing string representations of the classes.
       - name: n
         in: query
         type: integer
         description: Number of random stimuli to append
+      - name: detrend_type
+        in: query
+        type: string
+        description: Type of detrending to apply
     """
     model_name = request.args.get('model_name')
     n = int(request.args.get('n', '5'))
+    detrend_type = request.args.get('detrend_type', 'whitematterdetrend')
 
-    model = pickle.loads(r.get(f'db:model:{model_name}'))
-    concept_names = 'a,absorption,acknowledgeable,adjudicate,affect,Aida,alewife,Almaden,Amerada,anastomosis,anniversary,any,apprise,Argonne,artifice,Assyriology,attribute,avalanche,background,Bamako,barracuda,bawd,befall,Benedikt,bestir,billet,Blackburn,blot,Bolshevism,boson,brakeman,Bridgetown,browse,bullfrog,busload,Caesarian,camouflage,capstan,carousel,catenate,centenary,channel,chemisorb,chlorine,Churchillian,Clarence,close,codeposit,colloidal,commune,concentrate,Confucius,constant,controller,Corinth,cotman,Cowan,creekside,CRT,cupric,cytochemistry,Dartmouth,decal,deficient,demark,depressant,deterring,Dickinson,diocesan,dissemble,doghouse,doublet,dressmake,Dumpty,earthenware,eerie,electroencephalogram,embedded,endogamy,epicyclic,erosive,eucalyptus,exasperate,expansible,extramarital,fallen,fearsome,fetish,fingerprint,flash,flu,footstep,foster,freeman,Fuchs,gag,garland,genesis,gibbon,glean,Godwin,graham,Greg,GSA,Gwyn,Halstead,Harcourt,havoc,hedgehog,heredity,hidalgo,ho,homologue,Horus,humility,hymen,Ifni,impedance,inadvertent,incorrect,Indus,inflow,inputting,intemperance,invasive,irrepressible,jackknife,Jesus,joy,kaiser,keto,Klein,Kurd,landlord,laureate,leftward,Levin,limelight,Litton,Lombardy,lubricious,Lyman,magnanimity,Malta,Marceau,Maryland,Maya,meaty,Mendelssohn,Metcalf,might,minstrelsy,Moe,monstrosity,motet,multiplicity,myopic,nawab,nervous,niggardly,nondescript,nu,oblong,off,omnivore,orchestra,ostrich,pagoda,paperback,parry,patriot,pediatric,percent,personage,phi,picojoule,piss,playa,poesy,pompadour,postcondition,precious,primitive,prokaryotic,protagonist,psyllium,purpose,quantile,r,ramshackle,reason,reflexive,Rene,resultant,rhombus,rivet,rosebud,ruination,safekeeping,sanctuary,Saudi,scherzo,scrappy,sebaceous,Semitic,settle,shaven,shoemake,sibyl,simile,sketchy,slippery,snapdragon,solder,sorption,specific,splenetic,squawk,stark,Sternberg,stormbound,Stuart,sudden,superfluity,swain,syllabic,tactic,Tarbell,teet,term,Theodore,thorough,tide,tofu,torrential,transcendent,treat,tritium,tularemia,twirl,unilateral,urinate,vampire,Venusian,video,vivid,Wahl,Washington,wee,wherein,wigging,wireman,Wordsworth,xenon,your'
-    concept_names = concept_names.split(',')
-    probabilities = np.random.randn(len(concept_names))
+    model = pickle.loads(r.get(f'model:{model_name}'))
+    trial_index = pickle.loads(r.get('experiment:trial:current'))['index']
 
+    _, responses = detrend_responses('responses:thin', detrend_type=detrend_type, trials=[trial_index])
+
+    probabilities = model.predict_proba(responses.mean(0, keepdims=True)).ravel()
     top_indices = probabilities.argsort()[-n:][::-1]
     top_sizes = 10 + np.arange(n) * 10
-    logger.warning(top_indices)
-    logger.warning(top_sizes)
-    logger.warning(concept_names)
+    top_class_names = model.class_names[top_indices]
 
     stimulus = ''
-    for i in range(n):
-        stimulus += f"<p style='font-size:{top_sizes[i]}px'>{concept_names[top_indices[i]]}</p>"
+    for size, class_name in zip(top_sizes[::-1], top_class_names[::-1]):
+        stimulus += f"<p style='font-size:{size}px'>{class_name}</p>"
 
     trial = {'type': 'html-keyboard-response',
              'stimulus': stimulus,
              'stimulus_duration': 2000,
              'trial_duration': 2000}
 
-    logger.warning('stimulus %s', str(trial))
     r.lpush('experiment:trials', pickle.dumps(trial))
 
     return f'Appending top {n} trial'
@@ -128,7 +134,7 @@ def serve_append_optimal_stimulus_trial():
     n_random = request.args.get('n_random', 3)
 
     X = np.random.randn(5, 10).astype('float32')
-    model = r.get(f'db:model:{model_name}')
+    model = r.get(f'model:{model_name}')
     model = pickle.loads(model)
     y_hat = model.predict(X)
 
@@ -154,6 +160,70 @@ def serve_next_trial():
     return json.dumps(trial)
 
 
+@app.server.route('/experiment/trial/new', methods=['POST'])
+def serve_new_trial():
+    """Initialize a new trial"""
+    start_time = request.args.get('time')
+
+    current_trial = r.get('experiment:trial:current')
+    if current_trial is None:
+        trial_index = 0
+    else:
+        previous_trial = pickle.loads(current_trial)
+        trial_index = previous_trial['index'] + 1
+
+    current_trial = {'start_time': start_time, 'end_time': None, 'index': trial_index}
+    trial = pickle.dumps(current_trial)
+    r.set('experiment:trial:current', trial)
+    r.set(f'experiment:trial:{trial_index}', trial)
+    return json.dumps(current_trial)
+
+
+@app.server.route('/experiment/trial/current', methods=['GET'])
+def serve_current_trial():
+    """Trial number
+
+    parameters:
+      - name: model_name
+        in: query
+        type: string
+        required: true
+        description: Name of a pre-trained model
+      - name: n_optimal
+        in: query
+        type: integer
+        description: Number of optimal stimuli to append
+      - name: n_minimal
+        in: query
+        type: integer
+        description: Number of minimal stimuli to append
+      - name: n_random
+        in: query
+        type: integer
+        description: Number of random stimuli to append
+    """
+    current_trial = r.get('experiment:trial:current')
+    if current_trial is None:
+        response = 'No trial currently active'
+
+    else:
+        current_trial = pickle.loads(current_trial)
+
+        if request.method == 'GET':
+            response = json.dumps(current_trial)
+
+    return response
+
+
+@app.server.route('/experiment/trial/reset', methods=['POST'])
+def serve_reset_trial():
+    """Reset the trial count"""
+    for key in r.scan_iter('experiment:trial:*'):
+        r.delete(key)
+
+    return f'Trial count reset'
+
+
 @app.server.route('/experiment/log/<topic>', methods=['POST'])
 def serve_log(topic):
     """Store a log message from the client
@@ -169,7 +239,6 @@ def serve_log(topic):
     HTTP status code
     """
     if request.method == 'POST':
-        logger.debug(request.json)
         receive_time = time.time()
         r.set(f'log:{topic}:{receive_time}:time', request.json['time'])
         r.set(f'log:{topic}:{receive_time}:message', request.json['message'])

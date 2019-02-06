@@ -923,7 +923,7 @@ class SendToPycortexViewer(PreprocessingStep):
     ----------
     redis : redis connection
     """
-    def __init__(self, name, host=config.REDIS_HOST, port=6379, *args, **kwargs):
+    def __init__(self, name, *args, **kwargs):
         parameters = {'name': name}
         parameters.update(kwargs)
         super(SendToPycortexViewer, self).__init__(**parameters)
@@ -937,7 +937,10 @@ class StoreToRedis(PreprocessingStep):
 
     Parameters
     ----------
-    key : str
+    key_prefix : str
+        Prefix to redis key. Individual samples will be stored to the database with keys that
+        append the current trial index and sample index to this prefix,
+        e.g., responses:trial0000:0000
 
     Attributes
     ----------
@@ -945,19 +948,37 @@ class StoreToRedis(PreprocessingStep):
         Incrementing index
     active : bool
     """
-    def __init__(self, key, *args, active=True, **kwargs):
-        parameters = {'key': key, 'active': active}
+    def __init__(self, key_prefix, *args, active=True, **kwargs):
+        parameters = {'key_prefix': key_prefix, 'active': active}
         parameters.update(kwargs)
         super(StoreToRedis, self).__init__(**parameters)
-        self.key = key
+        self.key_prefix = key_prefix
         self.index = 0
         self.active = active
+
+    def update_state(self):
+        super(StoreToRedis, self).update_state()
+
+        trial = r.get('experiment:trial:current')
+        if trial is None:
+            key = f'{self.key_prefix}:pretrial'
+
+        else:
+            trial = pickle.loads(trial)
+            trial_index = trial['index']
+
+            if trial_index > 9999:
+                warnings.warn('Trial index overflow (max 9999 trials). Sorting trials as strings will fail.')
+
+            key = f'{self.key_prefix}:trial{trial_index:04}'
+
+        self.key = key
 
     def run(self, *args):
         self.update_state()
 
         if self.active:
-            key = f'{self.key}:{self.index}'
+            key = f'{self.key}:{self.index:04}'
             r.set(key, pickle.dumps(args))
             self.index += 1
 

@@ -8,19 +8,15 @@ from realtimefmri.config import get_subject_directory
 
 class WhiteMatterDetrend():
     def __init__(self, n_pcs=10):
-        self.n_pcs = n_pcs
-        self.model = None
-        self.pca = None
-
-    def fit(self, gm, wm, n_pcs=10):
         pca = decomposition.PCA(n_components=n_pcs)
-        pcs = pca.fit_transform(wm)
-
         model = linear_model.LinearRegression()
-        model.fit(pcs, gm)
 
-        self.model = model
         self.pca = pca
+        self.model = model
+
+    def fit(self, gm, wm):
+        pcs = self.pca.fit_transform(wm)
+        self.model.fit(pcs, gm)
         return self
 
     def detrend(self, gm, wm):

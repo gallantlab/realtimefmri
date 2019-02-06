@@ -43,8 +43,11 @@ layout = [
     html.Div(className='control-panel', children=[
         create_control_button('Collect TTL', 'collect-ttl-status'),
         create_control_button('Collect', 'collect-status'),
-        html.Div([html.Span('TR count: ', style={'font-size': 'x-small'}),
-                  html.Span('', id='tr-count', style={'font-size': 'x-small'})]),
+        html.Div([html.Span('TR: ', style={'font-size': 'x-small'}),
+                  html.Span('', id='tr-count', style={'font-size': 'x-small'}),
+                  html.Span(' / ', style={'font-size': 'x-small'}),
+                  html.Span('Trial: ', style={'font-size': 'x-small'}),
+                  html.Span('', id='trial-count', style={'font-size': 'x-small'})]),
         html.Hr(), html.Span('Simulation', style={'font-size': 'x-small'}),
         dcc.Dropdown(id='ttl-source', className='control-panel-dropdown',
                      placeholder='TTL source...', value=ttl_sources[0],
@@ -99,6 +102,20 @@ def update_tr_count(n):
             count = pickle.loads(count)
 
         return count
+
+    else:
+        raise dash.exceptions.PreventUpdate()
+
+
+@app.callback(Output('trial-count', 'children'),
+              [Input('interval-component', 'n_intervals')])
+def update_trial_index(n):
+    if n is not None:
+        trial_count = r.get('experiment:trial:current')
+        if trial_count:
+            trial_count = pickle.loads(trial_count)['index']
+
+        return trial_count
 
     else:
         raise dash.exceptions.PreventUpdate()
