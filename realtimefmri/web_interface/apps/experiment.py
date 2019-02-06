@@ -179,7 +179,7 @@ def serve_new_trial():
     trial = pickle.dumps(current_trial)
     r.set('experiment:trial:current', trial)
     r.set(f'experiment:trial:{trial_index}', trial)
-    return json.dumps(current_trial)
+    return f'Starting trial {trial_index}'
 
 
 @app.server.route('/experiment/trial/current', methods=['GET'])

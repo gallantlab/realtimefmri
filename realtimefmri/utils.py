@@ -40,6 +40,9 @@ def load_timestamped_array_from_redis(key_prefix):
         dat = pickle.loads(r.get(key))
         data.append(dat)
 
+    if len(data) == 0:
+        raise Exception(f'No data with key prefix {key_prefix}')
+
     data = sorted(data, key=lambda x: x[0])
     times, data = zip(*data)
 
