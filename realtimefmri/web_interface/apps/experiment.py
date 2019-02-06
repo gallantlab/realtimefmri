@@ -1,3 +1,4 @@
+import datetime
 import json
 import pickle
 import time
@@ -5,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import redis
-from flask import render_template, request, send_from_directory
+from flask import render_template, request, Response, send_from_directory
 
 from realtimefmri import config, utils
 from realtimefmri.web_interface.app import app
@@ -75,13 +76,15 @@ def serve_append_top_n():
         description: Type of detrending to apply
     """
     model_name = request.args.get('model_name')
+    responses_name = request.args.get('responses_name', 'graymatter')
     n = int(request.args.get('n', '5'))
     detrend_type = request.args.get('detrend_type', 'whitematterdetrend')
 
     model = pickle.loads(r.get(f'model:{model_name}'))
     trial_index = pickle.loads(r.get('experiment:trial:current'))['index']
 
-    _, responses = detrend_responses('responses:thin', detrend_type=detrend_type, trials=[trial_index])
+    key_prefix = f'responses:{responses_name}'
+    _, responses = detrend_responses(key_prefix, detrend_type=detrend_type, trials=[trial_index])
 
     probabilities = model.predict_proba(responses.mean(0, keepdims=True)).ravel()
     top_indices = probabilities.argsort()[-n:][::-1]
@@ -224,7 +227,45 @@ def serve_reset_trial():
     return f'Trial count reset'
 
 
-@app.server.route('/experiment/log/<topic>', methods=['POST'])
+@app.server.route('/experiment/logs', methods=['GET'])
+def serve_experiment_logs():
+    """Reset the trial count"""
+    logs = []
+    for key in r.scan_iter('experiment:log:*'):
+        log = pickle.loads(r.get(key))
+        logs.append({'name': key.decode('utf-8').split(':')[-1], 'length': len(log)})
+
+    return render_template('logs.html', logs=logs)
+
+
+@app.server.route('/experiment/log/store', methods=['POST'])
+def serve_store_experiment_log():
+    """Store the experiment log"""
+    log = json.loads(request.data)
+    log_name = datetime.datetime.strftime(datetime.datetime.now(), '%Y_%m_%d_%H_%M_%S')
+    key = f'experiment:log:{log_name}'
+    r.set(key, pickle.dumps(log))
+    return f'Saved log to {log_name}'
+
+
+@app.server.route('/experiment/log/<log_name>/download', methods=['GET'])
+def serve_download_experiment_log(log_name):
+    """Send download of experiment log"""
+    key = f'experiment:log:{log_name}'
+    log = r.get(key)
+    if log is None:
+        response = f'No log found for {log_name}'
+
+    else:
+        log = pickle.loads(log)
+        log = json.dumps(log)
+        response = Response(log, mimetype="application/json",
+                            headers={"Content-disposition": f"attachment; filename={log_name}.json"})
+
+    return response
+
+
+@app.server.route('/log/<topic>', methods=['POST'])
 def serve_log(topic):
     """Store a log message from the client
 
