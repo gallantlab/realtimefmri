@@ -12,9 +12,17 @@ _`Experiment`
 
   - Information related to a runing real-time experiment
 
+
 - ``experiment:trial:current``
 
-  - A dictionary containing the current trial ``{'start_time': <unix epoch time>, 'end_time': <unix epoch time>, 'index': <integer>}``
+  - A dictionary containing the current trial ``{'start_time': <unix epoch time>, 'end_time': <unix epoch 
+  time>, 'index': <integer>}``
+
+
+- ``experiment:log:<log_name>``
+
+  - A dictionary containing experimental log information
+
 
 - ``responses:<name>:trial<trial_index>:<sample_index>``
 

@@ -17,6 +17,7 @@ Contents
     pipelines
     network
     database
+    web_interface
     logging
 
 API
