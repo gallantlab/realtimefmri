@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="/static/experiment/">
+    <title>My experiment</title>
+    <script src="jsPsych/jspsych.js"></script>
+    <script src="jsPsych/plugins/jspsych-html-keyboard-response.js"></script>
+    <script src="jsPsych/plugins/jspsych-image-keyboard-response.js"></script>
+    <script src="jsPsych/plugins/jspsych-animation.js"></script>
+    <script src="custom-plugins/svg-keyboard-response.js"></script>
+    <script src="snap.svg-min.js"></script>
+    <link href="jsPsych/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+  </head>
+  <body></body>
+  <script>
+
+  /* XXX: perhaps we need to randomly sample stimulus and trial duration
+     to avoid trigger locking of each stimulus? */
+  var CUE_DURATION = 2000;
+  var IMAGINE_DURATION = 3000;
+  var TRIAL_DURATION = CUE_DURATION + IMAGINE_DURATION;
+  var BUTTON_RESPONSE_DURATION = 3000;
+  var BLANK_DURATION = 1000;
+  var TRIAL_BUTTON_RESPONSE_DURATION = BUTTON_RESPONSE_DURATION + BLANK_DURATION;
+  var SEQUENCE_DURATION = 2000;
+  var BLANK_AFTER_SEQ_DURATION = 1000;
+  var TRIAL_SEQUENCE_DURATION = SEQUENCE_DURATION + BLANK_DURATION;
+  // create timeline variable
+  var timeline = [];
+  var previous_trial_onset = 0;
+
+  // "trigger" trial -- waiting for 5 to start the experiment
+  var wait_trigger = {
+    type: 'html-keyboard-response',
+    stimulus: 'Waiting for trigger...',
+    choices: ['5'],
+    on_finish: function(data) {
+      previous_trial_onset = data.time_elapsed;
+    }
+  }
+  timeline.push(wait_trigger);
+
+  var ok = {
+    type: 'html-keyboard-response',
+    stimulus: 'OK'
+  }
+  // timeline.push(ok);
+
+  // let's make a function that creates a new trial variable
+  function make_trial(cues) {
+    var trial = {
+    type: 'svg-keyboard-response',
+    cues: cues,
+    choices: jsPsych.NO_KEYS,
+    stimulus_duration: CUE_DURATION,
+    trial_duration: TRIAL_DURATION,
+    response_ends_trial: false,
+    on_finish: function(data) {
+      data.duration = data.time_elapsed - previous_trial_onset;
+      previous_trial_onset = data.time_elapsed;
+        }
+      };
+    return trial;
+    };
+
+  function make_block(sequence, cues) {
+      var block = [];
+      // first show sequence
+      var seq = {
+        type: 'html-keyboard-response',
+        stimulus: sequence,
+        stimulus_duration: SEQUENCE_DURATION,
+        trial_duration: TRIAL_SEQUENCE_DURATION,
+        choices: jsPsych.NO_KEYS
+      };
+      block.push(seq);
+      // make response "trial"
+      var response = {
+          type: 'html-keyboard-response',
+          stimulus: 'Which one did you imagine? [1, 2, 3, 4]',
+          choices: ['1', '2', '3', '4'],
+          stimulus_duration: BUTTON_RESPONSE_DURATION,
+          trial_duration: TRIAL_BUTTON_RESPONSE_DURATION,
+          response_ends_trial: false
+      };
+      // now show cues
+      for (i = 0; i < cues.length; i++) {
+        block.push(make_trial(cues[i]));
+        block.push(response);
+      };
+      return block;
+  }
+
+  var test_cues = [
+    ["push", "pull", "force", "pry"],
+    ["pry", "force", "pull", "push"],
+    ["force", "pry", "push", "pull"],
+    ["force", "pry", "push", "pull"],
+   ];
+
+   timeline = timeline.concat(make_block("1324", test_cues));
+
+   jsPsych.init({
+       timeline: timeline,
+       on_finish: function() {
+           jsPsych.data.displayData();
+       }
+   })
+
+  </script>
+</html>
