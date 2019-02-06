@@ -16,6 +16,7 @@ Contents
     scanning
     pipelines
     network
+    database
     logging
 
 API
