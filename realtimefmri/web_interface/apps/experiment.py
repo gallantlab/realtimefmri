@@ -86,10 +86,12 @@ def serve_append_top_n():
     key_prefix = f'responses:{responses_name}'
     _, responses = detrend_responses(key_prefix, detrend_type=detrend_type, trials=[trial_index])
 
-    probabilities = model.predict_proba(responses.mean(0, keepdims=True)).ravel()
+    responses = np.nan_to_num(responses.mean(0, keepdims=True))
+    probabilities = model.predict_proba(responses).ravel()
+
     top_indices = probabilities.argsort()[-n:][::-1]
     top_sizes = 10 + np.arange(n) * 10
-    top_class_names = model.class_names[top_indices]
+    top_class_names = [model.class_names[i] for i in top_indices]
 
     stimulus = ''
     for size, class_name in zip(top_sizes[::-1], top_class_names[::-1]):
