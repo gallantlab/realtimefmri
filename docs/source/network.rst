@@ -5,7 +5,6 @@ Acquiring DICOM images in real-time
 
 To run a real-time experiment you need to be able to access the volumes as they are acquired. This involves connecting the real-time computer to the scanner console, and configuring the scanner to write out DICOM files in real-time.
 
-These steps should all be performed **before registing the patient for scanning** or DICOM files will not be created in real-time.
 
 Connecting to the scanner network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -35,15 +34,15 @@ Siemens scanners come with a useful program called ``ideacmdtool`` that can conf
 2. Press Ctrl-Esc and click "Command Prompt" or click "Run" and enter ``cmd`` in the dialog to launch the command prompt.
 3. Enter ``ideacmdtool`` in the command prompt to start the ``ideacmdtool`` program.
 
-Configure the default settings:
+Configure the default settings (these steps should be performed **BEFORE** registering a patient):
 
 4. Enter ``4`` to go to the "Online export defaults" menu
 5. Enter ``1`` and set "Target port" to ``-1``
 6. Enter ``3`` and set "Target path" to ``y:``
-7. Enter ``5`` to set ``SendBuffered`` to ``OFF``
+7. Enter ``8`` to set ``SendBuffered`` to ``OFF``
 8. Enter ``q`` to go back to the main ``ideacmdtool`` menu
 
-Configure the session settings:
+Configure the session settings (these steps should be performed **AFTER** registering a patient, since these flags get reset every time you register a new patient):
 
 9. Enter ``5`` to go to the "Switches" menu
 10. Enter ``8`` to set ``SendIMA`` to ``ON``
