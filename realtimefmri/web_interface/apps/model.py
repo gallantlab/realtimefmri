@@ -65,6 +65,11 @@ def detrend_responses(key_prefix, detrend_type, trials=None):
         detrender = detrend.WhiteMatterDetrend()
         detrender.fit(gm_responses, wm_responses)
 
+        gm_detrended = detrender.detrend(gm_responses, wm_responses)
+
+        gm_mean = np.nanmean(gm_detrended, 0, keepdims=True)
+        gm_std = np.nanstd(gm_detrended, 0, keepdims=True)
+
         if trials is not None:
             response_times, gm_responses = load_responses(key_prefix, trials=trials)
             _, wm_responses = load_responses('responses:whitematterdetrend', trials=trials)
@@ -74,7 +79,7 @@ def detrend_responses(key_prefix, detrend_type, trials=None):
     else:
         raise NotImplementedError(f'{detrend_type} not implemented.')
 
-    gm_detrended = stats.zscore(gm_detrended, axis=0)
+    gm_detrended = (gm_detrended - gm_mean) / gm_std
 
     return response_times, gm_detrended
 
