@@ -29,6 +29,7 @@ def dicom_to_nifti(dicom_path):
            '-s', 'y',
            '-b', 'n',
            '-1',
+           '-f', 'mystudy%s',
            '-o', d.name, dicom_path]
 
     _ = utils.run_command(cmd)
