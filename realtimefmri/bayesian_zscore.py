@@ -68,7 +68,7 @@ class BayesianZScore(preprocess.PreprocessingStep):
         -------
         The input array z-scored using the posterior mean and variance
         """
-        if not hasattr(self, 'data'):
+        if self.data is None:
             self.data = buffered_array.BufferedArray(inp.size, dtype=inp.dtype)
 
         self.data.append(inp)
