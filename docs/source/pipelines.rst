@@ -3,7 +3,7 @@
 Pipelines
 =========
 
-The flexibility of this package comes from your ability to configure custom preprocessing pipelines. To run a real-time experiment, you'll need to configure these. Pipelines are specified using :mod:`yaml` files stored in the ``pipelines`` directory.
+Part of flexibility of this package comes from the ability to configure custom preprocessing pipelines. A pipeline describes a sequence of processing steps that each new sample undergoes. Pipelines are specified using :mod:`yaml` files stored in the ``pipelines`` directory.
 
 
 Configuring a real-time preprocessing pipeline
@@ -46,7 +46,7 @@ The basic format of a preprocessing pipeline configuration file is:
 Example pipeline
 ----------------
 
-Here's an example of a complete pipeline configuration. It converts the raw DICOM to nifti, motion corrects, extracts the motion parameters from the motion correction affine, extracts the gray matter voxels, computes their mean and standard deviations, computes their z-score, decodes using a pre-trained decoder, sends an image of the decoded category to the dashboard, sends the motion parameters to the dashboard, and sends the gray matter activity to the pycortex viewer.
+Here's an example of a complete pipeline configuration. It converts the raw DICOM to nifti, motion corrects, extracts the motion parameters from the motion correction affine, extracts the gray matter voxels, computes their mean and standard deviations, computes their z-score, decodes using a pre-trained decoder, sends an image of the decoded category to the :ref:`dashboard <dashboard>`, sends the motion parameters to the dashboard, and sends the gray matter activity to the pycortex viewer.
 
 .. code-block:: yaml
 
@@ -54,11 +54,6 @@ Here's an example of a complete pipeline configuration. It converts the raw DICO
     n_skip: 0
 
   pipeline:
-    - name: debug
-      class_name: realtimefmri.preprocess.Debug
-      input: [ raw_image_nii ]
-      output: [ nii_repr, nii_shape ]
-
     - name: motion_correct
       class_name: realtimefmri.preprocess.MotionCorrect
       kwargs: { output_transform: True }

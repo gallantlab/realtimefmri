@@ -1,18 +1,15 @@
-API
-===
-
-preprocessing
--------------
+Preprocess
+----------
 
 .. automodule:: realtimefmri.preprocess
     :members:
     :inherited-members:
     :show-inheritance:
 
-stimulating
------------
+Utils
+-----
 
-.. automodule:: realtimefmri.stimulate
+.. automodule:: realtimefmri.utils
     :members:
     :inherited-members:
     :show-inheritance:

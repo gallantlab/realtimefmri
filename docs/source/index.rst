@@ -6,26 +6,42 @@
 **realtimefmri** documentation
 ==============================
 
-Contents
---------
+Real-time fMRI
+==============
 .. toctree::
-    :maxdepth: 1
+  :maxdepth: 1
 
-    overview
-    installation
-    scanning
-    pipelines
-    network
-    database
-    web_interface
-    logging
+  overview
+  installation
+  pipelines
+  database
+  logging
+
+
+Scanning
+========
+
+.. toctree::
+  :maxdepth 1
+
+  scanning/index
+
+
+Web interface
+=============
+
+.. toctree::
+  :maxdepth 1
+
+  web_interface/index
+
 
 API
----
+===
 .. toctree::
-    :maxdepth: 2
+  :maxdepth: 2
 
-    api
+  api
 
 Indices and tables
 ==================

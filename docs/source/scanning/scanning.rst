@@ -21,7 +21,7 @@ During the scanning session
 Control panel
 ^^^^^^^^^^^^^
 5. Go to http://localhost:8050/controls in your web browser.
-6. Select "keyboard" as the "TTL source..." and start the data collectors by clicking the ▶ buttons next to "Collect TTL", "Collect volumes", and "Collect" (in that order).
+6. Select "keyboard" as the "TTL source..." and start the data collectors by clicking the ▶ buttons next to "Collect TTL" and "Collect" (in that order).
 7. Select the Preprocessing pipeline using the "Configuration..." dropdown.
 8. Select the pycortex surface, transform, and mask using the dropdowns.
 9. Start the preprocessor by clicking the ▶ button next to "Preprocess".
