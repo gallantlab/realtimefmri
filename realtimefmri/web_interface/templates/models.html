@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+	Database models:
+	<ul>
+	{% for database_model in database_models %}
+	<li><a href="/model/{{ database_model }}/store">{{ database_model }}</a></li>
+	{% endfor %}
+	</ul>
+	Datastore models:
+	<ul>
+	{% for datastore_model in datastore_models %}
+	<li><a href="/model/{{ datastore_model|escape }}/store">{{ datastore_model|escape }}</a></li>
+	{% endfor %}
+	</ul>
+
+</body>
+</html>
