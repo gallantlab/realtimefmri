@@ -38,9 +38,11 @@ Configure the default settings (these steps should be performed **BEFORE** regis
 
 4. Enter ``4`` to go to the "Online export defaults" menu
 5. Enter ``1`` and set "Target port" to ``-1``
-6. Enter ``3`` and set "Target path" to ``y:``
+6. Enter ``3`` and set "Target path" to ``y:`` (or whatever path you mounted the SAMBA folder on)
 7. Enter ``8`` to set ``SendBuffered`` to ``OFF``
 8. Enter ``q`` to go back to the main ``ideacmdtool`` menu
+
+.. image:: network_online_export.jpg
 
 Configure the session settings (these steps should be performed **AFTER** registering a patient, since these flags get reset every time you register a new patient):
 
@@ -48,3 +50,5 @@ Configure the session settings (these steps should be performed **AFTER** regist
 10. Enter ``8`` to set ``SendIMA`` to ``ON``
 11. Enter ``q`` to go back to the main ``ideacmdtool`` menu
 12. Enter ``q`` to exit ``ideacmdtool``
+
+.. image:: network_switches.jpg
