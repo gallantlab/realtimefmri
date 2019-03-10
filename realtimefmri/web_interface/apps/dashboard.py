@@ -158,7 +158,41 @@ def generate_update_graph():
                                         'showline': False, 'ticks': '', 'showticklabels': False,
                                         'scaleanchor': 'x', 'scaleratio': 1.}}
                     layout_updates.append(layout)
-
+                elif plot_type == b'text':
+                    ncols = len(data)
+                    max_ntext = 0
+                    for icol, dt in enumerate(data):
+                        ntexts = len(dt)
+                        max_ntext = max(ntexts, max_ntext)
+                        trace = go.Scatter(
+                            x=[icol] * ntexts,
+                            y=list(range(ntexts)),
+                            mode='text',
+                            text=dt,
+                            textposition='top center'
+                        )
+                        traces.append(trace)
+                    layout = {
+                        'xaxis': {
+                            'range': [-0.5, ncols + 0.5],
+                            'showgrid': False,
+                            'zeroline': False,
+                            'showline': False,
+                            'ticks': '',
+                            'showticklabels': False
+                        },
+                        'yaxis': {
+                            'range': [max_ntext + 0.5, -0.5],
+                            'showgrid': False,
+                            'zeroline': False,
+                            'showline': False,
+                            'ticks': '',
+                            'showticklabels': False,
+                        },
+                        'showlegend': False,
+                        'font': {'size': 24}
+                    }
+                    layout_updates.append(layout)
                 else:
                     warnings.warn('{} plot not implemented. Omitting this plot.'.format(plot_type))
             else:
