@@ -78,6 +78,12 @@ def get_datasets():
     for path in paths:
         datasets.append(op.basename(path))
 
+    if len(datasets) == 0:
+        # create an empty directory if none is found
+        path = op.join(DATASET_DIR, "default")
+        os.makedirs(path)
+        datasets.append(op.basename(path))
+
     return datasets
 
 
