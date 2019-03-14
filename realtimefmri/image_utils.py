@@ -2,6 +2,7 @@ import os
 import os.path as op
 import shlex
 import tempfile
+import subprocess
 
 import nibabel
 import numpy as np
@@ -32,7 +33,7 @@ def dicom_to_nifti(dicom_path):
            '-f', 'mystudy%s',
            '-o', d.name, dicom_path]
 
-    _ = utils.run_command(cmd)
+    _ = utils.run_command(cmd, stdout=subprocess.DEVNULL)
     nii = nibabel.load(op.join(d.name, os.listdir(d.name)[0]), mmap=False)
 
     affine = nii.affine
