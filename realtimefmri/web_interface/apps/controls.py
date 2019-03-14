@@ -18,6 +18,7 @@ from realtimefmri import collect, collect_ttl, config, preprocess, viewer
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface import utils
 from realtimefmri.web_interface.app import app
+from realtimefmri.web_interface.apps.dashboard import graphs
 
 logger = get_logger('control_panel', to_console=True, to_network=True)
 
@@ -94,6 +95,10 @@ def flush_db(n):
     if n is not None:
         r.flushdb()
 
+        # reset all graphs
+        for key in graphs.keys():
+            graphs[key] = []
+        
     raise dash.exceptions.PreventUpdate()
 
 
