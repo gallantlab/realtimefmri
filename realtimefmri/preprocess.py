@@ -878,6 +878,63 @@ class SklearnPredictor(PreprocessingStep):
         return prediction
 
 
+class SklearnMultiplePredictorsTopK(PreprocessingStep):
+    """Given a list of scikit-learn predictors, runs the `.predict` method
+    of each one of them on incoming activity. Returns a list with the
+    predicted output.
+
+    Parameters
+    ----------
+    surface : str
+        subject/surface ID
+    pickled_predictors : list of str
+        filenames of the pickle files containing the trained classifiers
+    k: int
+
+    Attributes
+    ----------
+    predictors : list of sklearn fitted learner
+
+    Methods
+    -------
+    run():
+        Returns the prediction
+    """
+
+    def __init__(self, surface, pickled_predictors, *args, k=5, nan_to_num=True,
+                 **kwargs):
+        parameters = {
+            'surface': surface,
+            'pickled_predictors': pickled_predictors,
+            'nan_to_num': nan_to_num,
+            'k': k
+        }
+        parameters.update(kwargs)
+        super(SklearnMultiplePredictorsTopK, self).__init__(**parameters)
+        subj_dir = config.get_subject_directory(surface)
+        if not isinstance(pickled_predictors, (list, tuple)):
+            pickled_predictors = [pickled_predictors]
+        pickled_paths = [op.join(subj_dir, pp) for pp in pickled_predictors]
+        self.predictors = [
+            pickle.load(open(pp, 'rb')) for pp in pickled_paths
+        ]
+        self.nan_to_num = nan_to_num
+        self.k = k
+
+    def run(self, activity):
+        activity = activity.ravel()[None]
+        if self.nan_to_num:
+            activity = np.nan_to_num(activity)
+
+        predictions = []
+        for estimator in self.predictors:
+            log_prob = estimator.predict_log_proba(activity)
+            classes = estimator.classes_
+            topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
+            predictions.append(classes[topklogprob][0].tolist())
+        return {'pred': predictions}
+
+
 class SklearnMultiplePredictors(PreprocessingStep):
     """Given a list of scikit-learn predictors, runs the `.predict` method
     of each one of them on incoming activity. Returns a list with the
@@ -926,7 +983,7 @@ class SklearnMultiplePredictors(PreprocessingStep):
         predictions = [
             predictor.predict(activity)[0] for predictor in self.predictors
         ]
-        return predictions
+        return {'pred': predictions}
 
 
 class SendToDashboard(PreprocessingStep):
