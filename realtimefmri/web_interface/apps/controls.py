@@ -32,6 +32,9 @@ session_id = 'admin'
 ttl_sources = ['redis', 'keyboard']
 datasets = config.get_datasets()
 
+# XXX: remove this when dash implement which input triggered the callback
+flush_db_n_clicks_old = None  # global variable to monitor flush_db
+
 layout = [
     dcc.Interval(id='interval-component', interval=1000, n_intervals=0),
     html.Div([html.Div(session_id, id='session-id'),
@@ -92,6 +95,9 @@ r = redis.StrictRedis(config.REDIS_HOST)
 @app.callback(Output('empty-div1', 'children'),
               [Input('flush-db', 'n_clicks')])
 def flush_db(n):
+    global flush_db_n_clicks_old
+    flush_db_n_clicks_old = n
+
     if n is not None:
         r.flushdb()
 
@@ -131,23 +137,29 @@ def update_trial_index(n):
 
 
 @app.callback(Output('collect-ttl-status', 'children'),
-              [Input('collect-ttl-status', 'n_clicks')],
+              [Input('collect-ttl-status', 'n_clicks'),
+               Input('flush-db', 'n_clicks')],
               [State('ttl-source', 'value')])
-def collect_ttl_status(n, ttl_source):
+def collect_ttl_status(n, flush_db_n_clicks, ttl_source):
+    global flush_db_n_clicks_old
+    stop_only = flush_db_n_clicks != flush_db_n_clicks_old
+
     if n is not None:
         pid = r.get(session_id + '_collect_ttl_pid')
-        if pid is None:
+        if pid is None and not stop_only:
             label = u'■'
             process = utils.start_task(collect_ttl.collect_ttl, ttl_source)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info("Started TTL collector (pid %d)", process.pid)
             r.set(session_id + '_collect_ttl_pid', process.pid)
-        else:
+        elif pid is not None:
             logger.info("Stopping TTL collector (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_ttl_pid')
+        else:
+            label = u'▶'
 
         return label
 
@@ -156,22 +168,28 @@ def collect_ttl_status(n, ttl_source):
 
 
 @app.callback(Output('collect-status', 'children'),
-              [Input('collect-status', 'n_clicks')])
-def collect_status(n):
+              [Input('collect-status', 'n_clicks'),
+               Input('flush-db', 'n_clicks')])
+def collect_status(n, flush_db_n_clicks):
+    global flush_db_n_clicks_old
+    stop_only = flush_db_n_clicks != flush_db_n_clicks_old
+
     if n is not None:
         pid = r.get(session_id + '_collect_pid')
-        if pid is None:
+        if pid is None and not stop_only:
             label = u'■'
             process = utils.start_task(collect.collect)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info("Started collector (pid %d)", process.pid)
             r.set(session_id + '_collect_pid', process.pid)
-        else:
+        elif pid is not None:
             logger.info("Stopping collector (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_collect_pid')
+        else:
+            label = u'▶'
 
         return label
 
@@ -180,16 +198,21 @@ def collect_status(n):
 
 
 @app.callback(Output('preprocess-status', 'children'),
-              [Input('preprocess-status', 'n_clicks')],
+              [Input('preprocess-status', 'n_clicks'),
+               Input('flush-db', 'n_clicks')],
               [State('recording-id', 'value'),
                State('preproc-config', 'value'),
                State('pycortex-surface', 'value'),
                State('pycortex-transform', 'value'),
                State('pycortex-mask', 'value')])
-def preprocess_status(n, recording_id, preproc_config, surface, transform, mask):
+def preprocess_status(n, flush_db_n_clicks, recording_id, preproc_config,
+                      surface, transform, mask):
+    global flush_db_n_clicks_old
+    stop_only = flush_db_n_clicks != flush_db_n_clicks_old
+
     if n is not None:
         pid = r.get(session_id + '_preprocess_pid')
-        if pid is None:
+        if pid is None and not stop_only:
             label = u'■'
             global_parameters = {'surface': surface, 'transform': transform, 'mask_type': mask}
             process = utils.start_task(preprocess.preprocess,
@@ -198,11 +221,13 @@ def preprocess_status(n, recording_id, preproc_config, surface, transform, mask)
                 time.sleep(0.1)
             logger.info("Started preprocessor (pid %d)", process.pid)
             r.set(session_id + '_preprocess_pid', process.pid)
-        else:
+        elif pid is not None:
             logger.info("Stopping preprocessor (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_preprocess_pid')
+        else:
+            label = u'▶'
 
         return label
 
@@ -211,25 +236,31 @@ def preprocess_status(n, recording_id, preproc_config, surface, transform, mask)
 
 
 @app.callback(Output('viewer-status', 'children'),
-              [Input('viewer-status', 'n_clicks')],
+              [Input('viewer-status', 'n_clicks'),
+               Input('flush-db', 'n_clicks')],
               [State('pycortex-surface', 'value'),
                State('pycortex-transform', 'value'),
                State('pycortex-mask', 'value')])
-def viewer_status(n, surface, transform, mask):
+def viewer_status(n, flush_db_n_clicks, surface, transform, mask):
+    global flush_db_n_clicks_old
+    stop_only = flush_db_n_clicks != flush_db_n_clicks_old
+
     if n is not None:
         pid = r.get(session_id + '_viewer_pid')
-        if pid is None:
+        if pid is None and not stop_only:
             label = u'■'
             process = utils.start_task(viewer.serve, surface, transform, mask)
             while not process.is_alive():
                 time.sleep(0.1)
             logger.info("Started pycortex viewer (pid %d)", process.pid)
             r.set(session_id + '_viewer_pid', process.pid)
-        else:
+        elif pid is not None:
             logger.info("Stopping pycortex viewer (pid %s)", pid)
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_viewer_pid')
+        else:
+            label = u'▶'
 
         return label
 
@@ -278,13 +309,17 @@ def simulate_volume(n, simulated_dataset):
 
 
 @app.callback(Output('simulate-experiment', 'children'),
-              [Input('simulate-experiment', 'n_clicks')],
+              [Input('simulate-experiment', 'n_clicks'),
+               Input('flush-db', 'n_clicks')],
               [State('simulated-dataset', 'value'),
                State('simulated-tr', 'value')])
-def simulate_experiment(n, simulated_dataset, TR):
+def simulate_experiment(n, flush_db_n_clicks, simulated_dataset, TR):
+    global flush_db_n_clicks_old
+    stop_only = flush_db_n_clicks != flush_db_n_clicks_old
+
     if n is not None:
         pid = r.get(session_id + '_simulate_experiment_pid')
-        if pid is None:
+        if pid is None and not stop_only:
             label = u'■'
             process = utils.start_task(simulate_experiment_process,
                                        simulated_dataset, TR)
@@ -292,12 +327,14 @@ def simulate_experiment(n, simulated_dataset, TR):
             logger.info("Started simulation of experiment (pid %d)",
                         process.pid)
             r.set(session_id + '_simulate_experiment_pid', process.pid)
-        else:
+        elif pid is not None:
             logger.info("Stopping simulation of experiment (pid %s)",
                         pid.decode('utf-8'))
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_simulate_experiment_pid')
+        else:
+            label = u'▶'
         return label
     else:
         raise dash.exceptions.PreventUpdate()
