@@ -55,7 +55,11 @@ layout = [
         dcc.Dropdown(id='simulated-dataset', className='control-panel-dropdown',
                      placeholder='Simulation dataset...', value=datasets[0],
                      options=[{'label': d, 'value': d} for d in datasets]),
-        html.Button('TTL', id='simulate-ttl'), html.Button('DCM', id='simulate-volume')]),
+        html.Button('TTL', id='simulate-ttl'), html.Button('DCM', id='simulate-volume'),
+        create_control_button('Simulate experiment', 'simulate-experiment'),
+        dcc.Input(id='simulated-tr', placeholder='Simulation TR',
+                  type='number', value=2.0045)
+    ]),
 
     # preprocess
     html.Div(className='control-panel', children=[
@@ -266,6 +270,54 @@ def simulate_volume(n, simulated_dataset):
         r.set(session_id + '_simulated_volume_count', count)
 
     raise dash.exceptions.PreventUpdate()
+
+
+@app.callback(Output('simulate-experiment', 'children'),
+              [Input('simulate-experiment', 'n_clicks')],
+              [State('simulated-dataset', 'value'),
+               State('simulated-tr', 'value')])
+def simulate_experiment(n, simulated_dataset, TR):
+    if n is not None:
+        pid = r.get(session_id + '_simulate_experiment_pid')
+        if pid is None:
+            label = u'■'
+            process = utils.start_task(simulate_experiment_process,
+                                       simulated_dataset, TR)
+            time.sleep(0.5)
+            logger.info("Started simulation of experiment (pid %d)",
+                        process.pid)
+            r.set(session_id + '_simulate_experiment_pid', process.pid)
+        else:
+            logger.info("Stopping simulation of experiment (pid %s)",
+                        pid.decode('utf-8'))
+            label = u'▶'
+            utils.kill_process(int(pid))
+            r.delete(session_id + '_simulate_experiment_pid')
+        return label
+    else:
+        raise dash.exceptions.PreventUpdate()
+
+
+def simulate_experiment_process(simulated_dataset, TR):
+    r = redis.StrictRedis(config.REDIS_HOST)
+    paths = config.get_dataset_volume_paths(simulated_dataset)
+    count = 0
+    dest_directory = str(uuid4())
+    os.makedirs(op.join(config.SCANNER_DIR, dest_directory))
+    time.sleep(0.5)
+    for path in paths:
+        logger.info('Simulating volume %d %s', count, dest_directory)
+        dest_path = op.join(config.SCANNER_DIR, dest_directory, f"IM{count:04}.dcm")
+        logger.info('Copying %s to %s', path, dest_path)
+        logging.info('Simulating ttl at %s', str(time.time()))
+        # send a TTL
+        r.publish('ttl', 'message')
+        # copy volume
+        shutil.copy(path, dest_path)
+        # wait for TR
+        time.sleep(TR)
+        count += 1
+        r.set(session_id + '_simulated_volume_count', count)
 
 
 @app.callback(Output('pycortex-transform', 'options'),
