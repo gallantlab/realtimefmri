@@ -159,6 +159,7 @@ def generate_update_graph():
                                         'scaleanchor': 'x', 'scaleratio': 1.}}
                     layout_updates.append(layout)
                 elif plot_type == b'text':
+                    data = data[0]['pred']
                     ncols = len(data)
                     max_ntext = 0
                     for icol, dt in enumerate(data):
@@ -190,7 +191,7 @@ def generate_update_graph():
                             'showticklabels': False,
                         },
                         'showlegend': False,
-                        'font': {'size': 24}
+                        'font': {'size': 12}
                     }
                     layout_updates.append(layout)
                 else:
