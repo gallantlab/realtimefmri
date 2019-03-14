@@ -799,7 +799,7 @@ class ZScore(PreprocessingStep):
         if mean is None:
             zscored_array = np.zeros_like(array)
         else:
-            zscored_array = (array - mean) / std
+            zscored_array = np.divide(array - mean, std, where=std != 0)
 
         return zscored_array
 
