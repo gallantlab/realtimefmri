@@ -283,11 +283,13 @@ def simulate_experiment(n, simulated_dataset, TR):
             label = u'■'
             process = utils.start_task(simulate_experiment_process,
                                        simulated_dataset, TR)
+            time.sleep(0.5)
             logger.info("Started simulation of experiment (pid %d)",
                         process.pid)
             r.set(session_id + '_simulate_experiment_pid', process.pid)
         else:
-            logger.info("Stopping simulation of experiment (pid %s)", pid)
+            logger.info("Stopping simulation of experiment (pid %s)",
+                        pid.decode('utf-8'))
             label = u'▶'
             utils.kill_process(int(pid))
             r.delete(session_id + '_simulate_experiment_pid')
