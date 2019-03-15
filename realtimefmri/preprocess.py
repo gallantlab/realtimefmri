@@ -468,7 +468,9 @@ class VolumeToMosaic(PreprocessingStep):
         self.dim = dim
 
     def run(self, volume):
-        return cortex.mosaic(volume, dim=self.dim, show=False)[0]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return cortex.mosaic(volume, dim=self.dim, show=False)[0]
 
 
 class ApplyMask(PreprocessingStep):
