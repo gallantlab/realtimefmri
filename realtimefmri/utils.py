@@ -245,21 +245,19 @@ def get_logger(name, to_console=False, to_file=False, to_network=False,
     return logger
 
 
-
 class VoxelScoreSelectKBest(BaseEstimator, TransformerMixin):
     def __init__(self, scores, k, delays=3):
         self.scores = scores
         self.k = k
         self.delays = delays
-    
+
     def fit(self, X=None, y=None):
         self.delayed_scores_ = np.concatenate([self.scores] * self.delays)
         self.selected_indices_ = self.delayed_scores_.argsort()[::-1][:self.k]
         return self
-    
+
     def transform(self, X):
         return X[:, self.selected_indices_]
-
 
 
 class TopKPredictor:
@@ -267,13 +265,11 @@ class TopKPredictor:
         self.estimator = estimator
 
         self.k = k
-       
-    
+
     def predict(self, X):
         log_prob = self.estimator.predict_log_proba(X)
-        
+
         classes = self.estimator.classes_
-        
+
         topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
         return classes[topklogprob]
-

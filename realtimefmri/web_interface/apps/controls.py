@@ -78,7 +78,12 @@ layout = [
         dcc.Dropdown(id='pycortex-transform', className='control-panel-dropdown',
                      placeholder='Transform...', value=''),
         dcc.Dropdown(id='pycortex-mask', className='control-panel-dropdown',
-                     placeholder='Mask...', value='')]),
+                     placeholder='Mask...', value=''),
+        html.Hr(),
+        html.Div([html.Button(u'R', id='reset-pipe', className='status-indicator'),
+                  html.Span('Reset internals', className='status-label')],
+                 className='control-panel-button'),
+    ]),
 
     # pycortex viewer
     html.Div(className='control-panel', children=[
@@ -86,10 +91,20 @@ layout = [
 
     html.Div(id='empty-div1', children=[]),
     html.Div(id='empty-div2', children=[]),
-    html.Div(id='empty-div3', children=[])
+    html.Div(id='empty-div3', children=[]),
+    html.Div(id='empty-div4', children=[]),
 ]
 
 r = redis.StrictRedis(config.REDIS_HOST)
+
+
+@app.callback(Output('empty-div4', 'children'),
+              [Input('reset-pipe', 'n_clicks')])
+def reset_pipe(n):
+    if n is not None:
+        r.publish('pipeline_reset', 'message')
+
+    raise dash.exceptions.PreventUpdate()
 
 
 @app.callback(Output('empty-div1', 'children'),
@@ -104,7 +119,7 @@ def flush_db(n):
         # reset all graphs
         for key in graphs.keys():
             graphs[key] = []
-        
+
     raise dash.exceptions.PreventUpdate()
 
 

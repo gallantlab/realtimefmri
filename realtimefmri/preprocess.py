@@ -12,7 +12,6 @@ import nibabel as nib
 import numpy as np
 import redis
 import yaml
-from sklearn import linear_model
 
 import cortex
 from realtimefmri import buffered_array, config, image_utils, pipeline_utils
@@ -49,23 +48,27 @@ def preprocess(recording_id, pipeline_name, **global_parameters):
 
     pipeline = Pipeline(**pipeline_config)
 
-    n_skip = pipeline.global_parameters.get('n_skip', 0)
+    # XXX: global n_skip is unused.
+    # n_skip = pipeline.global_parameters.get('n_skip', 0)
 
     volume_subscription = r.pubsub()
     volume_subscription.subscribe('timestamped_volume')
+    volume_subscription.subscribe('pipeline_reset')
     for message in volume_subscription.listen():
-        if message['type'] == 'message':
-            data = message['data']
-            if data != 1:  # subscription message
-                timestamped_volume = pickle.loads(data)
-                logger.info('Received image %d', timestamped_volume['image_number'])
-                data_dict = {'image_number': timestamped_volume['image_number'],
-                             'raw_image_time': timestamped_volume['time'],
-                             'raw_image_nii': timestamped_volume['volume']}
-                t1 = time.time()
-                data_dict = pipeline.process(data_dict)
-                t2 = time.time()
-                logger.debug('Pipeline ran in %.4f seconds', t2 - t1)
+        if message['channel'] == b'timestamped_volume' and message['type'] == 'message':
+            timestamped_volume = pickle.loads(message['data'])
+            logger.info('Received image %d', timestamped_volume['image_number'])
+            data_dict = {'image_number': timestamped_volume['image_number'],
+                         'raw_image_time': timestamped_volume['time'],
+                         'raw_image_nii': timestamped_volume['volume']}
+            t1 = time.time()
+            data_dict = pipeline.process(data_dict)
+            t2 = time.time()
+            logger.debug('Pipeline ran in %.4f seconds', t2 - t1)
+
+        elif message['channel'] == b'pipeline_reset' and message['type'] == 'message':
+            pipeline.reset()
+            logger.info('Pipeline reset.')
 
 
 class Pipeline():
@@ -273,6 +276,12 @@ class Pipeline():
             step['instance'].register(step_key)
 
         self._key = pipeline_key
+
+    def reset(self):
+        """Reset internal states of each preprocessing step
+        """
+        for step in self.pipeline:
+            step['instance'].reset()
 
 
 class PreprocessingStep():
@@ -718,7 +727,7 @@ class IncrementalMeanStd(PreprocessingStep):
         The input array z-scored using the posterior mean and variance
         """
         self.update_state()
-        if not hasattr(self, 'data'):
+        if not getattr(self, 'data', None):
             self.array_shape = array.shape
             self.data = buffered_array.BufferedArray(array.size, dtype=array.dtype)
             self.data.append(array.ravel())
@@ -732,7 +741,7 @@ class IncrementalMeanStd(PreprocessingStep):
         return mean.reshape(self.array_shape), std.reshape(self.array_shape)
 
     def reset(self):
-        del self.data
+        self.data = None
 
 
 class RunningMeanStd(PreprocessingStep):
@@ -788,6 +797,10 @@ class RunningMeanStd(PreprocessingStep):
         self.std = np.nanstd(self.samples, 0)
         return self.mean, self.std
 
+    def reset(self):
+        self.mean = None
+        self.samples = None
+
 
 class ZScore(PreprocessingStep):
     """Compute a z-scored version of an input array given precomputed means and standard deviations
@@ -814,14 +827,13 @@ class AggregateTimestampedVolumes(PreprocessingStep):
 
         self.active = active
         self.buffer_size = buffer_size
-
-    def reset(self):
-        pass
+        self.array = None
+        self.times = None
 
     def run(self, t, array):
         self.update_state()
 
-        if not hasattr(self, 'array'):
+        if self.array is None:
             n_samples = array.size
             self.times = buffered_array.BufferedArray(size=1, buffer_size=self.buffer_size)
             self.array = buffered_array.BufferedArray(size=n_samples, buffer_size=self.buffer_size)
@@ -838,6 +850,10 @@ class AggregateTimestampedVolumes(PreprocessingStep):
             array = []
 
         return times, array
+
+    def reset(self):
+        self.array = None
+        self.times = None
 
 
 class SklearnPredictor(PreprocessingStep):
@@ -1093,6 +1109,10 @@ class StoreToRedis(PreprocessingStep):
             self.index += 1
 
             return key
+
+    def reset(self):
+        # XXX: should we reset the index?
+        pass
 
 
 class PublishToRedis(PreprocessingStep):
