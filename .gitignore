@@ -58,3 +58,6 @@ target/
 
 # default data path
 data/
+
+.vscode
+.idea
