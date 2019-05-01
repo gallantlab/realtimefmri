@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 import os
 import os.path as op
 import pickle
@@ -289,7 +288,7 @@ def viewer_status(n, flush_db_n_clicks, surface, transform, mask):
               [Input('simulate-ttl', 'n_clicks')])
 def simulate_ttl(n):
     if n is not None:
-        logging.info('Simulating ttl at %s', str(time.time()))
+        logger.info('Simulating ttl at %s', str(time.time()))
         r.publish('ttl', 'message')
     else:
         raise dash.exceptions.PreventUpdate()
@@ -388,7 +387,6 @@ def simulate_experiment_process(simulated_dataset, TR):
         if experiment_info is not None: # push cue to redis
             cue = get_cue(t)
             r.set('cur_cue', cue.encode('utf-8'))
-
         # send a TTL
         r.publish('ttl', 'message')
         # copy volume

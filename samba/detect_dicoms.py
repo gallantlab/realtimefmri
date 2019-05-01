@@ -11,17 +11,17 @@ from collections import defaultdict
 import redis
 
 # SETUP LOGGING
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('samba.detect_dicoms')
+logger.setLevel(logging.DEBUG)
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-fh = logging.FileHandler('/logs/samba.log')
-fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter(LOG_FORMAT)
-fh.setFormatter(formatter)
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
+fh = logging.FileHandler('/logs/samba.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 user = pwd.getpwuid(os.getuid()).pw_name
