@@ -6,6 +6,8 @@ import shutil
 from configparser import ConfigParser
 from glob import glob
 
+from datetime import datetime
+
 import cortex
 import realtimefmri
 
@@ -23,17 +25,10 @@ def initialize():
         for path in glob(op.join(PACKAGE_DIR, 'pipelines', '*.yaml')):
             shutil.copy(path, PIPELINE_DIR)
 
-    if not op.exists(SCANNER_DIR):
-        os.makedirs(SCANNER_DIR)
-
-    if not op.exists(DATASTORE_DIR):
-        os.makedirs(DATASTORE_DIR)
-
-    if not op.exists(RECORDING_DIR):
-        os.makedirs(RECORDING_DIR)
-
-    if not op.exists(DATASET_DIR):
-        os.makedirs(DATASET_DIR)
+    for DIR in [SCANNER_DIR, DATASTORE_DIR, RECORDING_DIR, DATASTORE_DIR,
+                LOG_DIR]:
+        if not op.exists(DIR):
+            os.makedirs(DIR)
 
 
 def get_surfaces():
@@ -126,6 +121,9 @@ SCANNER_DIR = op.join(DATA_DIR, 'scanner')
 DATASTORE_DIR = op.join(DATA_DIR, 'datastore')
 RECORDING_DIR = op.join(DATA_DIR, 'recordings')
 DATASET_DIR = op.join(DATA_DIR, 'datasets')
+LOG_DIR = op.join(DATA_DIR, 'logs')
+logfn = op.join(LOG_DIR,  f"{datetime.now():%Y%m%d}.log")
+
 initialize()
 
 config = ConfigParser()

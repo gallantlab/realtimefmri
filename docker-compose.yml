@@ -23,13 +23,19 @@ services:
       - "${EXPERIMENT_DIR}:/usr/local/share/realtimefmri/experiments"
       - "${DATASTORE_DIR}:/usr/local/share/realtimefmri/datastore"
       - "${TEST_DATASET_DIR}:/usr/local/share/realtimefmri/datasets"
+      - "${LOG_DIR}:/usr/local/share/realtimefmri/logs"
       - "${STATIC_PATH}:/public/static"
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
       - scanner:/usr/local/share/realtimefmri/scanner
       - .:/app/realtimefmri
 
   redis:
     image: redis
     restart: always
+    volumes:
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
 
   samba:
     build:
@@ -41,6 +47,9 @@ services:
     restart: always
     volumes:
       - scanner:/mnt/scanner
+      - /etc/timezone:/etc/timezone
+      - /etc/localtime:/etc/localtime
+      - "${LOG_DIR}/samba.log:/samba.log"
 
 volumes:
   scanner:

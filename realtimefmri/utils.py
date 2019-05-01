@@ -220,19 +220,20 @@ def get_logger(name, to_console=False, to_file=False, to_network=False,
             logger.addHandler(ch)
 
     if to_file and not has_file_handler(logger, to_file):
-        if op.exists(to_file):
-            msg = ('File {} exists. '
-                   'Append/Overwrite/Cancel (a/o/c)?'.format(to_file))
-            choice = confirm(msg, choices=('a', 'o', 'c'))
-            if choice.lower() == 'a':
-                mode = 'a'
-            elif choice.lower() == 'o':
-                mode = 'w'
-            elif choice.lower() == 'c':
-                raise IOError('Log for {} exists'.format(to_file))
-        else:
-            mode = 'w'
-        fh = logging.FileHandler(to_file, mode=mode)
+        # if op.exists(to_file):
+        #     # msg = ('File {} exists. '
+        #     #        'Append/Overwrite/Cancel (a/o/c)?'.format(to_file))
+        #     # choice = confirm(msg, choices=('a', 'o', 'c'))
+        #     # if choice.lower() == 'a':
+        #     #     mode = 'a'
+        #     # elif choice.lower() == 'o':
+        #     #     mode = 'w'
+        #     # elif choice.lower() == 'c':
+        #     #     raise IOError('Log for {} exists'.format(to_file))
+        #     mode = 'a'
+        # else:
+        #     mode = 'w'
+        fh = logging.FileHandler(config.logfn)
         fh.setLevel(level)
         fh.setFormatter(formatter)
         logger.addHandler(fh)

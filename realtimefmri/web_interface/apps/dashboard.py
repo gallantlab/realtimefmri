@@ -17,7 +17,7 @@ from realtimefmri import config
 from realtimefmri.utils import get_logger
 from realtimefmri.web_interface.app import app
 
-logger = get_logger('dashboard', to_console=True, to_network=False)
+logger = get_logger('realtimefmri.dashboard', to_console=True, to_network=False, to_file=True)
 graphs = defaultdict(list)
 r = redis.StrictRedis(config.REDIS_HOST)
 

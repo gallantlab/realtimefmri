@@ -8,7 +8,7 @@ from realtimefmri.utils import get_logger
 from realtimefmri.web_interface.app import app
 
 session_id = 'admin'
-logger = get_logger('pipeline', to_console=True, to_network=True)
+logger = get_logger('realtimefmri.pipeline', to_console=True, to_network=False, to_file=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 

@@ -11,7 +11,13 @@ from collections import defaultdict
 import redis
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('detect_dicoms')
+logger = logging.getLogger('samba.detect_dicoms')
+LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
+fh = logging.FileHandler('/samba.log')
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter(LOG_FORMAT)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 user = pwd.getpwuid(os.getuid()).pw_name
 logger.info("Running as user %s", user)
@@ -39,7 +45,7 @@ def detect_dicoms(root_directory=None, extension='*'):
 
     for new_path in monitor.yield_new_paths():
         new_path = new_path.replace(root_directory, '', 1).lstrip('/')
-        logger.info('Volume %s', new_path)
+        logger.info(f'SAMBA got a new volume {new_path} at time {time.time()}')
         r.publish('volume', new_path)
 
 

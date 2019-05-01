@@ -22,7 +22,7 @@ from realtimefmri.web_interface.apps.dashboard import graphs
 
 import numpy as np
 
-logger = get_logger('control_panel', to_console=True, to_network=True)
+logger = get_logger('realtimefmri.control_panel', to_console=True, to_network=False, to_file=True)
 
 
 def create_control_button(label, button_id):

@@ -13,7 +13,7 @@ class CollectTTL():
     file or transmit to a network destination.
     """
     def __init__(self, source='keyboard', verbose=True):
-        logger = utils.get_logger('scanner', to_console=verbose, to_network=True)
+        logger = utils.get_logger('realtimefmri.scanner', to_console=verbose, to_network=False, to_file=True)
 
         if source == 'keyboard':
             collect_ttl = self._collect_ttl_keyboard

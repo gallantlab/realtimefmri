@@ -14,10 +14,13 @@ import redis
 import yaml
 
 import cortex
+
+from datetime import datetime
+
 from realtimefmri import buffered_array, config, image_utils, pipeline_utils
 from realtimefmri.utils import get_logger
 
-logger = get_logger('preprocess', to_console=True, to_network=True)
+logger = get_logger('realtimefmri.preprocess', to_console=True, to_network=False, to_file=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 

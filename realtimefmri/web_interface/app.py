@@ -10,7 +10,7 @@ from pathlib import Path
 from realtimefmri import config
 from realtimefmri.utils import get_logger
 
-logger = get_logger('app', to_console=True)
+logger = get_logger('realtimefmri.app', to_console=True, to_file=True)
 
 
 external_stylesheets = []

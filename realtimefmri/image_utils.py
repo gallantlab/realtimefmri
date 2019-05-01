@@ -10,7 +10,7 @@ import numpy as np
 import cortex
 from realtimefmri import utils
 
-logger = utils.get_logger('image_utils', to_console=True)
+logger = utils.get_logger('realtimefmri.image_utils', to_console=True, to_file=True)
 
 
 def dicom_to_nifti(dicom_path):

@@ -1,6 +1,7 @@
 import os.path as op
 import pickle
 import struct
+import time
 
 import redis
 
@@ -15,7 +16,7 @@ def collect(verbose=True):
     """Continuously monitor for incoming volumes, merge with TTL timestamps, and send to
     preprocessor
     """
-    logger = get_logger('collector', to_console=verbose, to_network=True)
+    logger = get_logger('realtimefmri.collector', to_console=verbose, to_network=False, to_file=True)
     logger.info('data collector initialized')
 
     redis_client = redis.StrictRedis(config.REDIS_HOST)
@@ -31,7 +32,7 @@ def collect(verbose=True):
             logger.info('New volume %s', new_volume_path)
             timestamp = redis_client.rpop('timestamp')
             timestamp = struct.unpack('d', timestamp)[0]
-            logger.info('Collected at %d', timestamp)
+            logger.info(f'Collected at TTL time {timestamp}, internal time {time.time()}')
 
             nii = image_utils.dicom_to_nifti(new_volume_path)
             timestamped_volume = {'image_number': image_number, 'time': timestamp, 'volume': nii}

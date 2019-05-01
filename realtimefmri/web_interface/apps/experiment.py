@@ -13,7 +13,7 @@ from realtimefmri.web_interface.app import app
 from realtimefmri.web_interface.apps.model import detrend_responses
 
 
-logger = utils.get_logger(__name__)
+logger = utils.get_logger('realtimefmri.experiment', to_file=True)
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
