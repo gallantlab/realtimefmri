@@ -49,7 +49,7 @@ services:
       - scanner:/mnt/scanner
       - /etc/timezone:/etc/timezone
       - /etc/localtime:/etc/localtime
-      - "${LOG_DIR}/samba.log:/samba.log"
+      - "${LOG_DIR}:/logs"
 
 volumes:
   scanner:

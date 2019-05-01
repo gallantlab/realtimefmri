@@ -10,13 +10,18 @@ from collections import defaultdict
 
 import redis
 
+# SETUP LOGGING
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('samba.detect_dicoms')
 LOG_FORMAT = '%(asctime)-12s %(name)-20s %(levelname)-8s %(message)s'
-fh = logging.FileHandler('/samba.log')
+fh = logging.FileHandler('/logs/samba.log')
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter(LOG_FORMAT)
 fh.setFormatter(formatter)
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
 logger.addHandler(fh)
 
 user = pwd.getpwuid(os.getuid()).pw_name
@@ -49,7 +54,7 @@ def detect_dicoms(root_directory=None, extension='*'):
         r.publish('volume', new_path)
 
 
-class MonitorSambaDirectory():
+class MonitorSambaDirectory(object):
     """
     Monitor the file contents of a directory mounted with samba share
 
@@ -129,20 +134,20 @@ class MonitorSambaDirectory():
                                                               self.is_valid_directory)
             if len(added_directories) > 0:
                 for directory in added_directories:
-                    logging.info('Adding directory %s', directory)
+                    logger.info('Adding directory %s', directory)
                     self.last_modtimes[directory] = 0
                     self.directories.add(directory)
 
             if len(removed_directories) > 0:
                 for directory in removed_directories:
-                    logging.info('Removing directory %s', directory)
+                    logger.info('Removing directory %s', directory)
                     del self.last_modtimes[directory]
                     self.directories.remove(directory)
 
             for directory in self.directories:
                 current_modtime = op.getmtime(op.join(self.root_directory, directory))
                 if current_modtime > self.last_modtimes[directory]:
-                    logging.info('Detected change in %s', directory)
+                    logger.info('Detected change in %s', directory)
 
                     (added_paths,
                      removed_paths) = self.get_changed_contents(directory,
@@ -153,14 +158,14 @@ class MonitorSambaDirectory():
                     if len(added_paths) > 0:
                         for path in added_paths:
                             path = op.basename(path)
-                            logging.info('Adding %s from %s', path, directory)
+                            logger.info('Adding %s from %s', path, directory)
                             self.directory_contents[directory].add(path)
                             yield op.join(self.root_directory, directory, path)
 
                     if len(removed_paths) > 0:
                         for path in removed_paths:
                             path = op.basename(path)
-                            logging.info('Removing %s from %s', path, directory)
+                            logger.info('Removing %s from %s', path, directory)
                             self.directory_contents[directory].remove(path)
 
             time.sleep(0.1)
