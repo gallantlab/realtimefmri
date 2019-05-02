@@ -2,6 +2,7 @@
 import logging
 import os
 import os.path as op
+import glob
 import pwd
 import re
 import subprocess
@@ -44,7 +45,7 @@ def detect_dicoms(root_directory=None, extension='*'):
     """
     logger.info('Monitoring %s', root_directory)
 
-    monitor = MonitorSambaDirectory(root_directory, extension=extension)
+    monitor = MonitorSambaDirectoryAlt(root_directory, file_glob="*/*.dcm")#extension=extension)
 
     r = redis.StrictRedis('redis')
 
@@ -177,6 +178,41 @@ class MonitorSambaDirectory(object):
 
             time.sleep(0.1)
 
+
+class MonitorSambaDirectoryAlt:
+
+    def __init__(self, root_directory, file_glob="*/*.dcm"):
+        self.root_directory = root_directory
+        self.file_glob = file_glob
+
+        self.build()
+
+    def build(self):
+        self.samba_status = SambaStatus(self.root_directory)
+        self.contents = set()
+        self.update_contents()
+
+    def update_contents(self):
+        current_files = set(glob.glob(op.join(self.root_directory, self.file_glob)))
+        new_files = current_files - self.contents
+        deleted_files = self.contents - current_files
+        smb_open_files = self.samba_status.get_open_files()
+        eligible_new_files = {filename for filename in new_files if filename
+                              not in smb_open_files}
+        self.contents.difference_update(deleted_files)
+        self.contents.update(eligible_new_files)
+        return eligible_new_files
+
+    def yield_new_paths(self):
+        while True:
+            eligible_new_files = self.update_contents()
+            for filename in sorted(eligible_new_files, key=op.getmtime):
+                logger.info(f"Adding {filename} at {time.time()}")
+                yield filename
+            time.sleep(.1)
+
+
+    
 
 class SambaStatus():
     """Class to access information output by the `smbstatus` command.
