@@ -86,6 +86,7 @@ class MonitorSambaDirectory(object):
         self.last_modtimes = {}
         self.directory_contents = defaultdict(set)
 
+
         for directory in self.directories:
             self.last_modtimes[directory] = 0
             added_contents, _ = self.get_changed_contents(directory, set(), self.is_valid_file)
@@ -128,6 +129,7 @@ class MonitorSambaDirectory(object):
 
     def yield_new_paths(self):
         while True:
+
             # any new directories?
             (added_directories,
              removed_directories) = self.get_changed_contents('', self.directories,
@@ -155,8 +157,13 @@ class MonitorSambaDirectory(object):
                                                                 self.is_valid_file)
 
                     self.last_modtimes[directory] = current_modtime
+
+                    def get_mod_time(filename):
+                        return op.getmtime(op.join(self.root_directory,
+                                                   directory, filename))
+
                     if len(added_paths) > 0:
-                        for path in added_paths:
+                        for path in sorted(added_paths, key=get_mod_time):
                             path = op.basename(path)
                             logger.info('Adding %s from %s', path, directory)
                             self.directory_contents[directory].add(path)
