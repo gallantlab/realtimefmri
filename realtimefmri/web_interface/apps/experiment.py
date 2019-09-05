@@ -88,7 +88,6 @@ def serve_append_top_n():
 
     responses = np.nan_to_num(responses.mean(0, keepdims=True))
     probabilities = model.predict_proba(responses).ravel()
-
     top_indices = probabilities.argsort()[-n:][::-1]
     top_sizes = 10 + np.arange(n) * 10
     top_class_names = [model.class_names[i] for i in top_indices]

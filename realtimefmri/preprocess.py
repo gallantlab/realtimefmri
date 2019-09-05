@@ -61,6 +61,12 @@ def preprocess(recording_id, pipeline_name, **global_parameters):
             data_dict = {'image_number': timestamped_volume['image_number'],
                          'raw_image_time': timestamped_volume['time'],
                          'raw_image_nii': timestamped_volume['volume']}
+            cue = r.get("cur_cue")
+            if cue is not None:
+                data_dict['experiment_info'] = dict(cur_cue=cue.decode('utf-8'))
+            else:
+                data_dict['experiment_info'] = None
+
             t1 = time.time()
             data_dict = pipeline.process(data_dict)
             t2 = time.time()
@@ -896,6 +902,21 @@ class SklearnPredictor(PreprocessingStep):
         return prediction
 
 
+class TopKPredictor(PreprocessingStep):
+    def __init__(self, estimators, k=5):
+        self.estimators = estimators
+        self.k = k
+       
+    
+    def run(self, X):
+        log_prob = self.estimator.predict_log_proba(X)
+        
+        classes = self.estimator.classes_
+        
+        topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
+        return classes[topklogprob]
+
+
 class SklearnMultiplePredictorsTopK(PreprocessingStep):
     """Given a list of scikit-learn predictors, runs the `.predict` method
     of each one of them on incoming activity. Returns a list with the
@@ -946,10 +967,10 @@ class SklearnMultiplePredictorsTopK(PreprocessingStep):
 
         predictions = []
         for estimator in self.predictors:
-            log_prob = estimator.predict_log_proba(activity)
-            classes = estimator.classes_
-            topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
-            predictions.append(classes[topklogprob][0].tolist())
+        	log_prob = estimator.predict_log_proba(activity)
+        	classes = estimator.classes_
+        	topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
+        	predictions.append(classes[topklogprob][0].tolist())
         return {'pred': predictions}
 
 
@@ -1153,3 +1174,124 @@ class Dictionary(PreprocessingStep):
         value = self.dictionary[key]
         logger.debug('Dictionary, key=%s, value=%s', key, value)
         return value
+
+
+import requests
+import json
+
+class SklearnPredictorToAWS(PreprocessingStep):                                                
+    """Run the `.predict` method of a scikit-learn predictor on incoming                       
+    activity. Returns the predicted output.                                                    
+                                                                                               
+    Parameters                                                                                 
+    ----------                                                                                 
+    surface : str                                                                              
+        subject/surface ID                                                                     
+    pickled_predictor : str                                                                    
+        filename of the pickle file containing the trained classifier                          
+                                                                                               
+    Attributes                                                                                 
+    ----------                                                                                 
+    predictor : sklearn fitted learner                                                         
+                                                                                               
+    Methods                                                                                    
+    -------                                                                                    
+    run():                                                                                     
+        Returns the prediction                                                                 
+    """                                                                                        
+                                                                                               
+    def __init__(self, surface,  pickled_predictors, aws_address, nan_to_num=True, **kwargs):  
+        parameters = {'surface': surface, 'pickled_predictors':                                
+                      pickled_predictors,                                                      
+                      'nan_to_num': nan_to_num, 'aws_address': aws_address}                    
+        parameters.update(kwargs)                                                              
+        super(SklearnPredictorToAWS, self).__init__(**parameters)                              
+        subj_dir = config.get_subject_directory(surface)                                       
+        pickled_paths = {name: op.join(subj_dir, pickled_predictor) for                        
+                         name, pickled_predictor in pickled_predictors.items()}                
+        self.predictors = {name: pickle.load(open(pickled_path, 'rb')) for                     
+                           name, pickled_path in pickled_paths.items()}                        
+        self.nan_to_num = nan_to_num                                                           
+        self.aws_address = aws_address                                                         
+                                                                                               
+    def run(self, activity, experiment_info):                                                                   
+        activity = activity.ravel()[None]                                                      
+        if self.nan_to_num:                                                                    
+            activity = np.nan_to_num(activity)                                                 
+                                                                                               
+        probabilities = {name:predictor.predict_proba(activity)[0]
+								for name, predictor in self.predictors.items()}
+		
+        concept_classes = self.predictors["concepts"].classes_                                              
+        sizes_list = [dict(name=f"concept_{class_name}", size=probability)                     
+                         for class_name, probability in zip(concept_classes,                   
+                                                            probabilities["concepts"])]
+        category_classes = self.predictors["categories"].classes_
+        sizes_list.extend([dict(name=f"category_{class_name}", size=probability)                     
+                         for class_name, probability in zip(category_classes,                   
+                                                            probabilities["categories"])])
+
+        json_sizes_list = json.dumps(sizes_list)
+        data = dict(sizes=json_sizes_list)
+        if experiment_info is not None:
+            data['cue'] = experiment_info['cur_cue']
+
+        requests.post(self.aws_address, data=data)                      
+                                                                                               
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import io
+
+class UploadFlatmap(PreprocessingStep):
+    """Computes a flatmap and pushes it to an http address
+
+    Parameters
+    ----------
+    surface: str
+        subject/surface-ID
+
+    transform: str
+        pycortex transform name
+
+    height: int, default 1024
+        height in pixels of the flatmap
+
+    address: str
+        location to http POST the flatmap to under key 'flatmap'
+
+    """
+
+    def __init__(self, surface, transform, address, height=1024, vmin=None,
+                 vmax=None, cmap=None, **kwargs):
+        parameters = dict(surface=surface, transform=transform,
+                          address=address, height=height)
+        parameters = {**kwargs, **parameters}
+        super(UploadFlatmap, self).__init__(**parameters)
+
+        self.surface = surface
+        self.transform = transform
+        self.address = address
+        self.height = height
+        self.vmin = vmin
+        self.vmax = vmax
+        self.cmap = cmap
+
+    def run(self, activity):
+        
+        volume = cortex.Volume(activity, self.surface, self.transform,
+                              cmap=self.cmap, vmin=self.vmin, vmax=self.vmax)
+
+        buf = io.BytesIO()
+
+        fig = cortex.quickflat.make_figure(volume, height=self.height)
+
+        plt.savefig(buf, format="PNG")
+
+        buf.seek(0)
+        content = buf.read()
+
+        requests.post(self.address, data={"flatmap.png": content})
+
+

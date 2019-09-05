@@ -20,6 +20,8 @@ from realtimefmri.web_interface import utils
 from realtimefmri.web_interface.app import app
 from realtimefmri.web_interface.apps.dashboard import graphs
 
+import numpy as np
+
 logger = get_logger('control_panel', to_console=True, to_network=True)
 
 
@@ -358,15 +360,35 @@ def simulate_experiment(n, flush_db_n_clicks, simulated_dataset, TR):
 def simulate_experiment_process(simulated_dataset, TR):
     r = redis.StrictRedis(config.REDIS_HOST)
     paths = config.get_dataset_volume_paths(simulated_dataset)
+    experiment_info_file = config.get_experiment_info(simulated_dataset)
+    if os.path.exists(experiment_info_file):
+        import pandas
+        experiment_info = pandas.read_csv(experiment_info_file)
+        cues = experiment_info['cur_cue'].values
+        timings = experiment_info['timings'].values
+        def get_cue(t):
+            cur_cue = cues[np.where(timings < t)[0].max()]
+            return cur_cue
+    else:
+        experiment_info = None
+
+
     count = 0
     dest_directory = str(uuid4())
     os.makedirs(op.join(config.SCANNER_DIR, dest_directory))
+
+    t0 = time.time()
     time.sleep(0.5)
     for path in paths:
         logger.info('Simulating volume %d %s', count, dest_directory)
         dest_path = op.join(config.SCANNER_DIR, dest_directory, f"IM{count:04}.dcm")
         logger.info('Copying %s to %s', path, dest_path)
         logging.info('Simulating ttl at %s', str(time.time()))
+        t = time.time() - t0
+        if experiment_info is not None: # push cue to redis
+            cue = get_cue(t)
+            r.set('cur_cue', cue.encode('utf-8'))
+
         # send a TTL
         r.publish('ttl', 'message')
         # copy volume

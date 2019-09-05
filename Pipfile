@@ -20,8 +20,7 @@ pyserial = "~=3.4"
 PyYAML = "~=4.2b1"
 redis = "~=3.0.1"
 scikit-learn = "~=0.20.2"
-urllib3 = ">=1.24.2"
-Jinja2 = ">=2.10.1"
+pandas = "~=0.23.4"
 
 [dev-packages]
 pytest = "~=4.1.1"

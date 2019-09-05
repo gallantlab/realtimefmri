@@ -70,6 +70,10 @@ def get_dataset(dataset):
     return op.join(DATASET_DIR, dataset)
 
 
+def get_experiment_info(dataset):
+    return op.join(DATASET_DIR, dataset + "_experiment.csv")
+
+
 def get_datasets():
     """List all available datasets"""
     paths = sorted([d for d in os.listdir(DATASET_DIR)

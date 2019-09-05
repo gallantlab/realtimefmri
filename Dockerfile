@@ -8,6 +8,7 @@ RUN apt-get update && \
     apt-key adv --recv-keys --no-tty --keyserver hkp://pool.sks-keyservers.net:80 0xA5D32F012649A5A9 && \
     apt-get update && \
     apt-get install -y afni dcm2niix && \
+    apt-get install -y inkscape && \
     apt-get remove -y wget && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
