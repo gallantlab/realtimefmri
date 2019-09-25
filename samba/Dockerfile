@@ -11,6 +11,8 @@ RUN pip install redis
 RUN adduser --disabled-password --gecos "" rtfmri
 RUN mkdir /mnt/scanner
 RUN chown -R rtfmri:rtfmri /mnt/scanner
+RUN mkdir /logs
+RUN chown -R rtfmri:rtfmri /logs
 
 EXPOSE 139
 EXPOSE 445
