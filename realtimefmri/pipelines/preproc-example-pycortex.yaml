@@ -1,0 +1,41 @@
+global_parameters:
+  surface: RGfs
+  transform: 20170705RG_movies
+  mask: thick
+
+pipeline:
+  - name: motion_correct
+    class_name: realtimefmri.preprocess.MotionCorrect
+    kwargs : { reference: /path/to/cortex.reference.nii.gz }
+    input: [ raw_image_nii ]
+    output: [ image_nifti_mc ]
+
+  - name: save_nifti
+    class_name: realtimefmri.preprocess.SaveNifti
+    input:
+      - image_nifti_mc
+      - image_id
+  
+  - name: extract_gm_mask
+    class_name: realtimefmri.preprocess.ApplyMask
+    kwargs: { mask_type: thick }
+    input: [ image_nifti_mc ]
+    output: [ gm_activity ]
+
+  - name: running_mean_std
+    class_name: realtimefmri.preprocess.RunningMeanStd
+    input:
+      - gm_activity
+      - image_id
+    output:
+      - gm_activity_mean
+      - gm_activity_std
+
+  - name: gm_activity_zscore
+    class_name: realtimefmri.preprocess.VoxelZScore
+    input:
+      - gm_activity
+      - gm_activity_mean
+      - gm_activity_std
+    output: [ gm_activity_zscore ]
+    send: [ gm_activity_zscore ]

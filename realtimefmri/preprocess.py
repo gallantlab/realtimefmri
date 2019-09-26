@@ -13,6 +13,8 @@ import numpy as np
 import redis
 import yaml
 
+from nilearn._utils import check_niimg
+
 import cortex
 
 from datetime import datetime
@@ -416,13 +418,15 @@ class MotionCorrect(PreprocessingStep):
 
     Parameters
     ----------
-    surface : str
-        surface name in pycortex filestore
-    transform : str
-        Transform name for the surface in pycortex filestore
+    reference : NiImg-like or None
+        Reference volume to which motion correction will be performed.
+        If None is passed, the first input volume will be stored and used as
+        reference.
 
     Attributes
     ----------
+    reference : Nifti1Image
+        Reference volume
     reference_affine : numpy.ndarray
         Affine transform for the reference image
     reference_path : str
@@ -434,20 +438,29 @@ class MotionCorrect(PreprocessingStep):
         Motion corrects the incoming image to the provided reference image and
         returns the motion corrected volume
     """
-    def __init__(self, surface, transform, *args, twopass=False, output_transform=False, **kwargs):
-        parameters = {'surface': surface, 'transform': transform, 'twopass': twopass,
+    def __init__(self, reference=None, *args, twopass=False, output_transform=False, **kwargs):
+        parameters = {'twopass': twopass,
                       'output_transform': output_transform}
         parameters.update(kwargs)
         super(MotionCorrect, self).__init__(**parameters)
 
-        reference = cortex.db.get_xfm(surface, transform).reference
-
-        self.reference_affine = reference.affine
-        self.reference_path = reference.get_filename()
         self.twopass = twopass
         self.output_transform = output_transform
+        self.reference = None
+        self.reference_affine = None
+        self.reference_path = None
+
+        if reference is not None:
+            self.reference = check_niimg(reference)
+            self.reference_affine = reference.affine
+            self.reference_path = reference.get_filename()
 
     def run(self, input_volume):
+        if self.reference is None:
+            self.reference = check_niimg(input_volume)
+            self.reference_affine = input_volume.affine
+            self.reference_path = input_volume.get_filename()
+
         same_affine = np.allclose(input_volume.affine[:3, :3],
                                   self.reference_affine[:3, :3])
         if not same_affine:
@@ -456,7 +469,8 @@ class MotionCorrect(PreprocessingStep):
             warnings.warn('Input and reference volumes have different affines.')
 
         return image_utils.register(input_volume, self.reference_path,
-                                    twopass=self.twopass, output_transform=self.output_transform)
+                                    twopass=self.twopass,
+                                    output_transform=self.output_transform)
 
 
 class Function(PreprocessingStep):
@@ -492,6 +506,36 @@ class VolumeToMosaic(PreprocessingStep):
 
 
 class ApplyMask(PreprocessingStep):
+    """Apply a voxel mask to a volume. If no mask is passed, it will be
+    computed from the first input volume.
+
+    Parameters
+    ----------
+    mask : NiImg-like or None
+
+    Attributes
+    ----------
+    mask : numpy.ndarray
+        Boolean voxel mask
+    """
+    def __init__(self, mask=None, **kwargs):
+        parameters = {'mask': mask}
+        parameters.update(kwargs)
+        super(ApplyMask, self).__init__(**parameters)
+        # XXX: write this using nilearn nifti masker
+        raise NotImplementedError
+
+    def run(self, volume):
+        """Apply the mask to a volume
+
+        Parameters
+        -----------
+        volume : array
+        """
+        return volume[self.mask]
+
+
+class ApplyMaskCortex(PreprocessingStep):
     """Apply a voxel mask from the pycortex database to a volume
 
     Parameters
