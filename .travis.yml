@@ -1,0 +1,25 @@
+language: python
+
+python:
+  - "3.7"
+
+cache:
+  - pip
+
+script:
+  # install packages for docs and make docs
+  - travis_retry pip install -q ipython Sphinx sphinx-gallery numpydoc
+  - cd docs && make html && cd ..
+  # Tell GitHub not to use jekyll to compile the docs
+  - touch docs/build/html/.nojekyll
+
+deploy:
+  - provider: pages
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN  # Set in travis-ci.org dashboard, marked secure
+    keep-history: true
+    on:
+      branch: master
+      # push only once
+      python: "3.7"
+    local_dir: docs/build/html/
