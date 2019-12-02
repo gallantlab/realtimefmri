@@ -8,7 +8,7 @@ cache:
 
 script:
   # install packages for docs and make docs
-  - travis_retry pip install -q ipython Sphinx sphinx-gallery numpydoc
+  - travis_retry pip install -q ipython Sphinx sphinx-gallery numpydoc sphinx_rtd_theme
   - cd docs && make html && cd ..
   # Tell GitHub not to use jekyll to compile the docs
   - touch docs/build/html/.nojekyll
