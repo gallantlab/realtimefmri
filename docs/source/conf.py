@@ -55,8 +55,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'realtimefmri'
-copyright = u'2019, Robert Gibboni'
-author = u'Robert Gibboni'
+copyright = u'2019, Gallant Lab'
+author = u'realtimefmri developers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

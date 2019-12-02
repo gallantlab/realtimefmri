@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 def main():
     """Main setup function"""
     setup(name='realtimefmri',
-          version='0.1.2',
+          version='0.1.1.dev0',
           description='code for realtime fmri',
           author='robertg',
           author_email='robertg@berkeley.edu',
