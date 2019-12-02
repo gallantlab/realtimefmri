@@ -1,0 +1,282 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Web interface &mdash; realtimefmri 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> realtimefmri
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#data-collection">Data collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#dashboard">Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#stimulus-presentation">Stimulus presentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pipelines.html">Pipelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../pipelines.html#configuring-a-real-time-preprocessing-pipeline">Configuring a real-time preprocessing pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../pipelines.html#example-pipeline">Example pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../database.html">Database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../database.html#id1">Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../database.html#id4">Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../logging.html">Logging</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../scanning/scanning.html">Scanning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scanning/scanning.html#prior-to-scanning">Prior to scanning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scanning/scanning.html#during-the-scanning-session">During the scanning session</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../scanning/scanning.html#control-panel">Control panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scanning/scanning.html#dashboard">Dashboard</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scanning/network.html">Acquiring DICOM images in real-time</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scanning/network.html#connecting-to-the-scanner-network">Connecting to the scanner network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scanning/network.html#mounting-the-network-shared-drive">Mounting the network shared drive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scanning/network.html#configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time">Configuring the scanner to write out DICOM files to that folder in real-time</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="controls.html">Controls</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="controls.html#collection">Collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controls.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controls.html#webgl-viewer">WebGL Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="controls.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="controls.html#the-gentle-way">The gentle way</a></li>
+<li class="toctree-l3"><a class="reference internal" href="controls.html#the-extreme-way">The extreme way</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dashboard.html">Dashboard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dashboard.html#configuring-the-dashboard">Configuring the dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dashboard.html#using-the-dashboard">Using the dashboard</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Preprocess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html#utils">Utils</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">realtimefmri</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Web interface</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/web_interface/endpoints.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="web-interface">
+<h1>Web interface<a class="headerlink" href="#web-interface" title="Permalink to this headline">¶</a></h1>
+<p>There are many web endpoints to access and manipute parts of the real-time pipeline.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="#experiment">Experiment</a></p></li>
+<li><p><a class="reference internal" href="#model">Model</a></p></li>
+</ul>
+</div></blockquote>
+<div class="section" id="id1">
+<h2><span class="target" id="experiment">Experiment</span><a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">/experiments</span></code></p>
+<ul>
+<li><p>List the available experiments</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/experiment/&lt;name&gt;/run</span></code></p>
+<ul>
+<li><p>Run the experiment</p></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="id2">
+<h2><span class="target" id="model">Model</span><a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model:&lt;name&gt;</span></code></p></li>
+</ul>
+</div></blockquote>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Gallant Lab
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

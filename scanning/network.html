@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Acquiring DICOM images in real-time &mdash; realtimefmri 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="../web_interface/index.html" />
+    <link rel="prev" title="Scanning" href="scanning.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> realtimefmri
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#data-collection">Data collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#dashboard">Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../overview.html#stimulus-presentation">Stimulus presentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pipelines.html">Pipelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../pipelines.html#configuring-a-real-time-preprocessing-pipeline">Configuring a real-time preprocessing pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../pipelines.html#example-pipeline">Example pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../database.html">Database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../database.html#id1">Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../database.html#id4">Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../logging.html">Logging</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="scanning.html">Scanning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scanning.html#prior-to-scanning">Prior to scanning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning.html#during-the-scanning-session">During the scanning session</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="scanning.html#control-panel">Control panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scanning.html#dashboard">Dashboard</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Acquiring DICOM images in real-time</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#connecting-to-the-scanner-network">Connecting to the scanner network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mounting-the-network-shared-drive">Mounting the network shared drive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time">Configuring the scanner to write out DICOM files to that folder in real-time</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web_interface/controls.html">Controls</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/controls.html#collection">Collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/controls.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/controls.html#webgl-viewer">WebGL Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/controls.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../web_interface/controls.html#the-gentle-way">The gentle way</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../web_interface/controls.html#the-extreme-way">The extreme way</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web_interface/dashboard.html">Dashboard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/dashboard.html#configuring-the-dashboard">Configuring the dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../web_interface/dashboard.html#using-the-dashboard">Using the dashboard</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">Preprocess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html#utils">Utils</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">realtimefmri</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">&lt;no title&gt;</a> &raquo;</li>
+        
+      <li>Acquiring DICOM images in real-time</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/scanning/network.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="acquiring-dicom-images-in-real-time">
+<span id="network"></span><h1>Acquiring DICOM images in real-time<a class="headerlink" href="#acquiring-dicom-images-in-real-time" title="Permalink to this headline">¶</a></h1>
+<p>To run a real-time experiment you need to be able to access the volumes as they are acquired. This involves connecting the real-time computer to the scanner console, and configuring the scanner to write out DICOM files in real-time.</p>
+<div class="section" id="connecting-to-the-scanner-network">
+<h2>Connecting to the scanner network<a class="headerlink" href="#connecting-to-the-scanner-network" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Connect the <strong>real-time computer</strong> to the router switch on top of the <strong>scanner console</strong> with an ethernet cable.</p></li>
+<li><p>Take note of the real-time computer’s IP address, which should be <code class="docutils literal notranslate"><span class="pre">192.168.1.&lt;some</span> <span class="pre">number&gt;</span></code>.</p></li>
+</ol>
+</div>
+<div class="section" id="mounting-the-network-shared-drive">
+<h2>Mounting the network shared drive<a class="headerlink" href="#mounting-the-network-shared-drive" title="Permalink to this headline">¶</a></h2>
+<p>The real-time computer hosts a network shared folder using the <a class="reference external" href="https://www.samba.org/">SAMBA</a> protocol. We will use the built-in Windows tool to mount the shared folder over the network.</p>
+<ol class="arabic simple">
+<li><p>Press Ctrl+Esc to open the Windows start menu, click “Computer” or “Windows Explorer.”</p></li>
+<li><p>Click “Tools &gt; Map network drive”, and enter <code class="docutils literal notranslate"><span class="pre">Y:</span></code> and <code class="docutils literal notranslate"><span class="pre">\\&lt;real-time</span> <span class="pre">computer's</span> <span class="pre">IP</span> <span class="pre">address&gt;\rtfmri</span></code></p></li>
+<li><p>Check “use different credentials” and click “OK.”</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">rtfmri</span></code> for the user name and enter the samba password and click “OK.”</p></li>
+</ol>
+<p>This links the directory <code class="docutils literal notranslate"><span class="pre">Y:</span></code> on the scanner console to the <code class="docutils literal notranslate"><span class="pre">/mnt/scanner</span></code> on the <code class="docutils literal notranslate"><span class="pre">realtimefmri_samba</span></code> container running on the real-time computer. You can test this connection by writing a file to the directory on one computer and making sure it appears in the corresponding directory on the other computer.</p>
+</div>
+<div class="section" id="configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time">
+<h2>Configuring the scanner to write out DICOM files to that folder in real-time<a class="headerlink" href="#configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time" title="Permalink to this headline">¶</a></h2>
+<p>Siemens scanners come with a useful program called <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code> that can configure the scanner to write out DICOM files as they are collected. Unfortunately it is not that well documented – thanks to the <a class="reference external" href="http://firmm.readthedocs.io/en/latest/">FIRMM</a> and <a class="reference external" href="http://imaging.mrc-cbu.cam.ac.uk/basewiki/DynamicallyAdaptiveImaging">Dynamically Adaptive Imaging</a> projects for explaining how to configure it.</p>
+<ol class="arabic simple">
+<li><p>Press Ctrl-Esc to open the Windows start menu. Click on “Advanced user” to activate Advanced User mode. Talk to scanner administrators to get the authentication details.</p></li>
+<li><p>Press Ctrl-Esc and click “Command Prompt” or click “Run” and enter <code class="docutils literal notranslate"><span class="pre">cmd</span></code> in the dialog to launch the command prompt.</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code> in the command prompt to start the <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code> program.</p></li>
+</ol>
+<p>Configure the default settings (these steps should be performed <strong>BEFORE</strong> registering a patient):</p>
+<img alt="../_images/network_online_export.jpg" src="../_images/network_online_export.jpg" />
+<ol class="arabic simple" start="4">
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">4</span></code> to go to the “Online export defaults” menu</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">1</span></code> and set “Target port” to <code class="docutils literal notranslate"><span class="pre">-1</span></code></p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">3</span></code> and set “Target path” to <code class="docutils literal notranslate"><span class="pre">y:</span></code> (or whatever path you mounted the SAMBA folder on)</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">8</span></code> to set <code class="docutils literal notranslate"><span class="pre">SendBuffered</span></code> to <code class="docutils literal notranslate"><span class="pre">OFF</span></code></p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">q</span></code> to go back to the main <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code> menu</p></li>
+</ol>
+<p>Configure the session settings (these steps should be performed <strong>AFTER</strong> registering a patient, since these flags get reset every time you register a new patient):</p>
+<img alt="../_images/network_switches.jpg" src="../_images/network_switches.jpg" />
+<ol class="arabic simple" start="9">
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">5</span></code> to go to the “Switches” menu</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">8</span></code> to set <code class="docutils literal notranslate"><span class="pre">SendIMA</span></code> to <code class="docutils literal notranslate"><span class="pre">ON</span></code></p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">q</span></code> to go back to the main <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code> menu</p></li>
+<li><p>Enter <code class="docutils literal notranslate"><span class="pre">q</span></code> to exit <code class="docutils literal notranslate"><span class="pre">ideacmdtool</span></code></p></li>
+</ol>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../web_interface/index.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="scanning.html" class="btn btn-neutral float-left" title="Scanning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Gallant Lab
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

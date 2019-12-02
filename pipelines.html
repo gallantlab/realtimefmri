@@ -1,0 +1,385 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Pipelines &mdash; realtimefmri 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Database" href="database.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> realtimefmri
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#data-collection">Data collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#dashboard">Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#stimulus-presentation">Stimulus presentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pipelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-a-real-time-preprocessing-pipeline">Configuring a real-time preprocessing pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-pipeline">Example pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="database.html#id1">Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="database.html#id4">Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="scanning/scanning.html">Scanning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scanning/scanning.html#prior-to-scanning">Prior to scanning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/scanning.html#during-the-scanning-session">During the scanning session</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="scanning/scanning.html#control-panel">Control panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scanning/scanning.html#dashboard">Dashboard</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scanning/network.html">Acquiring DICOM images in real-time</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#connecting-to-the-scanner-network">Connecting to the scanner network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#mounting-the-network-shared-drive">Mounting the network shared drive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time">Configuring the scanner to write out DICOM files to that folder in real-time</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_interface/controls.html">Controls</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#collection">Collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#webgl-viewer">WebGL Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="web_interface/controls.html#the-gentle-way">The gentle way</a></li>
+<li class="toctree-l3"><a class="reference internal" href="web_interface/controls.html#the-extreme-way">The extreme way</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="web_interface/dashboard.html">Dashboard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/dashboard.html#configuring-the-dashboard">Configuring the dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/dashboard.html#using-the-dashboard">Using the dashboard</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Preprocess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#utils">Utils</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">realtimefmri</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Pipelines</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/pipelines.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pipelines">
+<span id="id1"></span><h1>Pipelines<a class="headerlink" href="#pipelines" title="Permalink to this headline">¶</a></h1>
+<p>Part of flexibility of this package comes from the ability to configure custom preprocessing pipelines. A pipeline describes a sequence of processing steps that each new sample undergoes. Pipelines are specified using <code class="xref py py-mod docutils literal notranslate"><span class="pre">yaml</span></code> files stored in the <code class="docutils literal notranslate"><span class="pre">pipelines</span></code> directory.</p>
+<div class="section" id="configuring-a-real-time-preprocessing-pipeline">
+<h2>Configuring a real-time preprocessing pipeline<a class="headerlink" href="#configuring-a-real-time-preprocessing-pipeline" title="Permalink to this headline">¶</a></h2>
+<p>A pipeline must be able to pass data between the different steps. This is accomplished using a dictionary of objects, the <code class="docutils literal notranslate"><span class="pre">data_dict</span></code>. Each step receives its input from the <code class="docutils literal notranslate"><span class="pre">data_dict</span></code> and adds its output to the <code class="docutils literal notranslate"><span class="pre">data_dict</span></code> for subsequent steps to use.</p>
+<p>The basic format of a preprocessing pipeline configuration file is:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># arguments sent to all preprocessing steps (steps will ignore keywords that</span>
+<span class="c1"># they do not use, so put anything that you want to re-use across many steps.</span>
+<span class="c1"># pycortex subject and transform names are used often)</span>
+<span class="nt">global_defaults</span><span class="p">:</span>
+  <span class="nt">subject</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">S1</span>
+  <span class="nt">xfm_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">20150101S1_transform</span>
+
+<span class="c1"># a list of steps in the pipeline</span>
+<span class="nt">pipeline</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">name_of_step</span>
+    <span class="c1"># the name of a python class that subclasses PreprocessingStep</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.StepClass</span>
+
+    <span class="c1"># keyword arguments used to initialize the step</span>
+    <span class="nt">kwargs</span><span class="p">:</span>
+      <span class="nt">a_keyword_argument</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5324532</span>
+      <span class="nt">another_one</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">wefwef</span>
+
+    <span class="c1"># keys indicating which data_dict values this step processeses</span>
+    <span class="nt">input</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">input_key</span>
+
+    <span class="c1"># return values will be added to data_dict with this key</span>
+    <span class="nt">output</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">output_key</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-pipeline">
+<h2>Example pipeline<a class="headerlink" href="#example-pipeline" title="Permalink to this headline">¶</a></h2>
+<p>Here’s an example of a complete pipeline configuration. It converts the raw DICOM to nifti, motion corrects, extracts the motion parameters from the motion correction affine, extracts the gray matter voxels, computes their mean and standard deviations, computes their z-score, decodes using a pre-trained decoder, sends an image of the decoded category to the <a class="reference internal" href="web_interface/dashboard.html#dashboard"><span class="std std-ref">dashboard</span></a>, sends the motion parameters to the dashboard, and sends the gray matter activity to the pycortex viewer.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">global_parameters</span><span class="p">:</span>
+  <span class="nt">n_skip</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+
+<span class="nt">pipeline</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">motion_correct</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.MotionCorrect</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> output_transform</span><span class="p">:</span> <span class="nv">True</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">raw_image_nii</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">nii_mc</span><span class="p p-Indicator">,</span> <span class="nv">affine_mc</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">decompose_affine</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.Function</span>
+    <span class="nt">kwargs </span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> function_name</span><span class="p">:</span> <span class="nv">realtimefmri.image_utils.decompose_affine</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">affine_mc</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">pitch</span><span class="p p-Indicator">,</span> <span class="nv">roll</span><span class="p p-Indicator">,</span> <span class="nv">yaw</span><span class="p p-Indicator">,</span> <span class="nv">x_displacement</span><span class="p p-Indicator">,</span> <span class="nv">y_displacement</span><span class="p p-Indicator">,</span> <span class="nv">z_displacement</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">nifti_to_volume</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.NiftiToVolume</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">nii_mc</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">volume</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">gm_mask</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.ApplyMask</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> mask_type</span><span class="p">:</span> <span class="nv">thick</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">volume</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_responses</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">incremental_mean_std</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.IncrementalMeanStd</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_responses</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_mean</span><span class="p p-Indicator">,</span> <span class="nv">gm_std</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">zscore</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.ZScore</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_responses</span><span class="p p-Indicator">,</span> <span class="nv">gm_mean</span><span class="p p-Indicator">,</span> <span class="nv">gm_std</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_zscore</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">decode</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.SklearnPredictor</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> surface</span><span class="p">:</span> <span class="nv">TZ</span><span class="p p-Indicator">,</span><span class="nt"> pickled_predictor</span><span class="p">:</span> <span class="nv">TZ_motor_decoder_thick.pkl</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_zscore</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">prediction</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">select_predicted_image</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.preprocess.Dictionary</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> dictionary</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> hand</span><span class="p">:</span> <span class="nv">static/img/motor_decoder/hand.png</span><span class="p p-Indicator">,</span>
+<span class="nt">                            foot</span><span class="p">:</span> <span class="nv">static/img/motor_decoder/foot.png</span><span class="p p-Indicator">,</span>
+<span class="nt">                            mouth</span><span class="p">:</span> <span class="nv">static/img/motor_decoder/mouth.png</span><span class="p p-Indicator">,</span>
+<span class="nt">                            saccade</span><span class="p">:</span> <span class="nv">static/img/motor_decoder/saccade.png</span><span class="p p-Indicator">,</span>
+<span class="nt">                            speak</span><span class="p">:</span> <span class="nv">static/img/motor_decoder/speak.png</span> <span class="p p-Indicator">},</span>
+<span class="nt">              decode_key</span><span class="p">:</span> <span class="nv">utf-8</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">prediction</span> <span class="p p-Indicator">]</span>
+    <span class="nt">output</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">image_url</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">send_motion_parameters</span>
+    <span class="nt">class_name </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToDashboard</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">motion_parameters</span><span class="p p-Indicator">,</span><span class="nt"> plot_type</span><span class="p">:</span> <span class="nv">timeseries</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">pitch</span><span class="p p-Indicator">,</span> <span class="nv">roll</span><span class="p p-Indicator">,</span> <span class="nv">yaw</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">send_motion_parameters_x</span>
+    <span class="nt">class_name </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToDashboard</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">x_disp</span><span class="p p-Indicator">,</span><span class="nt"> plot_type</span><span class="p">:</span> <span class="nv">timeseries</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">x_displacement</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">send_motion_parameters_y</span>
+    <span class="nt">class_name </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToDashboard</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">y_disp</span><span class="p p-Indicator">,</span><span class="nt"> plot_type</span><span class="p">:</span> <span class="nv">timeseries</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">y_displacement</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">send_motion_parameters_z</span>
+    <span class="nt">class_name </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToDashboard</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">z_disp</span><span class="p p-Indicator">,</span><span class="nt"> plot_type</span><span class="p">:</span> <span class="nv">timeseries</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">z_displacement</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">send_prediction</span>
+    <span class="nt">class_name </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToDashboard</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">predicted_image</span><span class="p p-Indicator">,</span><span class="nt"> plot_type</span><span class="p">:</span> <span class="nv">static_image</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">image_url</span> <span class="p p-Indicator">]</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">flatmap</span>
+    <span class="nt">class_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">realtimefmri.stimulate.SendToPycortexViewer</span>
+    <span class="nt">kwargs</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span> <span class="nv">flatmap</span> <span class="p p-Indicator">}</span>
+    <span class="nt">input</span><span class="p">:</span> <span class="p p-Indicator">[</span> <span class="nv">gm_zscore</span> <span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="database.html" class="btn btn-neutral float-right" title="Database" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Gallant Lab
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

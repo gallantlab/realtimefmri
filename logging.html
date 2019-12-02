@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Logging &mdash; realtimefmri 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="scanning/index.html" />
+    <link rel="prev" title="Database" href="database.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> realtimefmri
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#data-collection">Data collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#dashboard">Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#stimulus-presentation">Stimulus presentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelines</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html#configuring-a-real-time-preprocessing-pipeline">Configuring a real-time preprocessing pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html#example-pipeline">Example pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="database.html">Database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="database.html#id1">Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="database.html#id4">Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Logging</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="scanning/scanning.html">Scanning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scanning/scanning.html#prior-to-scanning">Prior to scanning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/scanning.html#during-the-scanning-session">During the scanning session</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="scanning/scanning.html#control-panel">Control panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scanning/scanning.html#dashboard">Dashboard</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scanning/network.html">Acquiring DICOM images in real-time</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#connecting-to-the-scanner-network">Connecting to the scanner network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#mounting-the-network-shared-drive">Mounting the network shared drive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scanning/network.html#configuring-the-scanner-to-write-out-dicom-files-to-that-folder-in-real-time">Configuring the scanner to write out DICOM files to that folder in real-time</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="web_interface/controls.html">Controls</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#collection">Collection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#preprocessing">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#webgl-viewer">WebGL Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/controls.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="web_interface/controls.html#the-gentle-way">The gentle way</a></li>
+<li class="toctree-l3"><a class="reference internal" href="web_interface/controls.html#the-extreme-way">The extreme way</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="web_interface/dashboard.html">Dashboard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/dashboard.html#configuring-the-dashboard">Configuring the dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="web_interface/dashboard.html#using-the-dashboard">Using the dashboard</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Preprocess</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#utils">Utils</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">realtimefmri</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Logging</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/logging.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="logging">
+<h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
+<p>The python <code class="docutils literal notranslate"><span class="pre">logging</span></code> module  is used to generate log entries that provide a record of what occurred during the real-time experiment. The log is stored in <code class="docutils literal notranslate"><span class="pre">recordings/&lt;recording_id&gt;/recording.log</span></code>. Here is an example log file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="mi">733</span> <span class="n">root</span>                 <span class="n">INFO</span>     <span class="n">starting</span> <span class="n">synchronizer</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="mi">734</span> <span class="n">root</span>                 <span class="n">INFO</span>     <span class="n">starting</span> <span class="n">scanner</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="mi">734</span> <span class="n">root</span>                 <span class="n">INFO</span>     <span class="n">starting</span> <span class="n">collector</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="mi">734</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">data</span> <span class="n">collector</span> <span class="n">initialized</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="mi">736</span> <span class="n">root</span>                 <span class="n">INFO</span>     <span class="n">starting</span> <span class="n">tasks</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">23</span><span class="p">,</span><span class="mi">605</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908343.6054802</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">26</span><span class="p">,</span><span class="mi">388</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">80</span><span class="n">d717bc</span><span class="o">-</span><span class="n">c6d1</span><span class="o">-</span><span class="mi">4</span><span class="n">ff5</span><span class="o">-</span><span class="n">b6df</span><span class="o">-</span><span class="mi">1</span><span class="n">ecd70f48f8c</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">34</span><span class="p">,</span><span class="mi">533</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908354.5333643</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">37</span><span class="p">,</span><span class="mi">215</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="n">f07c8b9c</span><span class="o">-</span><span class="mi">466</span><span class="n">d</span><span class="o">-</span><span class="mi">4</span><span class="n">d53</span><span class="o">-</span><span class="mi">994</span><span class="n">a</span><span class="o">-</span><span class="n">c3417f75a385</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">41</span><span class="p">,</span><span class="mi">101</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908361.1013849</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">42</span><span class="p">,</span><span class="mi">328</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="n">e0a979a3</span><span class="o">-</span><span class="mi">2003</span><span class="o">-</span><span class="mi">4</span><span class="n">c95</span><span class="o">-</span><span class="mi">92</span><span class="n">d5</span><span class="o">-</span><span class="n">d2fbe4ba38e7</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">44</span><span class="p">,</span><span class="mi">845</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908364.8452926</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">46</span><span class="p">,</span><span class="mi">339</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">8</span><span class="n">b929de3</span><span class="o">-</span><span class="n">ecdc</span><span class="o">-</span><span class="mi">401</span><span class="n">d</span><span class="o">-</span><span class="mi">8</span><span class="n">c1f</span><span class="o">-</span><span class="mi">343</span><span class="n">fdafca125</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">49</span><span class="p">,</span><span class="mi">493</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908369.4933078</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">50</span><span class="p">,</span><span class="mi">951</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="n">faf86960</span><span class="o">-</span><span class="mi">5</span><span class="n">c46</span><span class="o">-</span><span class="mi">4</span><span class="n">b05</span><span class="o">-</span><span class="n">acf9</span><span class="o">-</span><span class="mf">202e56</span><span class="n">db3eb9</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">53</span><span class="p">,</span><span class="mi">813</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908373.81325</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">55</span><span class="p">,</span><span class="mi">263</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">392</span><span class="n">a502f</span><span class="o">-</span><span class="n">ba92</span><span class="o">-</span><span class="mi">4498</span><span class="o">-</span><span class="mf">8e43</span><span class="o">-</span><span class="mf">24e14480902</span><span class="n">e</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">57</span><span class="p">,</span><span class="mi">501</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908377.5011406</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">170</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">7</span><span class="n">fbdf386</span><span class="o">-</span><span class="mi">4619</span><span class="o">-</span><span class="mi">4910</span><span class="o">-</span><span class="mi">985</span><span class="n">f</span><span class="o">-</span><span class="mi">6</span><span class="n">d09e6240d10</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">59</span><span class="p">,</span><span class="mi">069</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908379.0690863</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">59</span><span class="p">,</span><span class="mi">975</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">9335247</span><span class="n">b</span><span class="o">-</span><span class="n">a0af</span><span class="o">-</span><span class="mi">4</span><span class="n">b8a</span><span class="o">-</span><span class="mi">902</span><span class="n">f</span><span class="o">-</span><span class="n">a4b55802b3b5</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">01</span><span class="p">,</span><span class="mi">053</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908381.0530667</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">01</span><span class="p">,</span><span class="mi">779</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="n">a98b0f65</span><span class="o">-</span><span class="mi">6</span><span class="n">a1c</span><span class="o">-</span><span class="mi">4</span><span class="n">fd7</span><span class="o">-</span><span class="n">a511</span><span class="o">-</span><span class="mi">5</span><span class="n">eab883da94f</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">02</span><span class="p">,</span><span class="mi">989</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908382.9890192</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">03</span><span class="p">,</span><span class="mi">684</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">8</span><span class="n">ea49210</span><span class="o">-</span><span class="mi">4</span><span class="n">c3f</span><span class="o">-</span><span class="mi">4</span><span class="n">fe5</span><span class="o">-</span><span class="mi">92</span><span class="n">ba</span><span class="o">-</span><span class="mi">241</span><span class="n">dfd3f97ea</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">04</span><span class="p">,</span><span class="mi">925</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908384.9250386</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">05</span><span class="p">,</span><span class="mi">689</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mf">5e16647</span><span class="n">e</span><span class="o">-</span><span class="mi">669</span><span class="n">f</span><span class="o">-</span><span class="mi">4823</span><span class="o">-</span><span class="mi">9</span><span class="n">cab</span><span class="o">-</span><span class="mi">6</span><span class="n">a6fd75ee68a</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">07</span><span class="p">,</span><span class="mi">525</span> <span class="n">scanner</span>              <span class="n">INFO</span>     <span class="n">TR</span> <span class="mf">1490908387.5251012</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">08</span><span class="p">,</span><span class="mi">196</span> <span class="n">collector</span>            <span class="n">INFO</span>     <span class="n">volume</span> <span class="mi">8475</span><span class="n">b0f2</span><span class="o">-</span><span class="n">f3af</span><span class="o">-</span><span class="mi">4</span><span class="n">ec5</span><span class="o">-</span><span class="mi">8187</span><span class="o">-</span><span class="n">ee6082aee07f</span><span class="o">.</span><span class="n">PixelData</span>
+<span class="mi">2017</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">30</span> <span class="mi">14</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">16</span><span class="p">,</span><span class="mi">512</span> <span class="n">root</span>                 <span class="n">INFO</span>     <span class="n">shutting</span> <span class="n">down</span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="scanning/index.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="database.html" class="btn btn-neutral float-left" title="Database" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Gallant Lab
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
