@@ -28,6 +28,7 @@ RUN make requirements
 
 # pycortex
 RUN pip3 install pycortex
+RUN mkdir -p /root/.config/pycortex
 RUN python3 -c "import cortex"
 COPY data/pycortex-options.cfg /root/.config/pycortex/options.cfg
 
