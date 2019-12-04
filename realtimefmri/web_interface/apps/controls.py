@@ -382,7 +382,7 @@ def simulate_experiment_process(simulated_dataset, TR):
         logger.info('Simulating volume %d %s', count, dest_directory)
         dest_path = op.join(config.SCANNER_DIR, dest_directory, f"IM{count:04}.dcm")
         logger.info('Copying %s to %s', path, dest_path)
-        logging.info('Simulating ttl at %s', str(time.time()))
+        logger.info('Simulating ttl at %s', str(time.time()))
         t = time.time() - t0
         if experiment_info is not None: # push cue to redis
             cue = get_cue(t)
