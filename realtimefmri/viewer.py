@@ -9,12 +9,13 @@ import cortex
 from realtimefmri import config
 from realtimefmri.utils import get_logger
 
-logger = get_logger('viewer', to_console=True, to_network=True)
+logger = get_logger('realtimefmri.viewer', to_console=True, to_network=False,
+                    to_file=True)
 
 r = redis.StrictRedis(config.REDIS_HOST)
 
 
-class PyCortexViewer():
+class PyCortexViewer(object):
     bufferlen = 15
 
     def __init__(self, surface, transform, mask_type='thick', vmin=-2., vmax=2.):

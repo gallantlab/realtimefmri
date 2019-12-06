@@ -271,9 +271,10 @@ def viewer_status(n, flush_db_n_clicks, surface, transform, mask):
             logger.info("Started pycortex viewer (pid %d)", process.pid)
             r.set(session_id + '_viewer_pid', process.pid)
         elif pid is not None:
-            logger.info("Stopping pycortex viewer (pid %s)", pid)
+            pid = int(pid)
+            logger.info("Stopping pycortex viewer (pid %d)", pid)
             label = u'▶'
-            utils.kill_process(int(pid))
+            utils.kill_process(pid)
             r.delete(session_id + '_viewer_pid')
         else:
             label = u'▶'
