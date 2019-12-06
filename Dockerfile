@@ -26,11 +26,12 @@ ENV PIPENV_SYSTEM 1
 
 RUN make requirements
 
-# pycortex
-RUN pip3 install pycortex
+# install master from pycortex github
+RUN pip3 install git+git://github.com/gallantlab/pycortex.git
 RUN mkdir -p /root/.config/pycortex
 RUN python3 -c "import cortex"
 COPY data/pycortex-options.cfg /root/.config/pycortex/options.cfg
+RUN pip3 install tornado==4.3
 
 ENV PATH="$PATH:/usr/lib/afni/bin"
 
