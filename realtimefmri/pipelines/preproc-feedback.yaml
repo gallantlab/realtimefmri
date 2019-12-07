@@ -1,0 +1,52 @@
+global_parameters:
+  n_skip: 0
+
+pipeline:
+  - name: motion_correct
+    class_name: realtimefmri.preprocess.MotionCorrect
+    kwargs: { output_transform: True }
+    input: [ raw_image_nii ]
+    output: [ nii_mc, affine_mc ]
+
+  - name: decompose_affine
+    class_name: realtimefmri.preprocess.Function
+    kwargs : { function_name: realtimefmri.image_utils.decompose_affine }
+    input: [ affine_mc ]
+    output: [ pitch, roll, yaw, x_displacement, y_displacement, z_displacement ]
+
+  - name: nifti_to_volume
+    class_name: realtimefmri.preprocess.NiftiToVolume
+    input: [ nii_mc ]
+    output: [ volume ]
+
+  - name: gm_mask
+    class_name: realtimefmri.preprocess.ApplyMask
+    kwargs: { mask_type: thick }
+    input: [ volume ]
+    output: [ gm_responses ]
+
+  - name: incremental_mean_std
+    class_name: realtimefmri.preprocess.IncrementalMeanStd
+    input: [ gm_responses ]
+    output: [ gm_mean, gm_std ]
+
+  - name: zscore
+    class_name: realtimefmri.preprocess.ZScore
+    input: [ gm_responses, gm_mean, gm_std ]
+    output: [ gm_zscore ]
+
+  - name: simulate_decoder_proba
+    class_name: realtimefmri.preprocess.SimulateDecodingProba
+    input: [ gm_responses ]
+    kwargs: { n_classes: 4 }
+    output: [ decoder_proba ]
+
+  - name: publish_decoder_proba
+    class_name : realtimefmri.preprocess.PublishToRedis
+    kwargs : { topic: decoder_proba }
+    input: [ decoder_proba ]
+
+  - name: flatmap
+    class_name: realtimefmri.preprocess.SendToPycortexViewer
+    kwargs: { name: flatmap }
+    input: [ gm_zscore ]

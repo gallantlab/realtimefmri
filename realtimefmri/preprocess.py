@@ -970,10 +970,10 @@ class SklearnMultiplePredictorsTopK(PreprocessingStep):
 
         predictions = []
         for estimator in self.predictors:
-        	log_prob = estimator.predict_log_proba(activity)
-        	classes = estimator.classes_
-        	topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
-        	predictions.append(classes[topklogprob][0].tolist())
+            log_prob = estimator.predict_log_proba(activity)
+            classes = estimator.classes_
+            topklogprob = log_prob.argsort(axis=1)[:, ::-1][:, :self.k]
+            predictions.append(classes[topklogprob][0].tolist())
         return {'pred': predictions}
 
 
@@ -1296,5 +1296,25 @@ class UploadFlatmap(PreprocessingStep):
         content = buf.read()
 
         requests.post(self.address, data={"flatmap.png": content})
+
+
+class SimulateDecodingProba(PreprocessingStep):
+    """Simulate decoding probabilities by randomly sampling from a dirichlet
+    distribution
+
+    Parameters
+    ----------
+    n_classes: int
+    """
+
+    def __init__(self, n_classes, **kwargs):
+        parameters = dict(n_classes=n_classes)
+        parameters = {**kwargs, **parameters}
+        super(SimulateDecodingProba, self).__init__(**parameters)
+        self.n_classes = n_classes
+
+    def run(self, activity):
+        return np.random.dirichlet([1] * self.n_classes)
+
 
 
