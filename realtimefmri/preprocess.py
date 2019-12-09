@@ -1156,6 +1156,23 @@ class PublishToRedis(PreprocessingStep):
         r.publish(self.topic, pickle.dumps(data))
 
 
+class PushToRedis(PreprocessingStep):
+    """Push to a redis key using lpush
+
+    Parameters
+    ----------
+    key : str
+    """
+    def __init__(self, key, *args, **kwargs):
+        parameters = {'key': key}
+        parameters.update(kwargs)
+        super(PushToRedis, self).__init__(**parameters)
+        self.key = key
+
+    def run(self, data):
+        r.lpush(self.key, pickle.dumps(data))
+
+
 class Dictionary(PreprocessingStep):
     """A python-style dict as a preprocessing step
 

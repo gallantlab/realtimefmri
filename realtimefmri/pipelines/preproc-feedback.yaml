@@ -42,8 +42,8 @@ pipeline:
     output: [ decoder_proba ]
 
   - name: publish_decoder_proba
-    class_name : realtimefmri.preprocess.PublishToRedis
-    kwargs : { topic: decoder_proba }
+    class_name : realtimefmri.preprocess.PushToRedis
+    kwargs : { key: decoder_proba }
     input: [ decoder_proba ]
 
   - name: flatmap
