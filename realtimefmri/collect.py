@@ -32,7 +32,8 @@ def collect(verbose=True):
             logger.info('New volume %s', new_volume_path)
             timestamp = redis_client.rpop('timestamp')
             timestamp = struct.unpack('d', timestamp)[0]
-            logger.info(f'Collected at TTL time {timestamp}, internal time {time.time()}')
+            timestamp_internal = time.time()
+            logger.info(f'Collected at TTL time {timestamp}, internal time {timestamp_internal} (difference {timestamp - timestamp_internal:.2f} s')
 
             nii = image_utils.dicom_to_nifti(new_volume_path)
             timestamped_volume = {'image_number': image_number, 'time': timestamp, 'volume': nii}
