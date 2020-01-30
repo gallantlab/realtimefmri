@@ -13,6 +13,10 @@ import numpy as np
 import redis
 import yaml
 
+from numpy.polynomial.legendre import Legendre
+from scipy import linalg as la
+from sklearn import decomposition, linear_model, pipeline
+
 import cortex
 
 from datetime import datetime
@@ -668,6 +672,146 @@ class RoiActivity(PreprocessingStep):
         for name, mask in self.masks.items():
             roi_activities[name] = float(activity[mask].mean())
         return roi_activities
+
+
+def detrend_poly(data, poly_degree=1):
+    """Run polynomial detrending on data.
+
+    Parameters
+    ----------
+    data : array (n_samples, n_voxels)
+    poly_degree : int
+
+    Returns
+    -------
+    data : array (n_samples, n_voxels)
+        Detrended data.
+    """
+    n_samples = data.shape[0]
+    X = np.ones((n_samples, 1))  # mean
+    for d in range(poly_degree):
+        poly = Legendre.basis(d + 1)
+        poly_trend = poly(np.linspace(-1, 1, n_samples))
+        X = np.hstack((X, poly_trend[:, None]))
+    coef_poly, _, _, _ = la.lstsq(X, data)
+    data = data - X.dot(coef_poly)
+    return data
+
+
+class OnlineCompcorDetrending(PreprocessingStep):
+    """Perform CompCor detrending online
+
+    Parameters
+    ----------
+    subject : str
+        Subject identifier
+
+    transform : str
+        Transform
+
+    n_components : int
+        Number of components to keep. (default 6)
+        This also corresponds to the number of samples that need to be acquired
+        before WM detrending can be run.
+
+    window_size : int or None
+        Maximum number of samples to consider on which to compute the trend.
+        If None, all the data collected will be used. However, this could
+        incur in significant processing time that will delay further
+        processing.
+        Default 120.
+
+    mask_gray_matter : str
+        Type of mask to use to extract gray matter voxels.
+        Default 'thick'.
+
+    mask_white_matter : str
+        Type of mask to use to extract white matter voxels. Voxels
+        that are present in both the gray matter mask and the white matter mask
+        will be removed from the white matter mask.
+        Default 'whitematterdetrend-3'.
+        (This needs to be generated before)
+
+    Methods
+    -------
+    run(volume)
+        Returns detrended grey matter activity given incoming volume
+    """
+
+    def __init__(self, subject, transform,
+                 n_components=6,
+                 window_size=120,
+                 mask_gray_matter='thick',
+                 mask_white_matter='whitematterdetrend-3',
+                 **kwargs):
+        parameters = {
+            'subject': subject,
+            'transform': transform,
+            'n_components': n_components,
+            'window_size': window_size,
+            'mask_gray_matter': mask_gray_matter,
+            'mask_white_matter': mask_white_matter
+
+        }
+        parameters.update(kwargs)
+        super(OnlineCompcorDetrending, self).__init__(**parameters)
+        self.mask_gm = cortex.db.get_mask(subject,
+                                          transform,
+                                          type=mask_gray_matter)
+        self.n_gm_voxels = self.mask_gm.sum()
+
+        self.mask_wm = cortex.db.get_mask(subject,
+                                          transform,
+                                          type=mask_white_matter)
+        # remove gm voxels from white matter
+        n_intersection_voxels = np.logical_and(
+            self.mask_gm, self.mask_wm).sum()
+        if n_intersection_voxels > 0:
+            # remove voxels marked as gm from wm mask
+            self.mask_wm = self.mask_wm & ~self.mask_gm
+        self.n_wm_voxels = self.mask_wm.sum()
+
+        # make buffered arrays for non-detrended gm and wm data
+        self.gm_data = buffered_array.BufferedArray(self.n_gm_voxels)
+        self.wm_data = buffered_array.BufferedArray(self.n_wm_voxels)
+
+        self.n_components = n_components
+        self.window_size = window_size
+
+        self.detrend = pipeline.Pipeline(steps=[
+            ('pca', decomposition.PCA(n_components=self.n_components,
+                                      svd_solver='full')),
+            ('regression', linear_model.LinearRegression())])
+
+    def run(self, volume):
+        tstart = time.time()
+        wm = volume[self.mask_wm]
+        gm = volume[self.mask_gm]
+        self.gm_data.append(gm)
+        self.wm_data.append(wm)
+        # if we don't have enough samples return the masked data without
+        # further preprocessing
+        n_samples = self.gm_data.shape[0]
+        if n_samples <= self.n_components:
+            return gm
+        # otherwise run detrending
+        window_start = 0
+        if self.window_size is not None:
+            window_start = max(n_samples - self.window_size, 0)
+        # Take only a window of data
+        gm_data = self.gm_data[window_start:]
+        wm_data = self.wm_data[window_start:]
+        # Remove mean and linear trend first
+        both_data = np.hstack((gm_data, wm_data))
+        both_data = detrend_poly(both_data)
+        gm_data = both_data[:, :self.n_gm_voxels]
+        wm_data = both_data[:, self.n_gm_voxels:]
+        # Run PCA and remove noise estimated from components
+        self.detrend.fit(wm_data, gm_data)
+        trend = self.detrend.predict(wm_data[-1][None])
+        gm_detrended = gm_data[-1][None] - trend
+        logger.debug(f"OnlineCompcorDetrending took {time.time()-tstart:.2f} s")
+        return gm_detrended[0]
 
 
 class WMDetrend(PreprocessingStep):
